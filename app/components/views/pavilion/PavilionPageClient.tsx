@@ -2,7 +2,6 @@
 "use client";
 
 import { useMemo } from "react";
-import Image from "next/image";
 import { Button } from "@components/ui/button";
 import ResultsToolbar from "@components/views/catalog/ResultsToolbar";
 import FiltersSidebar from "@components/views/catalog/FiltersSidebar";

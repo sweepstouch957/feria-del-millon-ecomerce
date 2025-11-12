@@ -201,33 +201,101 @@ export default function FiltersSidebar(props: Props) {
         )}
       </div>
 
-      {/* Rango de precio */}
+      {/* Rango de precio mejorado con atajos y validación */}
       <div className="mb-5">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Rango de precio
-        </label>
-        <div className="flex items-center gap-3">
-          <Input
-            type="number"
-            min={0}
-            step={50_000}
-            value={minPrice}
-            onChange={(e) => setMinPrice(parseInt(e.target.value || "0", 10))}
-            placeholder="Mín"
-          />
-          <span className="text-gray-400">—</span>
-          <Input
-            type="number"
-            min={0}
-            step={50_000}
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(parseInt(e.target.value || "0", 10))}
-            placeholder="Máx"
-          />
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Rango de precio
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              setMinPrice(500000);
+              setMaxPrice(1000000);
+            }}
+            className="text-xs text-blue-600 hover:underline"
+          >
+            Limpiar rango
+          </button>
         </div>
-        <p className="text-xs text-gray-500 mt-1">
+
+        {/* Atajos de rango */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          {[
+            { label: "≤ 100K", min: 0, max: 100_000 },
+            { label: "≤ 500K", min: 0, max: 500_000 },
+            { label: "≤ 1M", min: 0, max: 1_000_000 },
+            { label: "≤ 5M", min: 0, max: 5_000_000 },
+          ].map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              onClick={() => {
+                setMinPrice(p.min);
+                setMaxPrice(p.max);
+              }}
+              className="px-3 py-1.5 rounded-full text-sm border hover:bg-gray-100 transition"
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1">
+          {/* Input mínimo */}
+          <div className="relative flex-1">
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={minPrice}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, ""); // solo números
+                const num = parseInt(value || "0", 10);
+                if (num >= 0 && num <= 10_000_000_000) setMinPrice(num);
+              }}
+              placeholder="Mín"
+              className="w-full rounded-md border border-gray-300 pl-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-right"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+              COP
+            </span>
+          </div>
+
+          <span className="text-gray-400">—</span>
+
+          {/* Input máximo */}
+          <div className="relative flex-1">
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={maxPrice}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, "");
+                const num = parseInt(value || "0", 10);
+                if (num >= 0 && num <= 10_000_000_000) setMaxPrice(num);
+              }}
+              placeholder="Máx"
+              className="w-full rounded-md border border-gray-300 pl-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none text-right"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+              COP
+            </span>
+          </div>
+        </div>
+
+        {/* Texto con formato de dinero */}
+        <p className="text-xs text-gray-500 mt-2">
           {formatMoney(minPrice)} — {formatMoney(maxPrice)}
         </p>
+
+        {/* Validación */}
+        {minPrice > 0 && maxPrice > 0 && minPrice > maxPrice && (
+          <p className="text-xs mt-2 text-red-600">
+            El mínimo no puede ser mayor que el máximo.
+          </p>
+        )}
       </div>
 
       {/* Toggles */}
@@ -239,14 +307,6 @@ export default function FiltersSidebar(props: Props) {
             onChange={(e) => setInStock(e.target.checked)}
           />
           Solo en stock
-        </label>
-        <label className="inline-flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={hasImage}
-            onChange={(e) => setHasImage(e.target.checked)}
-          />
-          Solo con imagen
         </label>
       </div>
 
@@ -263,7 +323,6 @@ export default function FiltersSidebar(props: Props) {
           >
             <option value="createdAt">Más recientes</option>
             <option value="price">Precio</option>
-            <option value="_id">ID</option>
           </select>
           <Button
             variant="outline"
@@ -275,11 +334,11 @@ export default function FiltersSidebar(props: Props) {
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <Button className="w-full" onClick={onApply}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+        <Button onClick={onApply} className="w-full">
           Aplicar
         </Button>
-        <Button className="w-full" variant="outline" onClick={onClear}>
+        <Button onClick={onClear} variant="outline" className="w-full">
           Limpiar
         </Button>
       </div>

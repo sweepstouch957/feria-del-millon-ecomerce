@@ -54,7 +54,7 @@ export default function CatalogCard({
   }, [artwork]);
 
   const imgs = useMemo(
-    () => mergeImages(artwork.image, artwork.images),
+    () => mergeImages(artwork?.image, artwork?.images),
     [artwork]
   );
   const hasCarousel = imgs.length > 1;
@@ -83,8 +83,8 @@ export default function CatalogCard({
   const techniqueSlug = artwork?.techniqueInfo?.slug;
   const pavilionName = artwork?.pavilionInfo?.name;
   const pavilionSlug = artwork?.pavilionInfo?.slug;
-  const detailHref = `/obra/${encodeURIComponent(artwork._id || artwork.id)}`;
-  const available = Number(artwork.stock || 0) > 0;
+  const detailHref = `/obra/${encodeURIComponent(artwork?._id || artwork?.id)}`;
+  const available = Number(artwork?.stock || 0) > 0;
 
   if (variant === "list") {
     return (
@@ -92,20 +92,20 @@ export default function CatalogCard({
         <div className="w-full md:w-48">
           <Image
             src={imgs[0]}
-            alt={artwork.title}
+            alt={artwork?.title}
             width={320}
             height={320}
             className="w-full h-48 object-cover rounded-lg"
           />
         </div>
         <div className="flex-1">
-          <h3 className="text-xl font-semibold mb-2">{artwork.title}</h3>
+          <h3 className="text-xl font-semibold mb-2">{artwork?.title}</h3>
           <p className="text-gray-600 mb-2">{artistName}</p>
           <p className="text-sm text-gray-500 mb-2">{techniqueName}</p>
           <p className="text-sm text-gray-500 mb-4">{pavilionName ?? ""}</p>
           <div className="flex items-center justify-between">
             <span className="text-xl font-bold">
-              {formatMoney(Number(artwork.price ?? 0), artwork.currency)}
+              {formatMoney(Number(artwork?.price ?? 0), artwork?.currency)}
             </span>
             <Button
               onClick={() => onAddToCart?.(artwork)}
@@ -117,7 +117,7 @@ export default function CatalogCard({
           </div>
           {showId && (
             <p className="mt-3 text-xs text-gray-400">
-              ID: {artwork._id || artwork.id}
+              ID: {artwork?._id || artwork?.id}
             </p>
           )}
         </div>
@@ -141,7 +141,7 @@ export default function CatalogCard({
           <img
             key={`${src}-${idx}`}
             src={src}
-            alt={artwork.title}
+            alt={artwork?.title}
             className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
               idx === current ? "opacity-100" : "opacity-0"
             }`}
@@ -244,19 +244,25 @@ export default function CatalogCard({
       {/* Contenido */}
       <div className="p-6">
         <h3 className="mb-2 line-clamp-2 text-lg font-bold text-gray-900 transition-colors group-hover:text-neutral-800">
-          {artwork.title}
+          {artwork?.title}
         </h3>
 
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <p className="text-sm font-medium text-gray-700">{artistName}</p>
+        {/* FILA MEJORADA: artista + chip de pabellón */}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <p className="text-sm font-medium text-gray-700 min-w-0 flex-1 truncate">
+            {artistName}
+          </p>
           {pavilionSlug && (
             <Link
               href={`/pabellones/${encodeURIComponent(pavilionSlug)}`}
-              className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700 shadow-sm transition hover:bg-gray-50"
+              className="inline-flex items-center gap-1.5 shrink-0 max-w-full sm:max-w-[70%] md:max-w-[60%]
+                         rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700
+                         shadow-sm transition hover:bg-gray-50"
               title={pavilionName}
+              aria-label={`Pabellón ${pavilionName ?? ""}`}
             >
-              <Landmark className="h-3.5 w-3.5" />
-              <span className="max-w-[12rem] truncate">{pavilionName}</span>
+              <Landmark className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{pavilionName}</span>
             </Link>
           )}
         </div>
@@ -267,11 +273,11 @@ export default function CatalogCard({
           </p>
           <p className="line-clamp-1">
             <span className="font-semibold">Dimensiones:</span>{" "}
-            {artwork.dimensionsText || "Sin especificar"}
+            {artwork?.dimensionsText || "Sin especificar"}
           </p>
         </div>
 
-        {artwork.description && (
+        {artwork?.description && (
           <p className="mb-4 leading-relaxed text-sm text-gray-600 line-clamp-2">
             {artwork.description}
           </p>
@@ -281,7 +287,7 @@ export default function CatalogCard({
           <div>
             <p className="mb-1 text-xs text-gray-500">Precio</p>
             <p className="text-xl font-bold text-gray-900">
-              {formatMoney(artwork.price, artwork.currency)}
+              {formatMoney(artwork?.price, artwork?.currency)}
             </p>
           </div>
           <Button
@@ -314,7 +320,7 @@ export default function CatalogCard({
 
           {showId && (
             <span className="text-xs text-gray-400">
-              ID: {artwork._id || artwork.id}
+              ID: {artwork?._id || artwork?.id}
             </span>
           )}
         </div>

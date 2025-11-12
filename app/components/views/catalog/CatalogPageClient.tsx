@@ -83,7 +83,7 @@ export default function CatalogPageClient() {
     event: DEFAULT_EVENT_ID,
     pavilion: pavilion || undefined,
     technique: techniqueCsv,
-    limit: 24,
+    limit: 12,
   } as ArtworksCursorFilters);
 
   const { techniques, pavilions: pavCounts } = useFacetCounts(rawRows);

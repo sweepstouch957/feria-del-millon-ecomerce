@@ -99,7 +99,9 @@ export default function CatalogCard({
           />
         </div>
         <div className="flex-1">
-          <h3 className="text-xl font-semibold mb-2">{artwork?.title}</h3>
+          <h3 className="text-xl font-semibold mb-2 !uppercase">
+            {artwork?.title}
+          </h3>{" "}
           <p className="text-gray-600 mb-2">{artistName}</p>
           <p className="text-sm text-gray-500 mb-2">{techniqueName}</p>
           <p className="text-sm text-gray-500 mb-4">{pavilionName ?? ""}</p>

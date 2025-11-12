@@ -3,313 +3,371 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, User, Palette } from "lucide-react";
-
+import {
+  Search,
+  Landmark,
+  User,
+  Palette,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
-import { artworks, categories } from "@data/artworks";
 
-export interface Artwork {
-  id: string;
-  title: string;
-  artist: string;
-  year: number;
-  medium: string;
-  dimensions: string;
-  description: string;
-  category: string;
-  image: string;
-  price: number;
+import { useEventArtists } from "@hooks/queries/useEventArtists";
+import { usePavilions } from "@hooks/queries/usePavilions";
+
+const DEFAULT_EVENT_NAME = "Feria del Millón";
+const DEFAULT_EVENT_ID = "6909aef219f26eec22af4220";
+
+const PAGE_SIZE = 24;
+
+function StatCard({
+  icon,
+  value,
+  label,
+  bg = "bg-white",
+}: {
+  icon: React.ReactNode;
+  value: number | string;
+  label: string;
+  bg?: string;
+}) {
+  return (
+    <div
+      className={`${bg} rounded-2xl shadow-md p-6 text-center border border-gray-100`}
+    >
+      <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
+        {icon}
+      </div>
+      <h3 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-1">
+        {value}
+      </h3>
+      <p className="text-gray-600">{label}</p>
+    </div>
+  );
 }
 
-type ArtistView = {
-  id: string;
-  name: string;
-  artworks: Artwork[];
-  categories: string[];
-  bio: string;
-  image: string;
-};
+function ArtistSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
+      <div className="h-64 w-full bg-gray-100 animate-pulse" />
+      <div className="p-6 space-y-4">
+        <div className="h-5 w-2/3 bg-gray-100 rounded animate-pulse" />
+        <div className="h-4 w-1/2 bg-gray-100 rounded animate-pulse" />
+        <div className="flex gap-2">
+          <div className="h-6 w-24 bg-gray-100 rounded-full animate-pulse" />
+          <div className="h-6 w-32 bg-gray-100 rounded-full animate-pulse" />
+        </div>
+        <div className="h-10 w-full bg-gray-100 rounded-md animate-pulse" />
+      </div>
+    </div>
+  );
+}
 
 export default function ArtistsPage() {
+  // filtros UI
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("Todos");
+  const [selectedPavilion, setSelectedPavilion] = useState<string>("all");
+  const [sort, setSort] = useState<"artworks" | "name">("artworks");
+  const [page, setPage] = useState(1);
 
-  // 🔎 Construcción de artistas únicos a partir de artworks (sin mutaciones peligrosas)
-  const allArtists: ArtistView[] = useMemo(() => {
-    const map = new Map<
-      string,
-      { data: Omit<ArtistView, "categories"> & { categoriesSet: Set<string> } }
-    >();
+  // Pabellones (para dropdown)
+  const {
+    data: pavilionsData = [],
+    isLoading: loadingPavs,
+    isError: errPavs,
+  } = usePavilions(DEFAULT_EVENT_ID);
 
-    (artworks as Artwork[]).forEach((art) => {
-      const key = art.artist;
-      const existing = map.get(key);
+  const pavilionId = selectedPavilion !== "all" ? selectedPavilion : undefined;
 
-      if (existing) {
-        existing.data.artworks.push(art);
-        existing.data.categoriesSet.add(art.category);
-      } else {
-        map.set(key, {
-          data: {
-            id: key.toLowerCase().replace(/\s+/g, "-"),
-            name: key,
-            artworks: [art],
-            categoriesSet: new Set([art.category]),
-            bio: `Artista colombiano especializado en ${art.category.toLowerCase()}. Participante destacado en la Semana del Arte 2025.`,
-            image: "/api/placeholder/300/300",
-          },
-        });
-      }
-    });
+  // Artistas con stats
+  const { data, isFetching, error } = useEventArtists(
+    DEFAULT_EVENT_ID,
+    {
+      q: searchTerm,
+      pavilionId,
+      sort,
+      page,
+      limit: PAGE_SIZE,
+    },
+    {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+    }
+  );
 
-    // Normalizamos categories (Set -> Array) y ordenamos por nombre
-    return Array.from(map.values())
-      .map(({ data }) => ({
-        id: data.id,
-        name: data.name,
-        artworks: data.artworks,
-        categories: Array.from(data.categoriesSet),
-        bio: data.bio,
-        image: data.image,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, []);
+  const rows = data?.rows ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 1;
 
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat("es-CO", {
-      style: "currency",
-      currency: "COP",
-      minimumFractionDigits: 0,
-    }).format(price);
+  // KPI: total de obras en la página actual (y podrías mostrar total global si lo agregas en backend)
+  const totalArtworksOnPage = useMemo(
+    () => rows.reduce((acc, r) => acc + (r.stats?.totalArtworks ?? 0), 0),
+    [rows]
+  );
 
-  const getArtistPriceRange = (list: Artwork[]) => {
-    const prices = list.map((a) => a.price);
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
-    return min === max
-      ? formatPrice(min)
-      : `${formatPrice(min)} - ${formatPrice(max)}`;
-  };
+  const headerSubtitle = useMemo(() => {
+    if (searchTerm && pavilionId)
+      return `Artistas en ${DEFAULT_EVENT_NAME} • Filtro: “${searchTerm}”, Pabellón seleccionado`;
+    if (searchTerm)
+      return `Artistas en ${DEFAULT_EVENT_NAME} • Resultados para “${searchTerm}”`;
+    if (pavilionId)
+      return `Artistas en ${DEFAULT_EVENT_NAME} • Filtrado por pabellón`;
+    return `Explora el talento de ${DEFAULT_EVENT_NAME}`;
+  }, [searchTerm, pavilionId]);
 
-  const filteredArtists = useMemo(() => {
-    const q = searchTerm.toLowerCase();
-    return allArtists.filter((artist) => {
-      const matchesSearch = artist.name.toLowerCase().includes(q);
-      const matchesCategory =
-        selectedCategory === "Todos" ||
-        artist.categories.includes(selectedCategory);
-      return matchesSearch && matchesCategory;
-    });
-  }, [allArtists, searchTerm, selectedCategory]);
+  const onPrev = () => setPage((p) => Math.max(1, p - 1));
+  const onNext = () => setPage((p) => Math.min(totalPages, p + 1));
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Artistas
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black text-white text-xs uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5" />
+            Curaduría {new Date().getFullYear()}
+          </div>
+          <h1 className="mt-3 text-4xl md:text-5xl font-black text-gray-900 leading-tight">
+            Artistas de la {DEFAULT_EVENT_NAME}
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Conoce a los talentosos artistas que participan en la Semana del
-            Arte 2025. Cada uno aporta su visión única al panorama artístico
-            colombiano.
-          </p>
+          <p className="mt-3 text-lg text-gray-600">{headerSubtitle}</p>
         </div>
 
         {/* Filtros */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <div className="grid md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+          <div className="grid lg:grid-cols-3 gap-4">
             {/* Búsqueda */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Buscar artistas..."
+                placeholder="Buscar por nombre o email…"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setPage(1);
+                  setSearchTerm(e.target.value);
+                }}
                 className="pl-10"
               />
             </div>
 
-            {/* Categoría */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category === "Todos" ? "Todas las categorías" : category}
-                </option>
-              ))}
-            </select>
+            {/* Pabellón */}
+            <div>
+              <select
+                value={selectedPavilion}
+                onChange={(e) => {
+                  setPage(1);
+                  setSelectedPavilion(e.target.value);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black bg-white"
+              >
+                <option value="all">Todos los pabellones</option>
+                {loadingPavs && (
+                  <option value="loading">Cargando pabellones…</option>
+                )}
+                {!loadingPavs &&
+                  !errPavs &&
+                  pavilionsData.map((p: any) => (
+                    <option key={p.id || p._id} value={p.id || p._id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Orden */}
+            <div>
+              <select
+                value={sort}
+                onChange={(e) => {
+                  setPage(1);
+                  setSort(e.target.value as "artworks" | "name");
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black bg-white"
+              >
+                <option value="artworks">Ordenar por # de obras</option>
+                <option value="name">Ordenar por nombre</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Estadísticas */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User className="h-8 w-8 text-blue-600" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              {allArtists.length}
-            </h3>
-            <p className="text-gray-600">Artistas Participantes</p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Palette className="h-8 w-8 text-purple-600" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              {artworks.length}
-            </h3>
-            <p className="text-gray-600">Obras Disponibles</p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <div className="text-2xl">🎨</div>
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              {categories.length - 1}
-            </h3>
-            <p className="text-gray-600">Disciplinas Artísticas</p>
-          </div>
+        {/* KPIs */}
+        <div className="grid md:grid-cols-3 gap-6 mb-10">
+          <StatCard
+            icon={<User className="h-8 w-8 text-gray-900" />}
+            value={total}
+            label="Artistas encontrados"
+          />
+          <StatCard
+            icon={<Palette className="h-8 w-8 text-gray-900" />}
+            value={totalArtworksOnPage}
+            label="Obras (página actual)"
+          />
+          <StatCard
+            icon={<Landmark className="h-8 w-8 text-gray-900" />}
+            value={pavilionsData?.length ?? 0}
+            label="Pabellones"
+          />
         </div>
 
-        {/* Resultados */}
-        <div className="mb-6">
-          <p className="text-gray-600">
-            Mostrando {filteredArtists.length} de {allArtists.length} artistas
+        {/* Info de conteo */}
+        <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
+          <p>
+            Mostrando <span className="font-semibold">{rows.length}</span> de{" "}
+            <span className="font-semibold">{total}</span> artistas
+          </p>
+          <p>
+            Página <span className="font-semibold">{page}</span> de{" "}
+            <span className="font-semibold">{totalPages}</span>
           </p>
         </div>
 
-        {/* Grid de Artistas */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredArtists.map((artist) => (
-            <div
-              key={artist.id}
-              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 group"
-            >
-              {/* Imagen del Artista */}
-              <div className="relative">
-                <Image
-                  src={artist.image}
-                  alt={artist.name}
-                  width={1200}
-                  height={800}
-                  className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-                  priority={false}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                <div className="absolute bottom-4 left-4 text-white">
-                  <h3 className="text-xl font-bold">{artist.name}</h3>
-                  <p className="text-sm opacity-90">
-                    {artist.artworks.length}{" "}
-                    {artist.artworks.length === 1 ? "obra" : "obras"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Información */}
-              <div className="p-6">
-                <div className="mb-4">
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    {artist.bio}
-                  </p>
-                </div>
-
-                {/* Categorías */}
-                <div className="mb-4">
-                  <div className="flex flex-wrap gap-2">
-                    {artist.categories.map((category) => (
-                      <span
-                        key={category}
-                        className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full"
-                      >
-                        {category}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Rango de Precios */}
-                <div className="mb-4">
-                  <p className="text-sm text-gray-600">Rango de precios:</p>
-                  <p className="font-semibold text-gray-900">
-                    {getArtistPriceRange(artist.artworks)}
-                  </p>
-                </div>
-
-                {/* Obras Destacadas */}
-                <div className="mb-4">
-                  <p className="text-sm text-gray-600 mb-2">
-                    Obras destacadas:
-                  </p>
-                  <div className="space-y-1">
-                    {artist.artworks.slice(0, 2).map((artwork) => (
-                      <Link
-                        key={artwork.id}
-                        href={`/obra/${artwork.id}`}
-                        className="block text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        • {artwork.title} ({artwork.year})
-                      </Link>
-                    ))}
-                    {artist.artworks.length > 2 && (
-                      <p className="text-xs text-gray-500">
-                        +{artist.artworks.length - 2} obras más
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Botón: Ver todas sus obras */}
-                <div className="space-y-2">
-                  <Link
-                    href={`/catalogo?artista=${encodeURIComponent(
-                      artist.name
-                    )}`}
-                    className="block"
-                  >
-                    <Button className="w-full" variant="outline">
-                      Ver todas sus obras
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredArtists.length === 0 && (
-          <div className="text-center py-12">
-            <User className="h-24 w-24 text-gray-400 mx-auto mb-6" />
+        {/* Grid */}
+        {isFetching ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <ArtistSkeleton key={i} />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-16">
+            <p className="text-lg text-red-600 font-medium">
+              Ocurrió un error cargando los artistas.
+            </p>
+            <p className="text-gray-500">Intenta de nuevo en unos segundos.</p>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="text-center py-16">
+            <User className="h-24 w-24 text-gray-300 mx-auto mb-6" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
               No se encontraron artistas
             </h3>
             <p className="text-gray-500">
-              Intenta ajustar los filtros de búsqueda.
+              Ajusta los filtros o cambia el término de búsqueda.
             </p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {rows.map((r) => {
+              const artist = r.artist;
+              const byPavilion = r.stats?.byPavilion || [];
+              const sampleCover = "/api/placeholder/1200/800"; // si luego quieres traer cover del artista, cámbialo aquí
+
+              return (
+                <div
+                  key={artist.id}
+                  className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100 group hover:shadow-xl transition-all"
+                >
+                  {/* Cover */}
+                  <div className="relative">
+                    <Image
+                      src={sampleCover}
+                      alt={artist.name}
+                      width={1200}
+                      height={800}
+                      className="w-full h-64 object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                      priority={false}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    <div className="absolute bottom-4 left-4 text-white">
+                      <h3 className="text-xl font-bold">{artist.name}</h3>
+                      <p className="text-sm opacity-90">
+                        {r.stats?.totalArtworks ?? 0}{" "}
+                        {(r.stats?.totalArtworks ?? 0) === 1 ? "obra" : "obras"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Body */}
+                  <div className="p-6 space-y-4">
+                    {/* Pabellones */}
+                    {byPavilion.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {byPavilion.slice(0, 3).map((p) => (
+                          <Link
+                            key={String(p.pavilionId)}
+                            href={`/pabellones/${p.slug}`}
+                            className="inline-flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-full transition"
+                          >
+                            <Landmark className="w-3.5 h-3.5" />
+                            <span className="font-medium">
+                              {p.name ?? "Pabellón"}
+                            </span>
+                            <span className="opacity-70">
+                              · {p.artworksCount}
+                            </span>
+                          </Link>
+                        ))}
+                        {byPavilion.length > 3 && (
+                          <span className="text-xs text-gray-500">
+                            +{byPavilion.length - 3} pab.
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">
+                        Sin pabellón asignado
+                      </p>
+                    )}
+
+                    {/* Acciones */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        href={`/catalogo?artistId=${encodeURIComponent(
+                          artist.id
+                        )}`}
+                        className="col-span-2"
+                      >
+                        <Button className="w-full" variant="outline">
+                          Ver todas sus obras
+                        </Button>
+                      </Link>
+                      {/* Si quieres mostrar email/rol */}
+                      {/* <Button disabled className="w-full" variant="ghost">@{artist.email?.split("@")[0]}</Button> */}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
+        {/* Paginación */}
+        <div className="flex items-center justify-between mt-10">
+          <Button onClick={onPrev} disabled={page <= 1} variant="outline">
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Anterior
+          </Button>
+          <span className="text-sm text-gray-600">
+            Página <strong>{page}</strong> de <strong>{totalPages}</strong>
+          </span>
+          <Button
+            onClick={onNext}
+            disabled={page >= totalPages}
+            variant="outline"
+          >
+            Siguiente
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        </div>
+
         {/* CTA */}
-        <div className="mt-16 bg-blue-900 rounded-lg p-8 text-center text-white">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">
+        <div className="mt-16 rounded-3xl p-10 text-center text-white bg-[radial-gradient(1200px_400px_at_50%_-10%,#0ea5e9,transparent),linear-gradient(135deg,#0f172a,#111827)] shadow-2xl">
+          <h2 className="text-2xl md:text-3xl font-extrabold mb-3 tracking-tight">
             ¿Eres artista y quieres participar?
           </h2>
-          <p className="text-xl mb-6 text-blue-200">
-            Únete a la próxima edición de la Semana del Arte
+          <p className="text-lg md:text-xl mb-6 text-blue-100">
+            Súmate a la próxima edición y muestra tu obra al mundo.
           </p>
           <div className="space-y-2">
-            <p className="text-lg">
+            <p className="text-base">
               <strong>Contacto:</strong> coordinaciongeneral@feriadelmillon.com
             </p>
-            <p className="text-lg">
+            <p className="text-base">
               <strong>Teléfono:</strong> +(57) 322 700 85 76
             </p>
           </div>

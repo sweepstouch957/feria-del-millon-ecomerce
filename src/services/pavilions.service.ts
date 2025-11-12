@@ -74,3 +74,38 @@ export const getPavillionBySlug = async (eventId: string, slug: string) => {
   );
   return normalizeId(data);
 }
+
+/* ========= Tipos: Pabellones por Usuario ========= */
+export interface PavilionByUserRow {
+  pavilionId: string;
+  name?: string;
+  slug?: string;
+  mainImage?: string;
+  priceRange?: { min?: number; max?: number };
+  artworksCount?: number; // presente si includeCounts=true
+}
+
+export interface ListPavilionsByUserResponse {
+  ok: boolean;
+  total: number;
+  rows: PavilionByUserRow[];
+}
+
+/* ========= Endpoint: GET /events/:eventId/pavilions/by-user/:userId ========= */
+export const listPavilionsByUser = async (
+  eventId: string,
+  userId: string,
+  includeCounts: boolean = true
+): Promise<ListPavilionsByUserResponse> => {
+  const qs = includeCounts === false ? "?includeCounts=false" : "";
+  const url = `/event/events/${encodeURIComponent(
+    eventId
+  )}/pavilions/by-user/${encodeURIComponent(userId)}${qs}`;
+
+  const { data } = await apiClient.get<ListPavilionsByUserResponse>(url, {
+    withCredentials: true,
+  });
+
+  // No hay _id en filas; retornamos tal cual
+  return data;
+};

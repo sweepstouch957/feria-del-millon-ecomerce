@@ -14,6 +14,7 @@ export interface Roles {
 
 export interface AuthUser {
   id: string;
+  _id?:string;
   email: string;
   roles?: Roles;
   firstName?: string;

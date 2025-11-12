@@ -29,6 +29,7 @@ export type ArtworksCursorFilters = {
   pavilion?: string | "null";
   technique?: string;
   limit?: number;
+  artist?: string;
 };
 
 export function useArtworksCursor(filters: ArtworksCursorFilters = {}) {
@@ -39,6 +40,7 @@ export function useArtworksCursor(filters: ArtworksCursorFilters = {}) {
       pavilion: filters.pavilion || undefined,
       technique: filters.technique || undefined,
       limit: filters.limit ?? 24,
+      artist: filters.artist || undefined,
     }),
     [
       filters.q,
@@ -46,6 +48,7 @@ export function useArtworksCursor(filters: ArtworksCursorFilters = {}) {
       filters.pavilion,
       filters.technique,
       filters.limit,
+      filters.artist,
     ]
   );
 

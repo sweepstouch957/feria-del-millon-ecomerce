@@ -113,3 +113,71 @@ export const createEvent = async (payload: CreateEventDto) => {
   });
   return normalizeId(data);
 };
+
+export type ArtistSort = "artworks" | "name";
+
+export interface PavilionArtworkStat {
+  pavilionId: string;
+  name?: string;
+  slug?: string;
+  artworksCount: number;
+}
+
+export interface ArtistSummary {
+  id: string;
+  name: string;
+  email?: string;
+  isArtista: boolean;
+}
+
+export interface ArtistWithStats {
+  artist: ArtistSummary;
+  stats: {
+    totalArtworks: number;
+    byPavilion: PavilionArtworkStat[];
+  };
+}
+
+export interface ListEventArtistsQuery {
+  q?: string;
+  pavilionId?: string;
+  artistId?: string;
+  sort?: ArtistSort;  // default: 'artworks'
+  page?: number;      // default: 1
+  limit?: number;     // default: 20 (máx 100)
+}
+
+export interface ListEventArtistsResponse {
+  ok: boolean;
+  page: number;
+  limit: number;
+  total: number;
+  rows: ArtistWithStats[];
+}
+
+/* ========= Helper local ========= */
+const normalizeArtistRow = (row: ArtistWithStats): ArtistWithStats => ({
+  ...row,
+  artist: {
+    ...row.artist,
+    id: (row.artist as any).id ?? (row.artist as any)._id, // por si viniera _id
+  },
+});
+
+/* ========= Endpoint: GET /event/events/:eventId/artists ========= */
+export const listEventArtists = async (
+  eventId: string,
+  params: ListEventArtistsQuery = {}
+): Promise<ListEventArtistsResponse> => {
+  const qs = buildQuery(params);
+  const url = `/event/events/${encodeURIComponent(eventId)}/artists${qs ? `?${qs}` : ""}`;
+
+  const { data } = await apiClient.get<ListEventArtistsResponse>(url, {
+    withCredentials: true,
+  });
+
+  return {
+    ...data,
+    rows: (data.rows ?? []).map(normalizeArtistRow),
+  };
+};

@@ -199,12 +199,6 @@ export default function CartPage() {
                   </span>
                 </div>
 
-                {shipping === 0 && (
-                  <p className="text-sm text-green-600">
-                    ¡Envío gratis por compra mayor a {formatPrice(5_000_000)}!
-                  </p>
-                )}
-
                 <div className="border-t pt-4">
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>

@@ -50,6 +50,7 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
     minPrice,
     setMinPrice,
     maxPrice,
+    artistId,
     setMaxPrice,
     inStock,
     setInStock,
@@ -95,6 +96,7 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
     pavilion: pavilion?._id,
     technique: techniqueCsv,
     limit: 12,
+    artist: artistId || undefined,
   } as ArtworksCursorFilters);
 
   // ===== Post-filtro local
@@ -136,6 +138,7 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
         title: art.title,
         price: Number(art.price ?? 0),
         image: art.image ?? art.images?.[0] ?? "/placeholder.png",
+        artist: art?.artist ?? "Desconocido",
       },
       qty
     );

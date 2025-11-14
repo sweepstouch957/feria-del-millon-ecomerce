@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import useCart from "@store/useCart";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
+import { formatMoney, mergeImages } from "@lib/utils";
 
 type ArtworkDoc = {
   _id: string;
@@ -57,27 +58,16 @@ type ArtworkDetailResponse = {
   relatedArtworks?: any[];
 };
 
-const toArrayImages = (primary?: string, extra?: string[]) => {
-  const arr = [
-    ...(primary ? [primary] : []),
-    ...((extra ?? []).filter(Boolean) as string[]),
-  ];
-  return arr.length ? arr : ["/placeholder.png"];
-};
 
 const toCartPayload = (doc: any) => ({
   id: String(doc._id),
   title: doc.title,
   price: Number(doc.price ?? 0),
   image: doc.image ?? doc.images?.[0] ?? "/placeholder.png",
+  artist: doc?.artist ?? "Desconocido",
 });
 
-const formatPrice = (price?: number, currency = "COP") =>
-  new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-  }).format(Number(price ?? 0));
+
 
 export default function Page() {
   const params = useParams<{ id: string }>();
@@ -90,7 +80,7 @@ export default function Page() {
   const related = data?.relatedArtworks ?? [];
 
   const images = useMemo(
-    () => toArrayImages(doc?.image, doc?.images),
+    () => mergeImages(doc?.image, doc?.images),
     [doc?.image, doc?.images]
   );
   const hasGallery = images.length > 1;
@@ -207,7 +197,7 @@ export default function Page() {
             {/* Pabellón + Técnica como chips */}
             {doc.pavilionInfo?.name && (
               <Link
-                href={`/pabellon/${
+                href={`/pabellones/${
                   doc.pavilionInfo.slug ?? doc.pavilionInfo._id
                 }`}
                 className="inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
@@ -405,7 +395,7 @@ export default function Page() {
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Precio</p>
                   <p className="text-3xl font-bold text-gray-900">
-                    {formatPrice(doc.price, currency)}
+                    {formatMoney(doc.price, currency)}
                   </p>
                 </div>
                 <div className="text-right">
@@ -522,7 +512,7 @@ export default function Page() {
                   <div className="p-4">
                     <p className="font-semibold">{ra.title}</p>
                     <p className="text-sm text-gray-600">
-                      {formatPrice(ra.price, ra.currency || currency)}
+                      {formatMoney(ra.price, ra.currency || currency)}
                     </p>
                     {/* <Link href={`/obra/${ra._id}`} className="inline-block mt-3">
                       <Button size="sm" variant="outline">Ver Detalle</Button>

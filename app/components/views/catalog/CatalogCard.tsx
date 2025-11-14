@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Button } from "@components/ui/button";
 import {
   ShoppingCart,
@@ -39,8 +40,10 @@ export default function CatalogCard({
   artwork,
   onAddToCart,
   variant = "grid",
-  showId = false, // ⬅️ por defecto no se muestra
+  showId = false,
 }: CatalogCardProps) {
+  const router = useRouter();
+
   const [isLiked, setIsLiked] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [current, setCurrent] = useState(0);
@@ -86,9 +89,34 @@ export default function CatalogCard({
   const detailHref = `/obra/${encodeURIComponent(artwork?._id || artwork?.id)}`;
   const available = Number(artwork?.stock || 0) > 0;
 
+  // ─────────────────────────────
+  // Navegación al hacer click en el card (mobile + desktop)
+  // ─────────────────────────────
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+
+    // Si se hizo click en un botón o link interno, NO navegamos
+    if (target.closest("button") || target.closest("a")) return;
+
+    router.push(detailHref);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      router.push(detailHref);
+    }
+  };
+
   if (variant === "list") {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 flex flex-col md:flex-row gap-6">
+      <div
+        className="bg-white rounded-lg shadow-md p-6 flex flex-col md:flex-row gap-6 cursor-pointer"
+        onClick={handleCardClick}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
+      >
         <div className="w-full md:w-48">
           <Image
             src={imgs[0]}
@@ -99,9 +127,9 @@ export default function CatalogCard({
           />
         </div>
         <div className="flex-1">
-          <h3 className="text-xl font-semibold mb-2 !uppercase">
+          <h3 className="text-xl font-semibold mb-2 !uppercase line-clamp-2">
             {artwork?.title}
-          </h3>{" "}
+          </h3>
           <p className="text-gray-600 mb-2">{artistName}</p>
           <p className="text-sm text-gray-500 mb-2">{techniqueName}</p>
           <p className="text-sm text-gray-500 mb-4">{pavilionName ?? ""}</p>
@@ -110,7 +138,10 @@ export default function CatalogCard({
               {formatMoney(Number(artwork?.price ?? 0), artwork?.currency)}
             </span>
             <Button
-              onClick={() => onAddToCart?.(artwork)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToCart?.(artwork);
+              }}
               disabled={!available}
             >
               <ShoppingCart className="mr-2 h-4 w-4" />
@@ -129,9 +160,13 @@ export default function CatalogCard({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-lg transition-all duration-500 hover:-translate-y-2 hover:border-gray-200 hover:shadow-2xl"
+      className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-lg transition-all duration-500 hover:-translate-y-2 hover:border-gray-200 hover:shadow-2xl cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={handleCardClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
     >
       {/* Media */}
       <div
@@ -144,9 +179,8 @@ export default function CatalogCard({
             key={`${src}-${idx}`}
             src={src}
             alt={artwork?.title}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
-              idx === current ? "opacity-100" : "opacity-0"
-            }`}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${idx === current ? "opacity-100" : "opacity-0"
+              }`}
             draggable={false}
           />
         ))}
@@ -158,6 +192,7 @@ export default function CatalogCard({
             href={`/catalogo?technique=${encodeURIComponent(
               techniqueSlug || ""
             )}`}
+            onClick={(e) => e.stopPropagation()}
             className={`inline-flex items-center gap-2 rounded-full bg-gradient-to-r ${techniqueTone(
               techniqueSlug
             )} px-3 py-1 text-xs font-medium text-white shadow-lg hover:brightness-110`}
@@ -170,12 +205,15 @@ export default function CatalogCard({
 
         <div className="absolute right-4 top-4 flex flex-col space-y-2">
           <button
-            onClick={() => setIsLiked((v) => !v)}
-            className={`flex h-10 w-10 translate-x-12 items-center justify-center rounded-full border border-white/20 backdrop-blur-sm transition-all duration-300 ${
-              isLiked
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsLiked((v) => !v);
+            }}
+            className={`flex h-10 w-10 translate-x-12 items-center justify-center rounded-full border border-white/20 backdrop-blur-sm transition-all duration-300 ${isLiked
                 ? "bg-rose-500 text-white"
                 : "bg-white/20 text-white hover:bg-white/30"
-            } ${isHovered ? "translate-x-0 opacity-100" : "opacity-0"}`}
+              } ${isHovered ? "translate-x-0 opacity-100" : "opacity-0"}`}
             style={{ transitionDelay: "0.1s" }}
             aria-label={isLiked ? "Quitar de favoritos" : "Agregar a favoritos"}
           >
@@ -186,9 +224,9 @@ export default function CatalogCard({
         <div className="pointer-events-none absolute inset-0 hidden items-center justify-center md:flex">
           <Link
             href={detailHref}
-            className={`pointer-events-auto scale-75 opacity-0 transition-all duration-300 ${
-              isHovered ? "scale-100 opacity-100" : ""
-            }`}
+            onClick={(e) => e.stopPropagation()}
+            className={`pointer-events-auto scale-75 opacity-0 transition-all duration-300 ${isHovered ? "scale-100 opacity-100" : ""
+              }`}
           >
             <Button
               variant="secondary"
@@ -206,6 +244,7 @@ export default function CatalogCard({
             <button
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 prev();
               }}
               className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/30 bg-black/40 p-2 text-white shadow-md transition hover:bg-black/60 md:opacity-0 md:group-hover:opacity-100"
@@ -216,6 +255,7 @@ export default function CatalogCard({
             <button
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 next();
               }}
               className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/30 bg-black/40 p-2 text-white shadow-md transition hover:bg-black/60 md:opacity-0 md:group-hover:opacity-100"
@@ -230,11 +270,11 @@ export default function CatalogCard({
                   key={i}
                   onClick={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     goTo(i);
                   }}
-                  className={`h-2.5 w-2.5 rounded-full transition ${
-                    i === current ? "bg-white" : "bg-white/50 hover:bg-white/80"
-                  }`}
+                  className={`h-2.5 w-2.5 rounded-full transition ${i === current ? "bg-white" : "bg-white/50 hover:bg-white/80"
+                    }`}
                   aria-label={`Ir a imagen ${i + 1}`}
                 />
               ))}
@@ -257,6 +297,7 @@ export default function CatalogCard({
           {pavilionSlug && (
             <Link
               href={`/pabellones/${encodeURIComponent(pavilionSlug)}`}
+              onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1.5 shrink-0 max-w-full sm:max-w-[70%] md:max-w-[60%]
                          rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700
                          shadow-sm transition hover:bg-gray-50"
@@ -293,27 +334,28 @@ export default function CatalogCard({
             </p>
           </div>
           <Button
-            onClick={() => onAddToCart?.(artwork)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddToCart?.(artwork);
+            }}
             size="sm"
             disabled={!available}
-            className={`text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-              available
+            className={`text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl ${available
                 ? "bg-gradient-to-r from-neutral-900 to-black"
                 : "bg-neutral-300 cursor-not-allowed"
-            }`}
+              }`}
           >
             <ShoppingCart className="mr-2 h-4 w-4" />
             {available ? "Agregar" : "Agotado"}
           </Button>
         </div>
 
-        {/* Pie: disponibilidad (ID opcional removido por defecto) */}
+        {/* Pie: disponibilidad (ID opcional) */}
         <div className="mt-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div
-              className={`h-2 w-2 rounded-full ${
-                available ? "bg-emerald-500" : "bg-rose-500"
-              }`}
+              className={`h-2 w-2 rounded-full ${available ? "bg-emerald-500" : "bg-rose-500"
+                }`}
             />
             <span className="text-xs text-gray-500">
               {available ? "Disponible" : "No disponible"}

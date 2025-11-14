@@ -255,7 +255,7 @@ export default function ArtistsPage() {
             {rows.map((r) => {
               const artist = r.artist;
               const byPavilion = r.stats?.byPavilion || [];
-              const sampleCover = "/api/placeholder/1200/800"; // si luego quieres traer cover del artista, cámbialo aquí
+              const sampleCover  = artist?.image || "/api/placeholder/1200/800"; // si luego quieres traer cover del artista, cámbialo aquí
 
               return (
                 <div

@@ -1,8 +1,15 @@
 "use client";
 
-import { useMemo, useState, FormEvent, ChangeEvent } from "react";
+import {
+  useMemo,
+  useState,
+  FormEvent,
+  ChangeEvent,
+} from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useMutation } from "@tanstack/react-query";
+
 import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
 import { Stepper } from "@components/ui/stepper";
@@ -13,8 +20,21 @@ import {
   CheckCircle,
   ShoppingBag,
 } from "lucide-react";
+
 import useCart from "@store/useCart";
 import PaymentForm from "@components/PaymentForm";
+import { useCities } from "@hooks/queries/useCities";
+
+import {
+  createOrder,
+  patchOrder,
+  confirmCashPayment,
+  confirmCardOfflinePayment,
+  initiateWhatsappPayment,
+  startItauMockCheckout,
+  type OrderDoc,
+  type PaymentMethod,
+} from "@services/order.service";
 
 type ImgLike = string | string[] | undefined | null;
 
@@ -27,6 +47,22 @@ type CartViewItem = {
   artist?: string;
   year?: number;
   medium?: string;
+
+  // campos “reales” para el backend (puedes ya tenerlos en tu store)
+  artworkId?: string;
+  copyId?: string | null;
+  artistId?: string;
+  eventId?: string;
+};
+
+type PaymentFormPayload = {
+  method: PaymentMethod;
+  phone?: string;
+  notes?: string;
+  cashierId?: string;
+  cardLast4?: string;
+  cardHolder?: string;
+  posTerminalId?: string;
 };
 
 const getFirstImage = (img: ImgLike): string => {
@@ -47,6 +83,9 @@ export default function CheckoutPage() {
   const items = useCart((s) => s.items) as CartViewItem[];
   const clear = useCart((s) => s.clear);
 
+  // Ciudades
+  const { data: cities = [], isLoading: loadingCities } = useCities();
+
   // Paso actual
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const steps = ["Dirección", "Pago", "Confirmación"];
@@ -58,14 +97,16 @@ export default function CheckoutPage() {
     email: "",
     phone: "",
     address: "",
-    city: "",
+    cityId: "",
     state: "",
     zipCode: "",
     country: "Colombia",
     notes: "",
   });
+
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
+  const [currentOrder, setCurrentOrder] = useState<OrderDoc | null>(null);
 
   // Totales
   const subtotal = useMemo(
@@ -76,31 +117,205 @@ export default function CheckoutPage() {
   const shipping = subtotal > 5_000_000 ? 0 : 150_000;
   const total = subtotal + shipping;
 
+  // ────────────────────────────────────────────────────────────────────────────
+  // React Query mutations
+  // ────────────────────────────────────────────────────────────────────────────
+  const createOrderMutation = useMutation({
+    mutationFn: createOrder,
+  });
+
+  const patchOrderMutation = useMutation({
+    mutationFn: ({
+      orderId,
+      patch,
+    }: { orderId: string; patch: Partial<OrderDoc> }) =>
+      patchOrder(orderId, patch),
+  });
+
+  const cashPaymentMutation = useMutation({
+    mutationFn: confirmCashPayment,
+  });
+
+  const cardPaymentMutation = useMutation({
+    mutationFn: confirmCardOfflinePayment,
+  });
+
+  const whatsappInitMutation = useMutation({
+    mutationFn: initiateWhatsappPayment,
+  });
+
+  const itauCheckoutMutation = useMutation({
+    mutationFn: startItauMockCheckout,
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
   // Handlers
+  // ────────────────────────────────────────────────────────────────────────────
   const handleInputChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
+
+    // Manejo especial ciudad por ID
+    if (name === "cityId") {
+      setFormData((s) => ({
+        ...s,
+        cityId: value,
+      }));
+      return;
+    }
+
     setFormData((s) => ({ ...s, [name]: value }));
   };
 
-  const handleSubmitInfo = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmitInfo = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Aquí podrías validar con react-hook-form + zod antes de avanzar
-    setStep(2);
+
+    if (!items.length) return;
+
+    // Determinar eventId (puedes ajustarlo según tu dominio)
+    const EVENT_ID_ENV =
+      process.env.NEXT_PUBLIC_EVENT_ID || undefined;
+    const eventId =
+      items[0]?.eventId || EVENT_ID_ENV;
+
+    if (!eventId) {
+      console.error("No se pudo determinar el eventId para la orden");
+      return;
+    }
+
+    if (!formData.cityId) {
+      alert("Por favor selecciona la ciudad de entrega.");
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+
+      // Mapear items del carrito a OrderItemInput
+      const orderItems = items.map((item) => ({
+        artworkId: item.artworkId ?? item.id,
+        copyId: item.copyId ?? null,
+        artistId: item.artist ?? "", // idealmente ya viene del carrito
+        qty: item.quantity,
+        unitPrice: item.price,
+        currency: "COP",
+      }));
+
+      const newOrder = await createOrderMutation.mutateAsync({
+        event: eventId,
+        items: orderItems,
+        // userId: si tienes auth, agrégalo aquí
+      });
+
+      setCurrentOrder(newOrder);
+
+      // Guardamos datos de envío dentro de invoice.meta (shipping)
+      const selectedCity = cities.find(
+        (c) => c.id === formData.cityId
+      );
+
+      await patchOrderMutation.mutateAsync({
+        orderId: newOrder.id,
+        patch: {
+          invoice: {
+            channel: "online",
+            meta: {
+              shipping: {
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                email: formData.email,
+                phone: formData.phone,
+                address: formData.address,
+                cityId: formData.cityId,
+                cityName: selectedCity?.name,
+                state: formData.state,
+                zipCode: formData.zipCode,
+                country: formData.country,
+                notes: formData.notes,
+              },
+            },
+          },
+        },
+      });
+
+      // Pasamos a pago
+      setStep(2);
+    } catch (error) {
+      console.error("Error creando la orden:", error);
+      alert("Ocurrió un error creando tu orden. Intenta de nuevo.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handlePayment = async () => {
+  const handlePayment = async (payload: PaymentFormPayload) => {
+    if (!currentOrder) {
+      console.error("No hay orden en memoria");
+      return;
+    }
+
     setIsProcessing(true);
+
     try {
-      // Simula pago
-      await new Promise((r) => setTimeout(r, 1800));
-      const orderNum = "SDA-" + Date.now().toString().slice(-6);
-      setOrderNumber(orderNum);
-      clear(); // limpia carrito desde Zustand
+      const method = payload.method;
+
+      if (method === "cash") {
+        await cashPaymentMutation.mutateAsync({
+          orderId: currentOrder.id,
+          cashierId: payload.cashierId ?? "online",
+          amount: currentOrder.total,
+        });
+      } else if (method === "card_offline") {
+        await cardPaymentMutation.mutateAsync({
+          orderId: currentOrder.id,
+          cashierId: payload.cashierId ?? "online",
+          amount: currentOrder.total,
+          cardLast4: payload.cardLast4,
+          cardHolder: payload.cardHolder,
+          posTerminalId: payload.posTerminalId,
+        });
+      } else if (method === "whatsapp") {
+        if (!payload.phone) {
+          alert("Debes indicar un número de WhatsApp para este método.");
+          return;
+        }
+
+        await whatsappInitMutation.mutateAsync({
+          orderId: currentOrder.id,
+          phone: payload.phone,
+          notes: payload.notes,
+        });
+
+        // Para WhatsApp dejamos la orden en "payment_processing" y mostramos confirmación
+      } else if (method === "itau_mock") {
+        const resp = await itauCheckoutMutation.mutateAsync({
+          orderId: currentOrder.id,
+          buyer: {
+            email: formData.email,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+          },
+        });
+
+        // Redirigimos a la página mock de Itaú (front que simula el banco)
+        if (resp.redirectUrl) {
+          window.location.href = resp.redirectUrl;
+          return; // no seguimos al step 3 aquí, depende del flujo de webhook
+        }
+      }
+
+      // Si llegamos aquí, consideramos flujo "OK" para mostrar confirmación
+      const formattedOrderNumber =
+        "FDM-" + (currentOrder.id || "").slice(-6);
+      setOrderNumber(formattedOrderNumber);
+      clear();
       setStep(3);
-    } catch (err) {
-      console.error("Error en el pago revise:", err);
+    } catch (error) {
+      console.error("Error procesando el pago:", error);
+      alert("Ocurrió un error procesando el pago. Intenta nuevamente.");
     } finally {
       setIsProcessing(false);
     }
@@ -142,7 +357,7 @@ export default function CheckoutPage() {
           </h1>
         </div>
 
-        {/* Stepper Radix integrado */}
+        {/* Stepper */}
         <Stepper
           steps={steps}
           current={step}
@@ -153,8 +368,7 @@ export default function CheckoutPage() {
           ]}
           lockForward
           onStepChange={(next) => {
-            // Permitimos clics solo para volver (retroceder)
-            if (next < step) setStep( next as 1 | 2 | 3);
+            if (next < step) setStep(next as 1 | 2 | 3);
           }}
           className="mb-8"
         />
@@ -253,16 +467,27 @@ export default function CheckoutPage() {
                 <div className="grid md:grid-cols-3 gap-4 mb-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Ciudad *
+                      Ciudad de entrega *
                     </label>
-                    <Input
-                      name="city"
-                      value={formData.city}
+                    <select
+                      name="cityId"
+                      value={formData.cityId}
                       onChange={handleInputChange}
                       required
-                      placeholder="Bogotá"
-                      className="focus-visible:ring-2 focus-visible:ring-blue-600/30 focus-visible:border-blue-600"
-                    />
+                      disabled={loadingCities}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:border-blue-600 bg-white"
+                    >
+                      <option value="">
+                        {loadingCities
+                          ? "Cargando ciudades..."
+                          : "Selecciona una ciudad"}
+                      </option>
+                      {cities.map((city) => (
+                        <option key={city.id} value={city.id}>
+                          {city.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -273,7 +498,7 @@ export default function CheckoutPage() {
                       value={formData.state}
                       onChange={handleInputChange}
                       required
-                      placeholder="Cundinamarca"
+                      placeholder="Departamento"
                       className="focus-visible:ring-2 focus-visible:ring-blue-600/30 focus-visible:border-blue-600"
                     />
                   </div>
@@ -309,13 +534,14 @@ export default function CheckoutPage() {
                   type="submit"
                   className="w-full transition-all hover:brightness-[0.98] active:scale-[0.99]"
                   size="lg"
+                  disabled={isProcessing}
                 >
-                  Continuar al Pago
+                  {isProcessing ? "Procesando..." : "Continuar al Pago"}
                 </Button>
               </form>
             )}
 
-            {step === 2 && (
+            {step === 2 && currentOrder && (
               <div className="bg-white/80 backdrop-blur rounded-2xl shadow-md border border-gray-100 p-6 sm:p-8">
                 <PaymentForm
                   total={total}
@@ -333,7 +559,7 @@ export default function CheckoutPage() {
                   ¡Pedido Confirmado!
                 </h2>
                 <p className="text-lg text-gray-600 mb-6">
-                  Tu pedido #{orderNumber} ha sido procesado exitosamente
+                  Tu pedido #{orderNumber} ha sido registrado correctamente.
                 </p>
 
                 <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left max-w-lg mx-auto">

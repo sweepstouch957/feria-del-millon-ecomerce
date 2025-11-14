@@ -31,6 +31,8 @@ export default function CatalogPageClient() {
     setQ,
     pavilion,
     setPavilion,
+    artistId, // 👈 nuevo
+
     techniqueIds,
     toggleTechnique,
     clearTechniques,
@@ -53,6 +55,7 @@ export default function CatalogPageClient() {
   } = useCatalogState({
     initialQ: sp.get("q") ?? "",
     initialPavilion: sp.get("pavilion") ?? "",
+    initialArtistId: sp.get("artistId") ?? "", // 👈 lo leemos de la URL
     defaultMaxPrice: 10_000_000,
   });
 
@@ -84,6 +87,7 @@ export default function CatalogPageClient() {
     pavilion: pavilion || undefined,
     technique: techniqueCsv,
     limit: 12,
+    artist: artistId || undefined, // 👈 filtro por artista
   } as ArtworksCursorFilters);
 
   const { techniques, pavilions: pavCounts } = useFacetCounts(rawRows);
@@ -122,8 +126,8 @@ export default function CatalogPageClient() {
     (pavilionsData.length
       ? pavilionsData.map((p) => ({ id: p._id, name: p.name }))
       : pavCounts
-          .sort((a, b) => b.count - a.count)
-          .map((p) => ({ id: p.id, name: p.name }))) || [];
+        .sort((a, b) => b.count - a.count)
+        .map((p) => ({ id: p.id, name: p.name }))) || [];
 
   const addToCart = useCart((s) => s.add);
   const totalItems = useCart((s) => s.totalItems)();
@@ -133,6 +137,7 @@ export default function CatalogPageClient() {
       {
         id: String(art._id),
         title: art.title,
+        artist: art?.artist ?? "Desconocido",
         price: Number(art.price ?? 0),
         image: art.image ?? art.images?.[0] ?? "/placeholder.png",
       },

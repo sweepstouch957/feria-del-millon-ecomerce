@@ -14,7 +14,7 @@ export interface Roles {
 
 export interface AuthUser {
   id: string;
-  _id?:string;
+  _id?: string;
   email: string;
   roles?: Roles;
   firstName?: string;
@@ -46,8 +46,43 @@ export interface LoginResponse {
   };
 }
 
+// ------ Password flows ------
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  ok: boolean;
+  message: string;
+}
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  ok: boolean;
+  message: string;
+  // dev-only (según backend)
+  token?: string;
+  resetUrl?: string;
+  expiresAt?: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  ok: boolean;
+  message: string;
+}
 
 // ------- Helpers -------
+
 const setAuthToken = (token: string | null) => {
   if (token) {
     Cookies.set(AUTH_TOKEN_KEY, token);
@@ -71,6 +106,7 @@ export const setAuthHeaderFromCookie = () => {
 export const clearAuth = () => setAuthToken(null);
 
 // ------- Auth básico: register + login -------
+
 export const register = async (payload: RegisterPayload) => {
   const { data } = await apiClient.post<RegisterResponse>(
     "/auth/register",
@@ -91,13 +127,15 @@ export const login = async (email: string, password: string) => {
   return data;
 };
 
-// ------- Nuevos: /me y /logout -------
+// ------- /me y /logout -------
+
 export const me = async (): Promise<AuthUser> => {
   const { data } = await apiClient.get<{ user: AuthUser }>("/auth/me", {
     withCredentials: true,
   });
-  // Normaliza por si el backend usa _id
+
   const u = data.user;
+  // Normaliza por si el backend usa _id
   return {
     id: (u as any).id || (u as any)._id || u.id,
     email: u.email,
@@ -115,4 +153,42 @@ export const logout = async (): Promise<void> => {
       // Si falla, igual limpiaremos cliente
     });
   clearAuth();
+};
+
+// ------- Password: change, forgot, reset -------
+
+// Cambiar contraseña estando logueado
+export const changePassword = async (
+  payload: ChangePasswordPayload
+): Promise<ChangePasswordResponse> => {
+  const { data } = await apiClient.post<ChangePasswordResponse>(
+    "/auth/password/change",
+    payload,
+    { withCredentials: true }
+  );
+  return data;
+};
+
+// Solicitar reset (forgot password)
+export const requestPasswordReset = async (
+  email: string
+): Promise<ForgotPasswordResponse> => {
+  const { data } = await apiClient.post<ForgotPasswordResponse>(
+    "/auth/password/forgot",
+    { email },
+    { withCredentials: true }
+  );
+  return data;
+};
+
+// Consumir el token y resetear la password
+export const resetPassword = async (
+  payload: ResetPasswordPayload
+): Promise<ResetPasswordResponse> => {
+  const { data } = await apiClient.post<ResetPasswordResponse>(
+    "/auth/password/reset",
+    payload,
+    { withCredentials: true }
+  );
+  return data;
 };

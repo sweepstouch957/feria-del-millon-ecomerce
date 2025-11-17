@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@components/ui/button";
 import {
@@ -52,25 +52,17 @@ type Copy = {
   createdAt: string;
 };
 
-type ArtworkDetailResponse = {
-  doc: ArtworkDoc;
-  copies?: Copy[];
-  relatedArtworks?: any[];
-};
-
-
-const toCartPayload = (doc: any) => ({
+const toCartPayload = (doc: any, artistName?: string) => ({
   id: String(doc._id),
   title: doc.title,
   price: Number(doc.price ?? 0),
   image: doc.image ?? doc.images?.[0] ?? "/placeholder.png",
-  artist: doc?.artist ?? "Desconocido",
+  artist: artistName || "Desconocido",
 });
-
-
 
 export default function Page() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const id = params?.id;
   const { data, isLoading, isError, error } = useArtworkDetail(id);
   const { add } = useCart();
@@ -159,10 +151,19 @@ export default function Page() {
     .filter(Boolean)
     .join(" ");
 
+  const handleAddToCart = () => {
+    add(toCartPayload(doc, artistFullName), 1);
+  };
+
+  const handleBuyNow = () => {
+    add(toCartPayload(doc, artistFullName), 1);
+    router.push("/checkout");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Breadcrumb / Back */}
+        {/* Breadcrumb */}
         <div className="mb-8 flex items-center justify-between">
           <Link
             href="/catalogo"
@@ -172,7 +173,6 @@ export default function Page() {
             Volver al Catálogo
           </Link>
 
-          {/* “Relacionada a un artista” si aplica */}
           {artistFullName && (
             <div className="hidden md:flex items-center gap-2 text-sm">
               <Users className="h-4 w-4 text-gray-500" />
@@ -184,7 +184,7 @@ export default function Page() {
           )}
         </div>
 
-        {/* Header Title */}
+        {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-3 flex-wrap">
             {doc.status === "published" && (
@@ -194,29 +194,28 @@ export default function Page() {
               </span>
             )}
 
-            {/* Pabellón + Técnica como chips */}
             {doc.pavilionInfo?.name && (
               <Link
-                href={`/pabellones/${
-                  doc.pavilionInfo.slug ?? doc.pavilionInfo._id
-                }`}
+                href={`/pabellones/${doc.pavilionInfo.slug ?? doc.pavilionInfo._id
+                  }`}
                 className="inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
               >
                 <Building2 className="h-4 w-4" />
                 {doc.pavilionInfo.name}
               </Link>
             )}
+
             {doc.techniqueInfo?.name && (
               <span className="inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-rose-50 text-rose-700">
                 {doc.techniqueInfo.name}
               </span>
             )}
+
             <span
-              className={`inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full ${
-                isAvailable
+              className={`inline-flex items-center gap-1 text-sm px-3 py-1 rounded-full ${isAvailable
                   ? "bg-emerald-100 text-emerald-800"
                   : "bg-gray-200 text-gray-600"
-              }`}
+                }`}
             >
               {isAvailable ? "Disponible" : "No disponible"}
             </span>
@@ -230,7 +229,7 @@ export default function Page() {
           )}
         </div>
 
-        {/* Main two-column content */}
+        {/* Main layout */}
         <div className="grid lg:grid-cols-2 gap-12 mb-16">
           {/* Gallery */}
           <div className="space-y-4">
@@ -238,7 +237,6 @@ export default function Page() {
             <div className="hidden md:grid md:grid-cols-12 gap-4">
               {hasGallery ? (
                 <>
-                  {/* Thumbs vertical */}
                   <div className="md:col-span-2">
                     <div className="flex md:flex-col gap-3 overflow-auto md:max-h-[620px]">
                       {images.map((src, idx) => {
@@ -253,7 +251,6 @@ export default function Page() {
                                 ? "border-blue-600 ring-2 ring-blue-200"
                                 : "border-gray-200 hover:border-gray-300",
                             ].join(" ")}
-                            aria-label={`Ver imagen ${idx + 1}`}
                           >
                             <img
                               src={src}
@@ -266,7 +263,6 @@ export default function Page() {
                     </div>
                   </div>
 
-                  {/* Main preview */}
                   <div className="md:col-span-10 relative">
                     <div className="bg-white rounded-lg shadow-lg overflow-hidden relative">
                       <img
@@ -277,21 +273,18 @@ export default function Page() {
                       <button
                         onClick={prev}
                         className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/90 border hover:bg-white shadow"
-                        aria-label="Anterior"
                       >
                         <ChevronLeft className="h-5 w-5" />
                       </button>
                       <button
                         onClick={next}
                         className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/90 border hover:bg-white shadow"
-                        aria-label="Siguiente"
                       >
                         <ChevronRight className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => setLightboxOpen(true)}
                         className="absolute bottom-3 right-3 px-3 py-1.5 text-sm rounded-md bg-white/90 border hover:bg-white shadow inline-flex items-center"
-                        aria-label="Ampliar"
                       >
                         <Maximize2 className="h-4 w-4 mr-1" />
                         Ampliar
@@ -318,26 +311,24 @@ export default function Page() {
                   alt={doc.title}
                   className="w-full h-80 object-contain bg-white"
                 />
+
                 {hasGallery && (
                   <>
                     <button
                       onClick={prev}
                       className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/90 border hover:bg-white shadow"
-                      aria-label="Anterior"
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
                     <button
                       onClick={next}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/90 border hover:bg-white shadow"
-                      aria-label="Siguiente"
                     >
                       <ChevronRight className="h-5 w-5" />
                     </button>
                     <button
                       onClick={() => setLightboxOpen(true)}
                       className="absolute bottom-3 right-3 px-3 py-1.5 text-sm rounded-md bg-white/90 border hover:bg-white shadow inline-flex items-center"
-                      aria-label="Ampliar"
                     >
                       <Maximize2 className="h-4 w-4 mr-1" />
                       Ampliar
@@ -360,7 +351,6 @@ export default function Page() {
                             ? "border-blue-600 ring-2 ring-blue-200"
                             : "border-gray-200 hover:border-gray-300",
                         ].join(" ")}
-                        aria-label={`Ver imagen ${idx + 1}`}
                       >
                         <img
                           src={src}
@@ -374,7 +364,7 @@ export default function Page() {
               )}
             </div>
 
-            {/* Secondary actions */}
+            {/* Actions */}
             <div className="flex flex-wrap gap-3">
               <Button variant="outline" size="sm">
                 <Share2 className="h-4 w-4 mr-2" />
@@ -387,7 +377,7 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Right column: info + purchase + contexto */}
+          {/* Right Column */}
           <div className="space-y-6">
             {/* Price & CTA */}
             <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
@@ -401,9 +391,8 @@ export default function Page() {
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Estado</p>
                   <p
-                    className={`font-semibold ${
-                      isAvailable ? "text-emerald-600" : "text-gray-500"
-                    }`}
+                    className={`font-semibold ${isAvailable ? "text-emerald-600" : "text-gray-500"
+                      }`}
                   >
                     {isAvailable ? "Disponible" : "No disponible"}
                   </p>
@@ -415,25 +404,31 @@ export default function Page() {
                 </div>
               </div>
 
-              <div className="space-y-4">
+              {/* ACTION BUTTONS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Button
                   disabled={!isAvailable}
-                  onClick={() => add(toCartPayload(doc), 1)}
+                  onClick={handleAddToCart}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-lg py-3 text-white flex items-center justify-center"
                   size="lg"
                 >
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   {isAvailable ? "Agregar al Carrito" : "Agotado"}
                 </Button>
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">
-                    Envío gratuito en Colombia • Garantía de autenticidad
-                  </p>
-                </div>
+
+                <Button
+                  disabled={!isAvailable}
+                  onClick={handleBuyNow}
+                  variant="outline"
+                  className="w-full text-lg py-3 flex items-center justify-center border-blue-600 text-blue-700 hover:bg-blue-50"
+                  size="lg"
+                >
+                  Comprar Ahora
+                </Button>
               </div>
             </div>
 
-            {/* Contexto de exhibición (Pabellón + Técnica + Artista) */}
+            {/* Context */}
             <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
               <h3 className="text-lg font-semibold mb-4">
                 Contexto de exhibición
@@ -443,15 +438,15 @@ export default function Page() {
                   <div className="flex flex-col">
                     <span className="text-gray-600">Pabellón</span>
                     <Link
-                      href={`/pabellon/${
-                        doc.pavilionInfo.slug ?? doc.pavilionInfo._id
-                      }`}
+                      href={`/pabellon/${doc.pavilionInfo.slug ?? doc.pavilionInfo._id
+                        }`}
                       className="font-medium hover:underline"
                     >
                       {doc.pavilionInfo.name}
                     </Link>
                   </div>
                 )}
+
                 {doc.techniqueInfo?.name && (
                   <div className="flex flex-col">
                     <span className="text-gray-600">Técnica</span>
@@ -460,6 +455,7 @@ export default function Page() {
                     </span>
                   </div>
                 )}
+
                 {artistFullName && (
                   <div className="flex flex-col sm:col-span-2">
                     <span className="text-gray-600">Artista</span>
@@ -471,8 +467,6 @@ export default function Page() {
                       </div>
                       <div className="flex flex-col">
                         <span className="font-medium">{artistFullName}</span>
-                        {/* Si tienes ruta de artista, descomenta */}
-                        {/* <Link href={`/artista/${doc.artistInfo?._id}`} className="text-sm text-blue-600 hover:underline">Ver más del artista</Link> */}
                       </div>
                     </div>
                   </div>
@@ -480,7 +474,7 @@ export default function Page() {
               </div>
             </div>
 
-            {/* Descripción */}
+            {/* Description */}
             {doc.description && (
               <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
                 <h3 className="text-lg font-semibold mb-3">Descripción</h3>
@@ -492,7 +486,7 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Related (si llega con data) */}
+        {/* Related */}
         {related.length > 0 && (
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-8">
@@ -514,9 +508,6 @@ export default function Page() {
                     <p className="text-sm text-gray-600">
                       {formatMoney(ra.price, ra.currency || currency)}
                     </p>
-                    {/* <Link href={`/obra/${ra._id}`} className="inline-block mt-3">
-                      <Button size="sm" variant="outline">Ver Detalle</Button>
-                    </Link> */}
                   </div>
                 </div>
               ))}
@@ -531,7 +522,6 @@ export default function Page() {
           <button
             onClick={() => setLightboxOpen(false)}
             className="absolute top-4 right-4 p-2 rounded-full bg-white/90 hover:bg-white shadow"
-            aria-label="Cerrar"
           >
             <X className="h-5 w-5" />
           </button>
@@ -539,7 +529,6 @@ export default function Page() {
           <button
             onClick={prev}
             className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white shadow"
-            aria-label="Anterior"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
@@ -553,7 +542,6 @@ export default function Page() {
           <button
             onClick={next}
             className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/90 hover:bg-white shadow"
-            aria-label="Siguiente"
           >
             <ChevronRight className="h-6 w-6" />
           </button>
@@ -570,7 +558,6 @@ export default function Page() {
                       ? "bg-white"
                       : "bg-white/50 hover:bg-white/80",
                   ].join(" ")}
-                  aria-label={`Ir a imagen ${idx + 1}`}
                 />
               ))}
             </div>

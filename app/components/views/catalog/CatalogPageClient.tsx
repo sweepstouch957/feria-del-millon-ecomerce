@@ -1,27 +1,29 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@components/ui/button";
 import CatalogCard from "@components/views/catalog/CatalogCard";
 import FiltersSidebar from "@components/views/catalog/FiltersSidebar";
 import ResultsToolbar from "@components/views/catalog/ResultsToolbar";
 import EmptyState from "@components/views/catalog/EmptyState";
-
 import useCart from "@store/useCart";
 import {
   useArtworksCursor,
   type ArtworksCursorFilters,
   type ArtworkRow,
 } from "@hooks/queries/useArtworksCursor";
-import { usePavilions } from "@hooks/queries/usePavilions";
 import { useTechniques } from "@hooks/queries/useTechniques";
-
 import { useCatalogState } from "@hooks/ui/catalog/useCatalogState";
 import { useFacetCounts } from "@hooks/ui/catalog/useFacetCounts";
-
-const DEFAULT_EVENT_NAME = "Feria del Millón";
-const DEFAULT_EVENT_ID = "6909aef219f26eec22af4220";
+import { useEventArtists } from "@hooks/queries/useEventArtists";
+import {
+  DEFAULT_EVENT_ID,
+  DEFAULT_EVENT_NAME,
+  FIXED_PAVILION_ID,
+  FIXED_PAVILION_NAME,
+} from "@core/constants";
+import { AutocompleteOption } from "@components/ui/autocomplete";
 
 export default function CatalogPageClient() {
   const sp = useSearchParams();
@@ -31,8 +33,8 @@ export default function CatalogPageClient() {
     setQ,
     pavilion,
     setPavilion,
-    artistId, // 👈 nuevo
-
+    artistId,
+    setArtistId,
     techniqueIds,
     toggleTechnique,
     clearTechniques,
@@ -54,24 +56,53 @@ export default function CatalogPageClient() {
     clearAllAndRefetch,
   } = useCatalogState({
     initialQ: sp.get("q") ?? "",
-    initialPavilion: sp.get("pavilion") ?? "",
-    initialArtistId: sp.get("artistId") ?? "", // 👈 lo leemos de la URL
+    initialPavilion: sp.get("pavilion") ?? FIXED_PAVILION_ID,
+    initialArtistId: sp.get("artistId") ?? "",
     defaultMaxPrice: 10_000_000,
   });
 
-  const {
-    data: pavilionsData = [],
-    isLoading: loadingPavs,
-    isError: errPavs,
-  } = usePavilions(DEFAULT_EVENT_ID);
-
+  // ===== Técnicas
   const {
     data: techniquesData = [],
     isLoading: loadingTechs,
     isError: errTechs,
   } = useTechniques();
 
+  // ===== Artistas (para el autocomplete)
+  const {
+    data: artistsResp,
+    isFetching: loadingArtists,
+    error: errArtists,
+  } = useEventArtists(
+    DEFAULT_EVENT_ID,
+    {
+      pavilionId: FIXED_PAVILION_ID,
+      sort: "name",
+      page: 1,
+      limit: 500,
+    },
+    {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  const artistOptions: AutocompleteOption[] = useMemo(
+    () =>
+      (artistsResp?.rows ?? []).map((row: any) => {
+        const a = row.artist ?? row;
+        const fullName = `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim();
+        return {
+          value: String(a.id ?? a._id),
+          label: fullName || a.name || a.displayName || "Artista sin nombre",
+        };
+      }),
+    [artistsResp]
+  );
+
   const techniqueCsv = techniqueIds.length ? techniqueIds.join(",") : undefined;
+  const effectivePavilion = pavilion || FIXED_PAVILION_ID;
 
   const {
     rows: rawRows,
@@ -84,25 +115,28 @@ export default function CatalogPageClient() {
   } = useArtworksCursor({
     q,
     event: DEFAULT_EVENT_ID,
-    pavilion: pavilion || undefined,
+    pavilion: effectivePavilion,
     technique: techniqueCsv,
     limit: 12,
-    artist: artistId || undefined, // 👈 filtro por artista
+    artist: artistId || undefined,
   } as ArtworksCursorFilters);
 
-  const { techniques, pavilions: pavCounts } = useFacetCounts(rawRows);
+  const { techniques } = useFacetCounts(rawRows);
 
   const filteredRows = useMemo(() => {
     let arr = rawRows.slice();
 
     if (hasImage) {
       arr = arr.filter(
-        (r) => (r.image && r.image !== "") || (r.images?.length ?? 0) > 0
+        (r) =>
+          (r.image && r.image !== "") || (r.images?.length ?? 0) > 0
       );
     }
+
     if (inStock) {
       arr = arr.filter((r) => Number(r.stock ?? 0) > 0);
     }
+
     arr = arr.filter((r) => {
       const p = Number(r.price ?? 0);
       return p >= minPrice && p <= maxPrice;
@@ -122,12 +156,10 @@ export default function CatalogPageClient() {
     return arr;
   }, [rawRows, hasImage, inStock, minPrice, maxPrice, sortBy, sortDir]);
 
-  const pavilionOptions =
-    (pavilionsData.length
-      ? pavilionsData.map((p) => ({ id: p._id, name: p.name }))
-      : pavCounts
-        .sort((a, b) => b.count - a.count)
-        .map((p) => ({ id: p.id, name: p.name }))) || [];
+  // Pabellón fijo
+  const pavilionOptions = [
+    { id: FIXED_PAVILION_ID, name: FIXED_PAVILION_NAME },
+  ];
 
   const addToCart = useCart((s) => s.add);
   const totalItems = useCart((s) => s.totalItems)();
@@ -144,6 +176,35 @@ export default function CatalogPageClient() {
       qty
     );
   };
+
+  // ===== Infinite scroll (IntersectionObserver)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hasNextPage) return;
+    const node = loadMoreRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && hasNextPage && !isFetching) {
+          loadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "300px", // empieza a cargar antes de llegar al final
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasNextPage, isFetching, loadMore]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -171,14 +232,21 @@ export default function CatalogPageClient() {
               pavilion={pavilion}
               setPavilion={setPavilion}
               pavilionOptions={pavilionOptions}
-              loadingPavilions={loadingPavs}
-              errorPavilions={!!errPavs}
+              loadingPavilions={false}
+              errorPavilions={false}
               techniquesData={techniquesData}
               loadingTechniques={loadingTechs}
               errorTechniques={!!errTechs}
               techniqueIds={techniqueIds}
               onToggleTechnique={toggleTechnique}
               onClearTechniques={clearTechniques}
+              // artista
+              artistId={artistId}
+              setArtistId={setArtistId}
+              artistOptions={artistOptions}
+              loadingArtists={loadingArtists}
+              errorArtists={!!errArtists}
+              // filtros locales
               minPrice={minPrice}
               maxPrice={maxPrice}
               setMinPrice={setMinPrice}
@@ -226,21 +294,14 @@ export default function CatalogPageClient() {
               </div>
             )}
 
-            <div className="flex justify-center">
-              {hasNextPage ? (
-                <Button
-                  className="mt-8"
-                  variant="outline"
-                  onClick={() => loadMore()}
-                  disabled={isFetching}
-                >
-                  {isFetching ? "Cargando..." : "Cargar más"}
-                </Button>
-              ) : (
-                <p className="mt-8 text-sm text-gray-500">
-                  {isLoading || isFetching
-                    ? "Cargando..."
-                    : "No hay más resultados"}
+            {/* Sentinel para infinite scroll */}
+            <div ref={loadMoreRef} className="flex justify-center mt-8 mb-4">
+              {isFetching && (
+                <p className="text-sm text-gray-500">Cargando más obras…</p>
+              )}
+              {!hasNextPage && !isLoading && !isFetching && filteredRows.length > 0 && (
+                <p className="text-sm text-gray-500">
+                  No hay más resultados
                 </p>
               )}
             </div>

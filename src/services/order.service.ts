@@ -1,17 +1,32 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// services/order/orders/order/orders.service.ts
+
 
 import apiClient from "src/http/axios";
 
-/** ─────────────────────────────────────────────────────────────────────────────
- *  Tipos compartidos con el backend (orders-svc / payments-svc)
- *  ────────────────────────────────────────────────────────────────────────────*/
-
 export type PaymentMethod =
     | "card_offline" // datáfono físico (Itaú POS)
-    | "cash"         // efectivo
-    | "whatsapp"     // transferencias coordinadas por WhatsApp
-    | "itau_mock";   // mock de pasarela Itaú
+    | "cash" // efectivo
+    | "whatsapp" // transferencias coordinadas por WhatsApp
+    | "itau_mock"
+    | "credit_card" // tarjeta en línea o marcada manualmente
+    | "pse" // pago PSE (vía webhook)
+    | "mercadopago"// pago vía Mercado Pago (vía webhook);
+    | "whatsapp";
+
+export interface AddressInput {
+    line1: string;
+    line2?: string;
+    city: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+}
+
+export interface BuyerInput {
+    name: string;
+    email: string;
+    phone?: string;
+    address: AddressInput;
+}
 
 export interface OrderItemInput {
     artworkId: string;
@@ -31,6 +46,7 @@ export interface PaymentDetails {
     phone?: string;
     notes?: string;
     confirmedBy?: string;
+    authCode?: string;
     [key: string]: any;
 }
 
@@ -43,6 +59,7 @@ export interface PaymentSnapshot {
     gateway?: {
         transactionId?: string;
         mock?: boolean;
+        provider?: string;
         [key: string]: any;
     };
     details?: PaymentDetails;
@@ -69,6 +86,8 @@ export interface OrderDoc {
     | "refunded";
     userId?: string;
     event: string;
+    /** buyer guardado en la orden */
+    buyer?: BuyerInput;
     items: OrderItemInput[];
     subtotal: number;
     total: number;
@@ -87,21 +106,12 @@ export interface CreateOrderInput {
     userId?: string;
     /** reservationId devuelto por inventory-svc (/inventory/holds) */
     reservationId?: string;
+    /** buyer requerido por backend: name + email + address */
+    buyer: BuyerInput;
 }
 
 /**
  * Payload para POST /orders/:id/paid (orders-svc)
- *
- * Coincide con el body esperado en el backend:
- * {
- *   method,
- *   amount,
- *   transactionId,
- *   reference,
- *   gateway,
- *   details,
- *   invoice
- * }
  */
 export interface MarkOrderPaidInput {
     method: PaymentMethod;
@@ -129,6 +139,15 @@ export interface CardOfflineConfirmInput {
     cardLast4?: string;
     cardHolder?: string;
     posTerminalId?: string;
+}
+
+export interface CreditCardConfirmInput {
+    orderId: string;
+    cashierId?: string;
+    amount: number;
+    authCode?: string;
+    cardLast4?: string;
+    cardHolder?: string;
 }
 
 export interface WhatsappInitiateInput {
@@ -160,20 +179,29 @@ export interface ItauMockCheckoutResponse {
     redirectUrl: string;
 }
 
-/** ─────────────────────────────────────────────────────────────────────────────
- *  Helpers
- *  ────────────────────────────────────────────────────────────────────────────*/
+
+export interface MercadoPagoCheckoutInput {
+    orderId: string;
+    /** Opcionales: override de back_urls si quieres por orden */
+    successUrl?: string;
+    failureUrl?: string;
+    pendingUrl?: string;
+}
+
+export interface MercadoPagoCheckoutResponse {
+    ok: boolean;
+    preferenceId: string;
+    initPoint: string;
+    sandboxInitPoint?: string;
+}
+
 
 const normalizeId = <T extends { id?: string; _id?: string }>(obj: T) => ({
     ...obj,
     id: obj.id || (obj as any)._id,
 });
 
-/** ─────────────────────────────────────────────────────────────────────────────
- *  ORDERS-SVC (ruteado como /order/* desde el API Gateway)
- *  ────────────────────────────────────────────────────────────────────────────*/
 
-/** POST /order/orders  → app.post("/orders", ...) */
 export const createOrder = async (
     payload: CreateOrderInput
 ): Promise<OrderDoc> => {
@@ -191,6 +219,20 @@ export const getOrder = async (orderId: string): Promise<OrderDoc> => {
     return normalizeId(data);
 };
 
+/** GET /order/orders (filtros por event, status, buyerEmail, buyerPhone) */
+export const listOrders = async (params?: {
+    event?: string;
+    status?: OrderDoc["status"];
+    buyerEmail?: string;
+    buyerPhone?: string;
+}): Promise<OrderDoc[]> => {
+    const { data } = await apiClient.get<OrderDoc[]>("/order/orders", {
+        params,
+        withCredentials: true,
+    });
+    return data.map(normalizeId);
+};
+
 /** PATCH /order/orders/:id (ajustes puntuales de la orden) */
 export const patchOrder = async (
     orderId: string,
@@ -206,11 +248,7 @@ export const patchOrder = async (
     return normalizeId(data);
 };
 
-/**
- * POST /order/orders/:id/paid
- * Marca la orden como pagada y dispara la confirmación del hold en inventory-svc
- * cuando exista `reservationId`.
- */
+
 export const markOrderPaid = async (
     orderId: string,
     payload: MarkOrderPaidInput
@@ -223,11 +261,7 @@ export const markOrderPaid = async (
     return data;
 };
 
-/** ─────────────────────────────────────────────────────────────────────────────
- *  PAYMENTS-SVC  (métodos de venta de obra)
- *  ────────────────────────────────────────────────────────────────────────────*/
 
-/** POST /pay/payments/cash/confirm */
 export const confirmCashPayment = async (
     payload: CashPaymentConfirmInput
 ): Promise<{ ok: boolean }> => {
@@ -251,7 +285,18 @@ export const confirmCardOfflinePayment = async (
     return data;
 };
 
-/** POST /pay/payments/whatsapp/initiate */
+
+export const confirmCreditCardPayment = async (
+    payload: CreditCardConfirmInput
+): Promise<{ ok: boolean }> => {
+    const { data } = await apiClient.post<{ ok: boolean }>(
+        "/pay/payments/credit-card/confirm",
+        payload,
+        { withCredentials: true }
+    );
+    return data;
+};
+
 export const initiateWhatsappPayment = async (
     payload: WhatsappInitiateInput
 ): Promise<{ ok: boolean }> => {
@@ -263,7 +308,6 @@ export const initiateWhatsappPayment = async (
     return data;
 };
 
-/** POST /pay/payments/whatsapp/confirm */
 export const confirmWhatsappPayment = async (
     payload: WhatsappConfirmInput
 ): Promise<{ ok: boolean }> => {
@@ -274,8 +318,6 @@ export const confirmWhatsappPayment = async (
     );
     return data;
 };
-
-/** POST /pay/payments/itau/mock/checkout */
 export const startItauMockCheckout = async (
     payload: ItauMockCheckoutInput
 ): Promise<ItauMockCheckoutResponse> => {
@@ -287,7 +329,6 @@ export const startItauMockCheckout = async (
     return data;
 };
 
-/** POST /pay/payments/itau/mock/webhook (para pruebas manuales desde admin) */
 export const sendItauMockWebhook = async (payload: {
     orderId: string;
     reference?: string;
@@ -298,5 +339,59 @@ export const sendItauMockWebhook = async (payload: {
         payload,
         { withCredentials: true }
     );
+    return data;
+};
+
+export const sendMockPaidWebhook = async (payload: {
+    orderId: string;
+}): Promise<{ ok: boolean }> => {
+    const { data } = await apiClient.post<{ ok: boolean }>(
+        "/pay/payments/mock-webhook-paid",
+        payload,
+        { withCredentials: true }
+    );
+    return data;
+};
+
+export const startMercadoPagoCheckout = async (
+    payload: MercadoPagoCheckoutInput
+): Promise<MercadoPagoCheckoutResponse> => {
+    const { data } = await apiClient.post<MercadoPagoCheckoutResponse>(
+        "/pay/payments/mercadopago/checkout",
+        payload,
+        { withCredentials: true }
+    );
+    return data;
+};
+
+export const sendMercadoPagoWebhookManual = async (payload: {
+    orderId: string;
+    status: "approved" | "pending" | "rejected";
+    mpPaymentId?: string;
+    raw?: any;
+}): Promise<{ ok: boolean }> => {
+    const { data } = await apiClient.post<{ ok: boolean }>(
+        "/pay/payments/mercadopago/webhook",
+        payload,
+        { withCredentials: true }
+    );
+    return data;
+};
+
+export const chargeMercadoPagoCard = async (payload: {
+    orderId: string;
+    token: string;
+    installments?: number;
+    paymentMethodId?: string;
+    issuerId?: string;
+    email: string;
+}) => {
+    const { data } = await apiClient.post<{
+        ok: boolean;
+        status: string;
+        payment: any;
+    }>("/pay/payments/mercadopago/card-charge", payload, {
+        withCredentials: true,
+    });
     return data;
 };

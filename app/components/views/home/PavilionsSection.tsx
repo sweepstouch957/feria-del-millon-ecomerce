@@ -62,11 +62,9 @@ export default function PavilionsSection({
               <span className="text-sm font-medium">Pabellones</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-              Recorre los pabellones
+              Recorre nuestro pabellón
             </h2>
-            <p className="text-gray-600 mt-2">
-              Explora las curadurías y navega a cada sala por su slug.
-            </p>
+
           </div>
           <Link href={`/tickets?event=${eventId}`}>
             <button

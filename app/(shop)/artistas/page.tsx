@@ -16,10 +16,8 @@ import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
 
 import { useEventArtists } from "@hooks/queries/useEventArtists";
-import { usePavilions } from "@hooks/queries/usePavilions";
+import { DEFAULT_EVENT_ID, DEFAULT_EVENT_NAME, FIXED_PAVILION_ID, FIXED_PAVILION_NAME } from "@core/constants";
 
-const DEFAULT_EVENT_NAME = "Feria del Millón";
-const DEFAULT_EVENT_ID = "6909aef219f26eec22af4220";
 
 const PAGE_SIZE = 24;
 
@@ -69,16 +67,10 @@ function ArtistSkeleton() {
 export default function ArtistsPage() {
   // filtros UI
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPavilion, setSelectedPavilion] = useState<string>("all");
+  const [selectedPavilion, setSelectedPavilion] = useState<string>(FIXED_PAVILION_ID);
   const [sort, setSort] = useState<"artworks" | "name">("artworks");
   const [page, setPage] = useState(1);
 
-  // Pabellones (para dropdown)
-  const {
-    data: pavilionsData = [],
-    isLoading: loadingPavs,
-    isError: errPavs,
-  } = usePavilions(DEFAULT_EVENT_ID);
 
   const pavilionId = selectedPavilion !== "all" ? selectedPavilion : undefined;
 
@@ -164,17 +156,7 @@ export default function ArtistsPage() {
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black bg-white"
               >
-                <option value="all">Todos los pabellones</option>
-                {loadingPavs && (
-                  <option value="loading">Cargando pabellones…</option>
-                )}
-                {!loadingPavs &&
-                  !errPavs &&
-                  pavilionsData.map((p: any) => (
-                    <option key={p.id || p._id} value={p.id || p._id}>
-                      {p.name}
-                    </option>
-                  ))}
+                <option value={FIXED_PAVILION_ID}>{FIXED_PAVILION_NAME}</option>
               </select>
             </div>
 
@@ -209,7 +191,7 @@ export default function ArtistsPage() {
           />
           <StatCard
             icon={<Landmark className="h-8 w-8 text-gray-900" />}
-            value={pavilionsData?.length ?? 0}
+            value={1}
             label="Pabellones"
           />
         </div>

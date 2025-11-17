@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// services/tickets.service.ts
+// src/services/tickets.service.ts
 import apiClient from "src/http/axios";
 
 /** ────────── Tipos base ────────── */
@@ -89,7 +89,7 @@ export interface DailyStatsResponse {
   >;
 }
 
-/** ────────── Utils ────────── */
+/** ────────── Utils internos ────────── */
 const normalizeId = <T extends { id?: string; _id?: string }>(obj: T) => ({
   ...obj,
   id: (obj as any).id || (obj as any)._id,
@@ -105,11 +105,15 @@ const buildQuery = (params: Record<string, any> = {}) =>
 
 /**
  * Compra de tickets (soporta preventa). Devuelve tickets con qrToken y (opcional) qrDataUrl.
+ * POST /tickets/purchase
  */
 export const purchaseTickets = async (payload: PurchaseTicketsDto) => {
-  const { data } = await apiClient.post<PurchaseTicketsResponse>("/tickets/purchase", payload, {
-    withCredentials: true,
-  });
+  const { data } = await apiClient.post<PurchaseTicketsResponse>(
+    "/tickets/purchase",
+    payload,
+    { withCredentials: true }
+  );
+
   return {
     ok: data.ok,
     tickets: data.tickets.map(normalizeId),
@@ -118,16 +122,20 @@ export const purchaseTickets = async (payload: PurchaseTicketsDto) => {
 
 /**
  * Validación del QR en puerta. Marca el ticket como checked_in (si procede).
+ * POST /tickets/validate
  */
 export const validateQr = async (payload: ValidateQrDto) => {
-  const { data } = await apiClient.post<ValidateQrResponse>("/tickets/validate", payload, {
-    withCredentials: true,
-  });
+  const { data } = await apiClient.post<ValidateQrResponse>(
+    "/tickets/validate",
+    payload,
+    { withCredentials: true }
+  );
   return data;
 };
 
 /**
  * Listado de tickets (cursor-based).
+ * GET /tickets
  * Ej: getTickets({ eventId, limit: 50, cursor })
  */
 export const getTickets = async (filters: TicketFilters = {}) => {
@@ -144,6 +152,7 @@ export const getTickets = async (filters: TicketFilters = {}) => {
 
 /**
  * Obtener un ticket por ID.
+ * GET /tickets/:id
  */
 export const getTicketById = async (id: string) => {
   const { data } = await apiClient.get<Ticket>(`/tickets/${id}`, {
@@ -154,11 +163,13 @@ export const getTicketById = async (id: string) => {
 
 /**
  * Stats diarias por evento (conteos por estado).
+ * GET /stats/daily?eventId=...
  */
 export const getDailyStats = async (eventId: string) => {
-  const { data } = await apiClient.get<DailyStatsResponse>(`/stats/daily?eventId=${eventId}`, {
-    withCredentials: true,
-  });
+  const { data } = await apiClient.get<DailyStatsResponse>(
+    `/stats/daily?eventId=${encodeURIComponent(eventId)}`,
+    { withCredentials: true }
+  );
   return data;
 };
 
@@ -168,14 +179,17 @@ export const getDailyStats = async (eventId: string) => {
  * Formatea el precio en COP (o la moneda que venga del ticket).
  */
 export const formatTicketPrice = (price: number, currency = "COP") =>
-  new Intl.NumberFormat("es-CO", { style: "currency", currency, minimumFractionDigits: 0 }).format(
-    price
-  );
+  new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+  }).format(price);
 
 /**
  * Devuelve YYYY-MM-DD (para agrupar por día).
  */
-export const toYMD = (d: string | Date) => new Date(d).toISOString().slice(0, 10);
+export const toYMD = (d: string | Date) =>
+  new Date(d).toISOString().slice(0, 10);
 
 /**
  * Descarga un PNG a partir del `qrDataUrl` (si lo devolviste en la compra).

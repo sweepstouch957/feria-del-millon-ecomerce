@@ -170,18 +170,20 @@ export interface ReactivateTicketResponse {
 /** ────────── DTO específico para pago con Mercado Pago ────────── */
 export interface PayWithMercadoPagoPayload {
   eventId: string;
-  date: string; // "YYYY-MM-DD"
+  date: string;       // "YYYY-MM-DD"
   quantity: number;
-  buyer: TicketBuyer;
   channel?: TicketChannel;
   presale?: boolean;
+  buyer: TicketBuyer; // { name, email }
   card: {
     token: string;
     installments: number;
     paymentMethodId: string;
     issuerId: string;
-    payerEmail: string;
-    amount: number;
+    identification?: {
+      type: string;
+      number: string;
+    };
   };
 }
 
@@ -241,7 +243,6 @@ export const payTicketsWithMercadoPago = async (
     tickets: data.tickets.map(normalizeId),
   };
 };
-
 /**
  * Validación del QR en puerta. Marca el ticket como checked_in (si procede).
  * POST /ticket/tickets/validate

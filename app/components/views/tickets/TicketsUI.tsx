@@ -21,11 +21,17 @@ import { DEFAULT_EVENT_ID, DEFAULT_EVENT_NAME } from "@core/constants";
 type MercadoPagoCardFormData = {
   token: string;
   installments: number;
-  paymentMethodId: string;
-  issuerId: string;
-  payer?: { email?: string };
+  payment_method_id: string;
+  issuer_id: string;
+  payer?: {
+    email?: string;
+    identification?: {
+      type: string;
+      number: string;
+    };
+  };
+  transaction_amount: number; // no lo vamos a confiar, solo lo recibimos
 };
-
 export default function TicketsUI({
   eventId = DEFAULT_EVENT_ID,
   eventName = DEFAULT_EVENT_NAME,
@@ -146,8 +152,8 @@ export default function TicketsUI({
               const {
                 token,
                 installments,
-                paymentMethodId,
-                issuerId,
+                payment_method_id,
+                issuer_id,
                 payer,
               } = cardFormData;
 
@@ -156,28 +162,25 @@ export default function TicketsUI({
               );
 
               try {
-                // 👉 Armamos el payload para el endpoint /ticket/tickets/pay
-                const payload: PayWithMercadoPagoPayload = {
+                const res = await payTicketsWithMercadoPago({
                   eventId: eventId!,
                   date: selectedDay.date, // "YYYY-MM-DD"
                   quantity: qty,
+                  channel: "online",
+                  presale: false,
                   buyer: {
+                    // 👇 estos vienen de tu propio formulario (NO confiamos en el Brick)
                     name: buyerName.trim(),
                     email: buyerEmail.trim(),
                   },
-                  channel: "online",
-                  presale: false,
                   card: {
                     token,
                     installments: Number(installments) || 1,
-                    paymentMethodId,
-                    issuerId,
-                    payerEmail: payer?.email ?? buyerEmail.trim(),
-                    amount: total,
+                    paymentMethodId: payment_method_id,
+                    issuerId: issuer_id,
+                    identification: payer?.identification,
                   },
-                };
-
-                const res = await payTicketsWithMercadoPago(payload);
+                });
 
                 toast.dismiss(loadingId);
 
@@ -199,11 +202,6 @@ export default function TicketsUI({
                   toast.error("Capacidad alcanzada para este día.");
                 } else if (err?.response?.data?.message) {
                   toast.error(err.response.data.message);
-                } else if (err?.message === "secure_fields_card_token_creation_failed") {
-                  // mensaje que ya viste en la consola
-                  toast.error(
-                    "No se pudo crear el token de la tarjeta. Verifica los datos e intenta de nuevo.",
-                  );
                 } else {
                   toast.error(
                     "Ocurrió un error procesando el pago. Intenta de nuevo.",
@@ -211,6 +209,7 @@ export default function TicketsUI({
                 }
               }
             },
+
           },
         });
       } catch (err) {
@@ -310,7 +309,7 @@ export default function TicketsUI({
               onChange={setBuyerEmail}
               icon={<Mail className="size-4 text-slate-500" />}
               type="email"
-            
+
             />
           </div>
 

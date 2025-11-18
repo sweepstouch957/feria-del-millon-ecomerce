@@ -5,7 +5,7 @@ export default function CheckoutPage() {
     return (
         <Suspense fallback={<div className="p-8">Cargando checkout…</div>}>
             <CheckoutPageClient />
-        </Suspense>
+        </Suspense> 
     )
 
 }

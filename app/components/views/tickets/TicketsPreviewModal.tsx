@@ -2,26 +2,32 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { QrCode, Ticket as TicketIcon } from "lucide-react";
-import { TicketDay } from "./ticketTypes";
+import { Ticket as TicketIcon } from "lucide-react";
+import type { Ticket } from "@services/ticket.service";
 import { TicketCard } from "./TicketCard";
+import { QrCode } from "lucide-react";
+import { downloadQrPng } from "@services/ticket.service";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  qty: number;
-  selectedDay: TicketDay | null;
+  tickets: Ticket[];
   currency?: string;
 };
 
 export function TicketsPreviewModal({
   open,
   onClose,
-  qty,
-  selectedDay,
+  tickets,
   currency = "COP",
 }: Props) {
-  if (!open || !selectedDay) return null;
+  if (!open || !tickets || tickets.length === 0) return null;
+
+  const handleDownloadAll = () => {
+    tickets.forEach((t, idx) => {
+      downloadQrPng(t, `ticket-${t.shortCode || t.id || idx + 1}.png`);
+    });
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -46,13 +52,12 @@ export function TicketsPreviewModal({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          {Array.from({ length: qty }).map((_, i) => (
-            <div key={i} className="space-y-3">
+          {tickets.map((ticket) => (
+            <div key={ticket.id} className="space-y-3">
               <TicketCard
-                code={("0000" + (i + 1)).slice(-4)}
-                date={selectedDay.display}
-                price={selectedDay.price}
+                ticket={ticket}
                 currency={currency}
+                onDownload={downloadQrPng}
               />
               <div className="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
                 <div className="rounded-lg bg-slate-900/90 p-2">
@@ -61,7 +66,7 @@ export function TicketsPreviewModal({
                 <div className="text-sm">
                   <div className="font-medium">QR listo</div>
                   <div className="text-xs text-slate-600">
-                    Se mostrará aquí y llegará a tu correo.
+                    Puedes descargarlo aquí o desde tu correo.
                   </div>
                 </div>
               </div>
@@ -76,8 +81,11 @@ export function TicketsPreviewModal({
           >
             Listo
           </button>
-          <button className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800">
-            Descargar todo (zip)
+          <button
+            className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:bg-slate-800"
+            onClick={handleDownloadAll}
+          >
+            Descargar todos los QR
           </button>
         </div>
       </motion.div>

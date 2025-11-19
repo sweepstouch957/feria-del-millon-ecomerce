@@ -72,7 +72,15 @@ export default function TicketsUI({
     emailValid &&
     remaining > 0,
   );
-
+  const resetState = () => {
+    setSelectedDay(days[0] ?? null);
+    setQty(initialQty);
+    setBuyerName("");
+    setBuyerEmail("");
+    setGeneratedTickets([]);
+    setShowPreview(false);
+    setReadyToPay(false); // esto desmonta el Brick de MP
+  };
   const handleBuy = () => {
     if (!selectedDay || !canBuy) return;
 
@@ -443,7 +451,10 @@ export default function TicketsUI({
       {/* Preview modal con tickets reales */}
       <TicketsPreviewModal
         open={showPreview}
-        onClose={() => setShowPreview(false)}
+        onClose={() => {
+          setShowPreview(false);
+          resetState();
+        }}
         tickets={generatedTickets}
         currency={currency}
       />

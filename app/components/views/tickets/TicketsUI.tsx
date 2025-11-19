@@ -273,7 +273,7 @@ export default function TicketsUI({
       {/* Days */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-800 sm:text-base">
-          Selecciona el día que quieres asistir
+           Tickets disponibles este día
         </h3>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

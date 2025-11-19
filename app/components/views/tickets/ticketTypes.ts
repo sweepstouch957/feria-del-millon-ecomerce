@@ -9,6 +9,8 @@ export type TicketDay = {
   sold: number;
   kind: TicketDayKind;
   isToday?: boolean;
+  remaining: number; // cupo restante
+  utilization: number; // porcentaje de cupo vendido
 };
 
 export type TicketsUIProps = {

@@ -61,6 +61,14 @@ export interface ValidateQrDto {
   token: string; // qrToken (JWT) leído del QR
 }
 
+/** Día de tickets para la fecha actual (CO) */
+export interface TodayTicketDayResponse {
+  eventId: string;
+  today: string; // YYYY-MM-DD
+  ticketDay: TicketDaySummary | null;
+  message?: string;
+}
+
 export interface ValidateQrResponse {
   ok: boolean;
   status: "checked_in" | "already_checked_in";
@@ -400,4 +408,16 @@ export const downloadQrPng = (ticket: Ticket, filename?: string) => {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+};
+
+export const getTodayTicketDay = async (eventId: string) => {
+  const { data } = await apiClient.get<TodayTicketDayResponse>(
+    `/ticket/tickets/events/${encodeURIComponent(eventId)}/days/today`,
+    { withCredentials: true }
+  );
+
+  return {
+    ...data,
+    ticketDay: data.ticketDay ? normalizeId(data.ticketDay) : null,
+  };
 };

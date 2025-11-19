@@ -40,9 +40,7 @@ export function DayCard({ day, selected, onSelect, currency = "COP" }: Props) {
         <CalendarDays className="size-4 text-slate-500" />
         <span className="text-sm font-semibold">{day.display}</span>
         <Pill className={classNames("ml-auto", k.className)}>{k.label}</Pill>
-        {day.isToday && (
-          <Pill className="bg-blue-500/10 text-blue-600">Hoy</Pill>
-        )}
+       
       </div>
 
       <div className="mb-3 flex items-end gap-3">
@@ -52,7 +50,7 @@ export function DayCard({ day, selected, onSelect, currency = "COP" }: Props) {
         <span className="text-[12px] text-slate-500">por boleto</span>
       </div>
 
-      <CapacityBar cap={day.cap} sold={day.sold} />
+      <CapacityBar cap={day.cap} sold={day.utilization * 1000} />
     </motion.button>
   );
 }

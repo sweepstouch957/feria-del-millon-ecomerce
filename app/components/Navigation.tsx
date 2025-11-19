@@ -65,6 +65,7 @@ export default function Navigation() {
   const navItems = [
     { path: "/", label: "Inicio" },
     { path: "/catalogo", label: "Catálogo" },
+    { path: "/tickets", label: "Tickets" },
     { path: "/artistas", label: "Artistas" },
     { path: "/sobre-nosotros", label: "Sobre Nosotros" },
   ];
@@ -254,17 +255,6 @@ export default function Navigation() {
                           Mi cuenta
                         </Link>
 
-                        {isArtist && (
-                          <Link
-                            href="/admin/artist"
-                            role="menuitem"
-                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-100"
-                            onClick={() => setUserOpen(false)}
-                          >
-                            <LayoutDashboard className="h-4 w-4" />
-                            Panel de artista
-                          </Link>
-                        )}
                       </div>
 
                       <button

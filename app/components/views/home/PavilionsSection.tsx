@@ -66,7 +66,7 @@ export default function PavilionsSection({
             </h2>
 
           </div>
-          <Link href={`/tickets?event=${eventId}`}>
+          <Link href={`/tickets`}>
             <button
               className={`px-5 py-3 rounded-xl ${brand.ctaGradient} inline-flex items-center`}
             >

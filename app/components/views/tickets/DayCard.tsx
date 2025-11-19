@@ -15,7 +15,13 @@ type Props = {
 };
 
 export function DayCard({ day, selected, onSelect, currency = "COP" }: Props) {
-  const k = badges[day.kind];
+  // 👇 fallback bonito si no existe el badge para ese kind
+  const k =
+    badges[day.kind] ??
+    ({
+      label: "Día",
+      className: "bg-slate-100 text-slate-700",
+    } as const);
 
   return (
     <motion.button
@@ -34,7 +40,9 @@ export function DayCard({ day, selected, onSelect, currency = "COP" }: Props) {
         <CalendarDays className="size-4 text-slate-500" />
         <span className="text-sm font-semibold">{day.display}</span>
         <Pill className={classNames("ml-auto", k.className)}>{k.label}</Pill>
-        {day.isToday && <Pill className="bg-blue-500/10 text-blue-600">Hoy</Pill>}
+        {day.isToday && (
+          <Pill className="bg-blue-500/10 text-blue-600">Hoy</Pill>
+        )}
       </div>
 
       <div className="mb-3 flex items-end gap-3">

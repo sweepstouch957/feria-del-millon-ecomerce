@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, Mail, QrCode, Sparkles, User } from "lucide-react";
+import { BadgeCheck, Mail, Phone, QrCode, Sparkles, User } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { TicketDay, TicketsUIProps, classNames } from "./ticketTypes";
@@ -17,6 +17,7 @@ import {
   type PayWithMercadoPagoPayload,
 } from "@services/ticket.service";
 import { DEFAULT_EVENT_ID, DEFAULT_EVENT_NAME } from "@core/constants";
+import { ColombianPhoneInput } from "@components/ColombianInput";
 
 type MercadoPagoCardFormData = {
   token: string;
@@ -46,6 +47,8 @@ export default function TicketsUI({
   const [qty, setQty] = useState<number>(initialQty);
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
+  const [buyerPhone, setBuyerPhone] = useState(""); // ⭐ nuevo estado teléfono
+
   const [showPreview, setShowPreview] = useState(false);
   const [generatedTickets, setGeneratedTickets] = useState<Ticket[]>([]);
   const [readyToPay, setReadyToPay] = useState(false);
@@ -59,6 +62,8 @@ export default function TicketsUI({
   );
 
   const emailValid = /\S+@\S+\.\S+/.test(buyerEmail);
+  const isPhoneValid =
+    buyerPhone === "" || /^3\d{9}$/.test(buyerPhone); // 10 dígitos, empieza en 3
 
   const remaining = useMemo(() => {
     if (!selectedDay) return 0;
@@ -93,7 +98,7 @@ export default function TicketsUI({
     onBuyClick?.({
       day: selectedDay,
       quantity: qty,
-      buyer: { name: buyerName, email: buyerEmail },
+      buyer: { name: buyerName, email: buyerEmail, phone: buyerPhone || "" },
     } as any);
 
     setReadyToPay(true);
@@ -273,7 +278,7 @@ export default function TicketsUI({
       {/* Days */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-800 sm:text-base">
-           Tickets disponibles este día
+          Tickets disponibles este día
         </h3>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -317,9 +322,22 @@ export default function TicketsUI({
               onChange={setBuyerEmail}
               icon={<Mail className="size-4 text-slate-500" />}
               type="email"
-
             />
           </div>
+          {/* Teléfono opcional (colombiano) */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ColombianPhoneInput
+              value={buyerPhone}
+              onChange={setBuyerPhone}
+            />
+            {/* espacio para que se mantenga alineado en desktop */}
+            <div className="hidden sm:block" />
+          </div>
+          {buyerPhone && !isPhoneValid && (
+            <p className="text-[11px] text-red-500 sm:text-xs">
+              Ingresa un celular colombiano válido
+            </p>
+          )}
 
           {/* Qty + total */}
           <div className="flex flex-wrap items-center justify-between gap-4">

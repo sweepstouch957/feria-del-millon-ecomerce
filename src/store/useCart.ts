@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 type CartItem = {
   id: string;
   title: string;
+  artist: string;
   price: number;
   image?: string;
   quantity: number;

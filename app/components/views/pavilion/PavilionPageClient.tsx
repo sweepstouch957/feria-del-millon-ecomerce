@@ -1,7 +1,7 @@
 // @components/views/pavilion/PavilionPageClient.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@components/ui/button";
 import ResultsToolbar from "@components/views/catalog/ResultsToolbar";
@@ -27,6 +27,9 @@ import {
   ArrowUpDown,
   FileText,
 } from "lucide-react";
+
+import { useEventArtists } from "@hooks/queries/useEventArtists";
+import type { AutocompleteOption } from "@components/ui/autocomplete";
 
 type Props = { eventId: string; slug: string };
 
@@ -63,9 +66,12 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
     setViewMode,
     applyFilters,
     clearAllAndRefetch,
+    artistId,
+    setArtistId,
   } = useCatalogState({
     initialQ: "",
     initialPavilion: "",
+    initialArtistId: "",
     defaultMaxPrice: pavilion?.maxArtworkPrice ?? 10_000_000,
   });
 
@@ -79,6 +85,39 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
     isError: errTechs,
   } = useTechniques();
   const techniqueCsv = techniqueIds.length ? techniqueIds.join(",") : undefined;
+
+  // ===== Artistas (para el autocomplete del pabellón)
+  const {
+    data: artistsResp,
+    isFetching: loadingArtists,
+    error: errArtists,
+  } = useEventArtists(
+    eventId,
+    {
+      pavilionId: pavilion?._id,
+      sort: "name",
+      page: 1,
+      limit: 500,
+    },
+    {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  const artistOptions: AutocompleteOption[] = useMemo(
+    () =>
+      (artistsResp?.rows ?? []).map((row: any) => {
+        const a = row.artist ?? row;
+        const fullName = `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim();
+        return {
+          value: String(a.id ?? a._id),
+          label: fullName || a.name || a.displayName || "Artista sin nombre",
+        };
+      }),
+    [artistsResp]
+  );
 
   // ===== Artworks
   const {
@@ -95,6 +134,7 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
     pavilion: pavilion?._id,
     technique: techniqueCsv,
     limit: 12,
+    artist: artistId || undefined,
   } as ArtworksCursorFilters);
 
   // ===== Post-filtro local
@@ -136,10 +176,40 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
         title: art.title,
         price: Number(art.price ?? 0),
         image: art.image ?? art.images?.[0] ?? "/placeholder.png",
+        artist: art?.artist ?? "Desconocido",
       },
       qty
     );
   };
+
+  // ===== Infinite scroll (IntersectionObserver)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hasNextPage) return;
+    const node = loadMoreRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && hasNextPage && !isFetching) {
+          loadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "300px", // precarga un poco antes
+        threshold: 0.1,
+      }
+    );
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasNextPage, isFetching, loadMore]);
 
   // ===== Header Pavilion
   const Header = () => {
@@ -249,7 +319,6 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
           }
           viewMode={viewMode}
           onViewMode={setViewMode}
-          // en móvil dejamos limpia la barra, las acciones principales van abajo
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
@@ -258,12 +327,13 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
             <FiltersSidebar
               q={q}
               setQ={setQ}
-              pavilion={pavilion?._id || ""}
-              setPavilion={() => {}}
+              pavilion={pavilion?._id || ""} // fijo al pabellón
+              setPavilion={() => { }}
               pavilionOptions={[]}
               loadingPavilions={false}
               errorPavilions={false}
               techniquesData={techniquesData}
+              showPavilionFilter={false}
               loadingTechniques={loadingTechs}
               errorTechniques={!!errTechs}
               techniqueIds={techniqueIds}
@@ -286,6 +356,12 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
                 applyFilters();
               }}
               onClear={() => clearAllAndRefetch(refetch)}
+              // 🎨 artistas para desktop
+              artistId={artistId}
+              setArtistId={setArtistId}
+              artistOptions={artistOptions}
+              loadingArtists={loadingArtists}
+              errorArtists={!!errArtists}
             />
           </aside>
 
@@ -314,24 +390,20 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
               </div>
             )}
 
-            {/* Cargar más / Estado */}
-            <div className="flex justify-center">
-              {hasNextPage ? (
-                <Button
-                  className="mt-6 md:mt-8 w-full sm:w-auto"
-                  variant="outline"
-                  onClick={() => loadMore()}
-                  disabled={isFetching}
-                >
-                  {isFetching ? "Cargando..." : "Cargar más"}
-                </Button>
-              ) : (
-                <p className="mt-6 md:mt-8 text-sm text-gray-500">
-                  {isLoading || isFetching
-                    ? "Cargando..."
-                    : "No hay más resultados"}
-                </p>
+            {/* Sentinel para infinite scroll */}
+            <div
+              ref={loadMoreRef}
+              className="flex justify-center mt-6 md:mt-8 mb-4"
+            >
+              {isFetching && (
+                <p className="text-sm text-gray-500">Cargando más obras…</p>
               )}
+              {!hasNextPage &&
+                !isLoading &&
+                !isFetching &&
+                filteredRows.length > 0 && (
+                  <p className="text-sm text-gray-500">No hay más resultados</p>
+                )}
             </div>
 
             {/* Vacío */}
@@ -363,9 +435,8 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
             toggleSortDir();
             refetch();
           }}
-          title={`Orden: ${sortBy === "price" ? "precio" : "reciente"} ${
-            sortDir === "asc" ? "↑" : "↓"
-          }`}
+          title={`Orden: ${sortBy === "price" ? "precio" : "reciente"} ${sortDir === "asc" ? "↑" : "↓"
+            }`}
         >
           <ArrowUpDown className="h-4 w-4 mr-2" />
           Orden
@@ -404,7 +475,7 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
                 q={q}
                 setQ={setQ}
                 pavilion={pavilion?._id || ""}
-                setPavilion={() => {}}
+                setPavilion={() => { }}
                 pavilionOptions={[]}
                 loadingPavilions={false}
                 errorPavilions={false}
@@ -434,6 +505,12 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
                 onClear={() => {
                   clearAllAndRefetch(refetch);
                 }}
+                // 🎨 artistas también en mobile
+                artistId={artistId}
+                setArtistId={setArtistId}
+                artistOptions={artistOptions}
+                loadingArtists={loadingArtists}
+                errorArtists={!!errArtists}
               />
             </div>
           </div>

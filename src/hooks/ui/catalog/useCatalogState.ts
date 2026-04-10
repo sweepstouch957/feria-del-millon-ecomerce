@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 type Opts = {
   initialQ?: string;
   initialPavilion?: string;
+  initialArtistId?: string;
   defaultMaxPrice?: number;
   /** Opcional: forzar un path base; si no se pasa, usa la ruta actual */
   basePath?: string;
@@ -20,6 +21,7 @@ export function useCatalogState(opts: Opts) {
 
   const [q, setQ] = useState(opts.initialQ ?? "");
   const [pavilion, setPavilion] = useState(opts.initialPavilion ?? "");
+  const [artistId, setArtistId] = useState(opts.initialArtistId ?? "");
   const [techniqueIds, setTechniqueIds] = useState<string[]>([]);
 
   const [minPrice, setMinPrice] = useState(0);
@@ -33,29 +35,38 @@ export function useCatalogState(opts: Opts) {
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  // URL sync q/pavilion (sin forzar /catalogo)
+  // URL sync q/pavilion/artistId (sin forzar /catalogo)
   useEffect(() => {
     const sp = new URLSearchParams(Array.from(searchParams.entries()));
     const currentQ = sp.get("q") ?? "";
     const currentPavilion = sp.get("pavilion") ?? "";
+    const currentArtistId = sp.get("artistId") ?? "";
 
     if (q) sp.set("q", q);
     else sp.delete("q");
+
     if (pavilion) sp.set("pavilion", pavilion);
     else sp.delete("pavilion");
 
+    if (artistId) sp.set("artistId", artistId);
+    else sp.delete("artistId");
+
+    const nextQuery = sp.toString();
+    const nextUrl = `${basePath}${nextQuery ? `?${nextQuery}` : ""}`;
+    const currentQuery = searchParams.toString();
+    const currentUrl = `${pathname}${currentQuery ? `?${currentQuery}` : ""}`;
+
     // Evita replace inútil si no cambió nada
-    const nextUrl = `${basePath}?${sp.toString()}`;
-    const currentUrl = `${pathname}?${searchParams.toString()}`;
     if (
       nextUrl !== currentUrl ||
       q !== currentQ ||
-      pavilion !== currentPavilion
+      pavilion !== currentPavilion ||
+      artistId !== currentArtistId
     ) {
       router.replace(nextUrl, { scroll: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, pavilion, basePath]);
+  }, [q, pavilion, artistId, basePath]);
 
   const toggleTechnique = (id: string) =>
     setTechniqueIds((prev) =>
@@ -67,12 +78,13 @@ export function useCatalogState(opts: Opts) {
   const toggleSortDir = () => setSortDir((d) => (d === "asc" ? "desc" : "asc"));
 
   const applyFilters = () => {
-    /* noop */
+    /* noop por ahora */
   };
 
   const clearAllAndRefetch = (refetch: () => void) => {
     setQ("");
     setPavilion("");
+    setArtistId("");
     setTechniqueIds([]);
     setMinPrice(0);
     setMaxPrice(opts.defaultMaxPrice ?? 10_000_000);
@@ -85,6 +97,7 @@ export function useCatalogState(opts: Opts) {
     const sp = new URLSearchParams(Array.from(searchParams.entries()));
     sp.delete("q");
     sp.delete("pavilion");
+    sp.delete("artistId");
     router.replace(`${basePath}?${sp.toString()}`, { scroll: false });
 
     refetch();
@@ -95,6 +108,8 @@ export function useCatalogState(opts: Opts) {
     setQ,
     pavilion,
     setPavilion,
+    artistId,
+    setArtistId,
     techniqueIds,
     toggleTechnique,
     clearTechniques,

@@ -6,8 +6,10 @@ import {
   ArrowDownUp,
   Search as SearchIcon,
 } from "lucide-react";
+import { useMemo } from "react";
 import { Input } from "@components/ui/input";
 import { Button } from "@components/ui/button";
+import { Autocomplete, AutocompleteOption } from "@components/ui/autocomplete";
 import { formatMoney } from "@lib/utils";
 
 type Option = { id: string; name: string };
@@ -23,6 +25,7 @@ type Props = {
   pavilionOptions: Option[];
   loadingPavilions?: boolean;
   errorPavilions?: boolean;
+  showPavilionFilter?: boolean;
 
   // técnicas
   techniquesData: any[];
@@ -31,6 +34,13 @@ type Props = {
   techniqueIds: string[];
   onToggleTechnique: (id: string) => void;
   onClearTechniques: () => void;
+
+  // 🎨 artistas
+  artistId: string;
+  setArtistId: (id: string) => void;
+  artistOptions: AutocompleteOption[];
+  loadingArtists?: boolean;
+  errorArtists?: boolean;
 
   // filtros locales
   minPrice: number;
@@ -71,6 +81,11 @@ export default function FiltersSidebar(props: Props) {
     techniqueIds,
     onToggleTechnique,
     onClearTechniques,
+    artistId,
+    setArtistId,
+    artistOptions,
+    loadingArtists,
+    errorArtists,
     minPrice,
     maxPrice,
     setMinPrice,
@@ -85,6 +100,8 @@ export default function FiltersSidebar(props: Props) {
     toggleSortDir,
     onApply,
     onClear,
+    facetTechniques,
+    showPavilionFilter = true,
   } = props;
 
   return (
@@ -103,7 +120,7 @@ export default function FiltersSidebar(props: Props) {
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             type="search"
-            placeholder="Título, artista…"
+            placeholder="Título"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="pl-10"
@@ -112,32 +129,63 @@ export default function FiltersSidebar(props: Props) {
       </div>
 
       {/* Pabellón */}
-      <div className="mb-5">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Pabellón
-        </label>
-        <div className="relative">
-          <select
-            value={pavilion}
-            onChange={(e) => setPavilion(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Todos</option>
-            <option value="null">Sin pabellón</option>
-            {loadingPavilions ? (
-              <option>cargando…</option>
-            ) : errorPavilions ? (
-              <option>error al cargar</option>
-            ) : (
-              pavilionOptions.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))
-            )}
-          </select>
-          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      {showPavilionFilter && (
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Pabellón
+          </label>
+          <div className="relative">
+            <select
+              value={pavilion}
+              onChange={(e) => setPavilion(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+
+              {loadingPavilions ? (
+                <option>cargando…</option>
+              ) : errorPavilions ? (
+                <option>error al cargar</option>
+              ) : (
+                pavilionOptions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))
+              )}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          </div>
         </div>
+
+      )}
+      {/* Artista (Autocomplete cmdk + Radix) */}
+      <div className="mb-5">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Artista
+            </label>
+
+          </div>
+          {artistId && (
+            <button
+              type="button"
+              onClick={() => setArtistId("")}
+              className="text-xs text-blue-600 hover:underline"
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
+
+        <Autocomplete
+          value={artistId}
+          onChange={setArtistId}
+          options={artistOptions}
+          loading={loadingArtists}
+          placeholder="Buscar artista…"
+        />
+
       </div>
 
       {/* Técnicas multi */}
@@ -171,29 +219,36 @@ export default function FiltersSidebar(props: Props) {
           <div className="flex flex-wrap gap-2 max-h-40 overflow-auto pr-1">
             <button
               onClick={onClearTechniques}
-              className={`px-3 py-1.5 rounded-full text-sm border ${
-                techniqueIds.length === 0
-                  ? "bg-black text-white border-black"
-                  : "hover:bg-gray-100"
-              }`}
+              className={`px-3 py-1.5 rounded-full text-sm border ${techniqueIds.length === 0
+                ? "bg-black text-white border-black"
+                : "hover:bg-gray-100"
+                }`}
             >
               Todas
             </button>
             {techniquesData.map((t: any) => {
               const id = String(t._id);
               const active = techniqueIds.includes(id);
+              const facetCount = facetTechniques?.find(
+                (f) => f.name === t.name
+              )?.count;
+
               return (
                 <button
                   key={id}
                   onClick={() => onToggleTechnique(id)}
-                  className={`px-3 py-1.5 rounded-full text-sm border transition ${
-                    active
-                      ? "bg-black text-white border-black"
-                      : "hover:bg-gray-100"
-                  }`}
+                  className={`px-3 py-1.5 rounded-full text-sm border transition ${active
+                    ? "bg-black text-white border-black"
+                    : "hover:bg-gray-100"
+                    }`}
                   title={t.slug ?? t.name}
                 >
-                  <span className="line-clamp-1 max-w-[10rem]">{t.name}</span>
+                  <span className="line-clamp-1 max-w-[10rem]">
+                    {t.name}
+                    {typeof facetCount === "number" && facetCount > 0
+                      ? ` (${facetCount})`
+                      : ""}
+                  </span>
                 </button>
               );
             })}
@@ -210,8 +265,8 @@ export default function FiltersSidebar(props: Props) {
           <button
             type="button"
             onClick={() => {
-              setMinPrice(500000);
-              setMaxPrice(1000000);
+              setMinPrice(500_000);
+              setMaxPrice(1_000_000);
             }}
             className="text-xs text-blue-600 hover:underline"
           >
@@ -307,6 +362,15 @@ export default function FiltersSidebar(props: Props) {
             onChange={(e) => setInStock(e.target.checked)}
           />
           Solo en stock
+        </label>
+
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={hasImage}
+            onChange={(e) => setHasImage(e.target.checked)}
+          />
+          Solo obras con imagen
         </label>
       </div>
 

@@ -65,6 +65,7 @@ export default function Navigation() {
   const navItems = [
     { path: "/", label: "Inicio" },
     { path: "/catalogo", label: "Catálogo" },
+    { path: "/tickets", label: "Tickets" },
     { path: "/artistas", label: "Artistas" },
     { path: "/convocatoria", label: "Convocatoria Artistas" },
     { path: "/sobre-nosotros", label: "Sobre Nosotros" },
@@ -246,7 +247,7 @@ export default function Navigation() {
 
                       <div className="py-1">
                         <Link
-                          href="/cuenta"
+                          href="/admin/account"
                           role="menuitem"
                           className="flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-100"
                           onClick={() => setUserOpen(false)}
@@ -255,17 +256,6 @@ export default function Navigation() {
                           Mi cuenta
                         </Link>
 
-                        {isArtist && (
-                          <Link
-                            href="/admin/artist"
-                            role="menuitem"
-                            className="flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-100"
-                            onClick={() => setUserOpen(false)}
-                          >
-                            <LayoutDashboard className="h-4 w-4" />
-                            Panel de artista
-                          </Link>
-                        )}
                       </div>
 
                       <button
@@ -428,7 +418,7 @@ export default function Navigation() {
 
                   <div className="mt-3 space-y-1">
                     <Link
-                      href="/cuenta"
+                      href="/admin/account"
                       onClick={() => setIsMenuOpen(false)}
                       className="flex items-center gap-2 px-2 py-2 rounded-lg text-sm text-gray-800 hover:bg-gray-100"
                     >

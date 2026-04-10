@@ -49,7 +49,7 @@ export default function HomePage() {
           { href: "/artistas", label: "Conocer Artistas" },
         ]}
         tickets={{
-          href: `/tickets?event=${EVENT_ID}`,
+          href: `/tickets`,
           label: `Comprar tickets · ${EVENT_DATES_LABEL}`,
           icon: <TicketsIcon className="w-5 h-5" />,
         }}

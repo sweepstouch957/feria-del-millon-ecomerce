@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 import { useTechniques } from "@hooks/queries/useTechniques";
 
 type Brand = {
-  catGradient?: string[]; // p.ej. ["from-indigo-500", "to-purple-500"]
+  catGradient?: string[]; // p.ej. ["from-zinc-800", "to-black"]
 };
 
 function getGradient(brand?: Brand) {

@@ -210,7 +210,7 @@ export default function Page() {
                 href={`/pabellon/${
                   doc.pavilionInfo.slug ?? doc.pavilionInfo._id
                 }`}
-                className="inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
+                className="inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-green-50 text-green-700 hover:bg-green-100 transition"
               >
                 <Building2 className="h-4 w-4" />
                 {doc.pavilionInfo.name}

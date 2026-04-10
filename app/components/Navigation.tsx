@@ -66,6 +66,7 @@ export default function Navigation() {
     { path: "/", label: "Inicio" },
     { path: "/catalogo", label: "Catálogo" },
     { path: "/artistas", label: "Artistas" },
+    { path: "/convocatoria", label: "Convocatoria Artistas" },
     { path: "/sobre-nosotros", label: "Sobre Nosotros" },
   ];
 

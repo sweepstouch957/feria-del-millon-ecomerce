@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@components/ui/tabs";
 import { Input } from "@components/ui/input";
@@ -14,6 +16,7 @@ import {
   type ArtworkRow,
 } from "@hooks/queries/useArtworksCursor";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
+import { getMyApplications } from "@services/applications.service";
 
 import ArtworksTable from "./ArtworksTable";
 import ArtworkDetailModal from "./ArtworkDetailModal";
@@ -22,13 +25,35 @@ import { useAuth } from "@provider/authProvider";
 
 // Modales extra
 import CreateEditArtworkModal from "./CreateEditArtworkModal";
-import QRModal from "./QrModal"; // 👈 asegúrate de tener el QRModal del paso anterior
+import QRModal from "./QrModal";
 
 const DEFAULT_EVENT_ID = "6909aef219f26eec22af4220";
 
 export default function MiEstudioClient() {
+  const router = useRouter();
   const { user, isAuthLoading, isAuthenticated } = useAuth();
   const artistId = user?.id || user?._id;
+
+  const { data: apps = [], isLoading: appsLoading } = useQuery({
+    queryKey: ["my-applications", artistId],
+    queryFn: getMyApplications,
+    enabled: !!artistId && isAuthenticated,
+  });
+
+  useEffect(() => {
+    if (!isAuthLoading && !appsLoading && isAuthenticated) {
+      if (apps.length === 0) {
+        toast.error("Debes iniciar una postulación primero.");
+        router.push("/convocatoria/pagar");
+        return;
+      }
+      const isApproved = apps.some((app) => app.status === "accepted");
+      if (!isApproved) {
+        toast.error("Tu postulación aún no ha sido aprobada.");
+        router.push("/convocatoria/mi-solicitud");
+      }
+    }
+  }, [isAuthLoading, appsLoading, isAuthenticated, apps, router]);
 
   const [q, setQ] = useState("");
   const [tech, setTech] = useState<string | "all">("all");
@@ -89,10 +114,11 @@ export default function MiEstudioClient() {
     [techniques]
   );
 
-  if (isAuthLoading) {
+  if (isAuthLoading || appsLoading) {
     return (
-      <div className="min-h-[60vh] grid place-items-center text-gray-600">
-        <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Cargando sesión…
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-gray-600">
+        <Loader2 className="w-6 h-6 mb-2 animate-spin" />
+        <p>Cargando información del artista…</p>
       </div>
     );
   }
@@ -100,6 +126,17 @@ export default function MiEstudioClient() {
     return (
       <div className="min-h-[60vh] grid place-items-center text-gray-600">
         Debes iniciar sesión para acceder a tu estudio.
+      </div>
+    );
+  }
+
+  // Prevent flashing content if we are about to redirect because user is not approved
+  const isApproved = apps.some((app) => app.status === "accepted");
+  if (!isApproved && !appsLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-gray-600">
+        <Loader2 className="w-6 h-6 mb-2 animate-spin" />
+        <p>Redirigiendo a tu solicitud…</p>
       </div>
     );
   }

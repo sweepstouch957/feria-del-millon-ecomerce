@@ -376,7 +376,7 @@ export default function CheckoutPage() {
                   <span className="rounded-full bg-blue-50 text-blue-700 text-xs px-3 py-1">
                     Pago seguro
                   </span>
-                  <span className="rounded-full bg-indigo-50 text-indigo-700 text-xs px-3 py-1">
+                  <span className="rounded-full bg-green-50 text-green-700 text-xs px-3 py-1">
                     Envío asegurado
                   </span>
                   <span className="rounded-full bg-fuchsia-50 text-fuchsia-700 text-xs px-3 py-1">

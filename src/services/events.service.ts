@@ -97,9 +97,8 @@ export const getEventByArtistId = async (
   status?: EventStatus
 ) => {
   const qs = buildQuery({ status });
-  const url = `/event/events/artist/${encodeURIComponent(artistId)}${
-    qs ? `?${qs}` : ""
-  }`;
+  const url = `/event/events/artist/${encodeURIComponent(artistId)}${qs ? `?${qs}` : ""
+    }`;
   const { data } = await apiClient.get<EventDoc>(url, {
     withCredentials: true,
   });
@@ -180,4 +179,13 @@ export const listEventArtists = async (
     ...data,
     rows: (data.rows ?? []).map(normalizeArtistRow),
   };
+};
+
+/* ========= Endpoint: GET /api/event/convocatorias ========= */
+export const getConvocatorias = async () => {
+  const { data } = await apiClient.get("/event/convocatorias", {
+    withCredentials: true,
+  });
+  // Dependiendo de cómo lo retorne el controller, puede ser data o data.docs
+  return (data as any).docs || data;
 };

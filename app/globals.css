@@ -200,10 +200,10 @@
 
 @keyframes glow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
   }
   50% {
-    box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.6);
   }
 }
 
@@ -343,7 +343,7 @@
 }
 
 .hover-glow:hover {
-  box-shadow: 0 0 30px rgba(59, 130, 246, 0.4), 0 0 60px rgba(147, 51, 234, 0.2);
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.4), 0 0 60px rgba(0, 0, 0, 0.2);
 }
 
 .hover-rotate {
@@ -356,35 +356,35 @@
 
 /* Gradientes personalizados mejorados */
 .gradient-art {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background: linear-gradient(135deg, #18181b 0%, #000000 50%, #27272a 100%);
 }
 
 .gradient-sunset {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%);
+  background: linear-gradient(135deg, #27272a 0%, #000000 50%, #000000 100%);
 }
 
 .gradient-ocean {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 50%, #43e97b 100%);
+  background: linear-gradient(135deg, #000000 0%, #000000 50%, #22c55e 100%);
 }
 
 .gradient-forest {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 50%, #667eea 100%);
+  background: linear-gradient(135deg, #22c55e 0%, #4ade80 50%, #667eea 100%);
 }
 
 .gradient-cosmic {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%);
+  background: linear-gradient(135deg, #18181b 0%, #000000 25%, #27272a 50%, #000000 75%, #000000 100%);
 }
 
 /* Efectos de texto mejorados */
 .text-gradient {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background: linear-gradient(135deg, #18181b 0%, #000000 50%, #27272a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .text-gradient-cosmic {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%);
+  background: linear-gradient(135deg, #18181b 0%, #000000 25%, #27272a 50%, #000000 75%, #000000 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -397,7 +397,7 @@
 }
 
 .text-shadow-glow {
-  text-shadow: 0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(147, 51, 234, 0.3);
+  text-shadow: 0 0 20px rgba(34, 197, 94, 0.5), 0 0 40px rgba(0, 0, 0, 0.3);
 }
 
 /* Efectos de imagen mejorados */
@@ -415,8 +415,8 @@
   bottom: 0;
   background: linear-gradient(
     45deg,
-    rgba(59, 130, 246, 0.1) 0%,
-    rgba(147, 51, 234, 0.1) 50%,
+    rgba(34, 197, 94, 0.1) 0%,
+    rgba(0, 0, 0, 0.1) 50%,
     rgba(236, 72, 153, 0.1) 100%
   );
   opacity: 0;
@@ -446,7 +446,7 @@
 
 /* Efectos de botón mejorados */
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #18181b 0%, #000000 100%);
   border: none;
   color: white;
   transition: all 0.4s ease;
@@ -476,11 +476,11 @@
 
 .btn-primary:hover {
   transform: translateY(-3px) scale(1.05);
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2), 0 0 20px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2), 0 0 20px rgba(34, 197, 94, 0.3);
 }
 
 .btn-gradient {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background: linear-gradient(135deg, #18181b 0%, #000000 50%, #27272a 100%);
   background-size: 200% 200%;
   transition: all 0.4s ease;
 }
@@ -655,18 +655,18 @@
 
 .focus-ring:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4), 0 0 20px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.4), 0 0 20px rgba(34, 197, 94, 0.2);
   transform: scale(1.02);
 }
 
 /* Efectos de selección mejorados */
 ::selection {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(0, 0, 0, 0.3));
   color: inherit;
 }
 
 ::-moz-selection {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(0, 0, 0, 0.3));
   color: inherit;
 }
 
@@ -681,12 +681,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #18181b, #000000);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #5a67d8, #6b46c1);
+  background: linear-gradient(135deg, #22c55e, #16a34a);
 }
 
 /* Efectos de carga de página */

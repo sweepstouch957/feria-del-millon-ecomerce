@@ -193,8 +193,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
       return me;
     },
     onSuccess: () => {
-      // Respeta ?redirect=... si existe; si no, usa última pública o "/"
-      const redirect = getRedirectParam() || getLastPublicPath() || "/";
+      // Respeta ?redirect=... si existe; si no usa LOGIN_NEXT, última pública o "/"
+      let redirect = getRedirectParam();
+      if (!redirect && typeof window !== "undefined") {
+        redirect = sessionStorage.getItem("LOGIN_NEXT");
+      }
+      redirect = redirect || getLastPublicPath() || "/";
       router.replace(redirect);
     },
   });

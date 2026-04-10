@@ -105,7 +105,7 @@ function CardPreview({
     <div className="relative w-full max-w-md mx-auto">
       <div className={`relative h-56 rounded-2xl shadow-xl overflow-hidden transition-transform duration-500 ${cvvFocused ? 'rotate-y-180' : ''}`}>
         {/* Frente */}
-        <div className="absolute inset-0 backface-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white p-5 flex flex-col justify-between">
+        <div className="absolute inset-0 backface-hidden bg-gradient-to-br from-zinc-900 to-black text-white p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <div className="text-xs uppercase tracking-widest bg-white/15 px-2 py-1 rounded-full">Feria del Millón</div>
             {logo}

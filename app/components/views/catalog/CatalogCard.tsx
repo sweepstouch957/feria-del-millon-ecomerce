@@ -27,7 +27,7 @@ const techniqueTone = (slug = "") => {
   const map: Record<string, string> = {
     "dibujo-drawing": "from-blue-600 to-blue-700",
     "acuarela-watercolor": "from-cyan-700 to-blue-700",
-    fotografia: "from-purple-600 to-indigo-700",
+    fotografia: "from-zinc-900 to-black",
     "oleo-oil": "from-emerald-600 to-green-700",
     "mixta-mixed-media": "from-pink-600 to-rose-700",
     escultura: "from-amber-600 to-orange-700",

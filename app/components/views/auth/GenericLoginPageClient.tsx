@@ -74,7 +74,8 @@ export default function GenericLoginPageClient() {
       setSubmitting(true);
       // Guardamos el destino preferido para que el AuthProvider lo lea después de /login
       try {
-        window.sessionStorage.setItem("LOGIN_NEXT", ui.next);
+        const customRedirect = search.get("redirect");
+        window.sessionStorage.setItem("LOGIN_NEXT", customRedirect || ui.next);
       } catch {}
       await login(email, password); // el provider redirige al NEXT guardado (o a "/")
     } catch (err: any) {

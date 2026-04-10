@@ -52,7 +52,7 @@ export function Stepper({
             <Progress.Indicator
               className={cn(
                 "h-full w-full origin-left",
-                "bg-gradient-to-r from-blue-600 via-indigo-500 to-fuchsia-500"
+                "bg-gradient-to-r from-green-500 to-green-400"
               )}
               style={{ transform: `translateX(-${100 - pct}%)` }}
             />
@@ -87,7 +87,7 @@ export function Stepper({
                     "grid size-14 place-items-center rounded-full border transition-all duration-300",
                     "shadow-sm outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-blue-600/60 disabled:opacity-60",
                     isComplete &&
-                      "border-transparent bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-blue-200",
+                      "border-transparent bg-gradient-to-br from-black to-zinc-900 text-white shadow-green-200/50",
                     isCurrent &&
                       "border-blue-600 bg-white text-blue-700 shadow-lg",
                     !isComplete &&
@@ -165,7 +165,7 @@ export function Stepper({
           className="relative h-2 w-full overflow-hidden rounded-full bg-gray-200/80 dark:bg-white/10"
         >
           <Progress.Indicator
-            className="h-full w-full bg-gradient-to-r from-blue-600 via-indigo-500 to-fuchsia-500"
+            className="h-full w-full bg-gradient-to-r from-green-500 to-green-400"
             style={{ transform: `translateX(-${100 - pct}%)` }}
           />
         </Progress.Root>

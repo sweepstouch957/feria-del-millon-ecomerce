@@ -1,0 +1,420 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Convocatoria — Aplicar Wizard Styles
+   CSS Module  ·  Dark theme  ·  Inter font
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+.wrapper {
+  width: 100%;
+  min-height: calc(100vh - 64px);
+  background: #0a0a0a;
+  color: #fff;
+}
+
+.page {
+  padding: 32px 16px 64px;
+  font-family: "Inter", sans-serif;
+  color: #fff;
+}
+
+.container {
+  max-width: 760px;
+  margin: auto;
+}
+
+/* ── Loading ────────────────────────────────────────────────────────────── */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+  color: #888;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #222;
+  border-top-color: #22c55e;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Status gate (pending payment / submitted) ──────────────────────────── */
+.gateCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+}
+
+.gateCard {
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 20px;
+  padding: 48px;
+  text-align: center;
+  max-width: 440px;
+  box-shadow: 0 8px 32px rgba(255, 255, 255, 0.02);
+}
+
+.gateIcon {
+  font-size: 56px;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.gateCard h2 {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 12px;
+}
+
+.gateCard p {
+  color: #888;
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+
+/* ── Stepper ────────────────────────────────────────────────────────────── */
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+}
+
+.stepDot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #111;
+  border: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+  flex-shrink: 0;
+  transition: all 0.25s ease;
+}
+
+.stepActive .stepDot {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+
+.stepDone .stepDot {
+  background: #222;
+  color: #fff;
+  border-color: #555;
+}
+
+.stepLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.stepActive .stepLabel {
+  color: #fff;
+}
+
+.stepDone .stepLabel {
+  color: #aaa;
+}
+
+.stepConnector {
+  width: 40px;
+  height: 1px;
+  background: #333;
+  margin: 0 8px;
+  transition: background 0.3s;
+}
+
+.stepDone .stepConnector {
+  background: #666;
+}
+
+/* ── Alerts ─────────────────────────────────────────────────────────────── */
+.error {
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.success {
+  background: rgba(22, 163, 74, 0.1);
+  border: 1px solid #22c55e;
+  color: #4ade80;
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+/* ── Global classes for sub-components (scoped inside .container) ────── */
+.container :global(.app-section) {
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.02);
+}
+
+.container :global(.app-section__title) {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 6px;
+}
+
+.container :global(.app-section__desc) {
+  color: #888;
+  font-size: 14px;
+  margin: 0 0 28px;
+}
+
+/* ── Fields ─────────────────────────────────────────────────────────────── */
+.container :global(.app-field) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.container :global(.app-field label) {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ccc;
+}
+
+.container :global(.app-field input),
+.container :global(.app-field select),
+.container :global(.app-field textarea) {
+  border: 1.5px solid #333;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: inherit;
+  background: #111;
+  color: #fff;
+}
+
+.container :global(.app-field input::placeholder),
+.container :global(.app-field textarea::placeholder) {
+  color: #555;
+}
+
+.container :global(.app-field input:focus),
+.container :global(.app-field select:focus),
+.container :global(.app-field textarea:focus) {
+  border-color: #fff;
+}
+
+.container :global(.app-hint) {
+  font-size: 12px;
+  color: #666;
+}
+
+.container :global(.app-chars) {
+  font-size: 11px;
+  color: #666;
+  font-weight: 400;
+}
+
+/* ── Image entries ──────────────────────────────────────────────────────── */
+.container :global(.app-images-list) {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.container :global(.app-image-entry) {
+  border: 1.5px solid #222;
+  border-radius: 14px;
+  padding: 20px;
+  background: #0d0d0d;
+}
+
+.container :global(.app-image-entry__header) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  font-weight: 700;
+  color: #fff;
+  font-size: 14px;
+}
+
+.container :global(.app-image-remove) {
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  border-radius: 8px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.container :global(.app-image-grid) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .container :global(.app-image-grid) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.container :global(.app-btn-add) {
+  width: 100%;
+  border: 2px dashed #444;
+  background: transparent;
+  color: #888;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 24px;
+}
+
+.container :global(.app-btn-add:hover) {
+  border-color: #fff;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Summary ────────────────────────────────────────────────────────────── */
+.container :global(.app-summary) {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.container :global(.app-summary__row) {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #222;
+  font-size: 14px;
+  color: #ccc;
+}
+
+.container :global(.app-summary__row:last-child) {
+  border-bottom: none;
+}
+
+.container :global(.app-notice) {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #444;
+  color: #bbb;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+/* ── Action buttons ─────────────────────────────────────────────────────── */
+.container :global(.app-actions) {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.container :global(.app-btn-primary) {
+  background: #fff;
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.container :global(.app-btn-primary:hover:not(:disabled)) {
+  transform: translateY(-1px);
+  background: #eee;
+}
+
+.container :global(.app-btn-primary:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.container :global(.app-btn-secondary) {
+  background: #111;
+  color: #ccc;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.container :global(.app-btn-secondary:hover) {
+  background: #222;
+  color: #fff;
+}
+
+.container :global(.app-btn-submit) {
+  background: #fff;
+  color: #000;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.container :global(.app-btn-submit:hover:not(:disabled)) {
+  transform: translateY(-1px);
+  background: #eee;
+}
+
+.container :global(.app-btn-submit:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+

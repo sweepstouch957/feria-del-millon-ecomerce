@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { listTechniques } from "@services/techniques.service";
+import { updateUserById } from "@services/users.service";
 import {
   getMyApplications,
   getApplicationById,
@@ -172,6 +173,20 @@ export function useApplicationWizard() {
     if (!appDoc) return;
     setError("");
     await updateMutation.mutateAsync({ id: appDoc._id, payload: formPayload });
+
+    // Sync profile photo to user record when leaving profile step
+    if (profilePhotoUrl && nextStep === 2) {
+      try {
+        const artistId = typeof appDoc.artist === "string" ? appDoc.artist : (appDoc.artist as any)?._id;
+        if (artistId) {
+          await updateUserById(artistId, { image: profilePhotoUrl });
+        }
+      } catch {
+        // Non-critical — don't block wizard progress
+        console.warn("[wizard] Could not sync profile photo to user record");
+      }
+    }
+
     setStep(nextStep);
   };
 

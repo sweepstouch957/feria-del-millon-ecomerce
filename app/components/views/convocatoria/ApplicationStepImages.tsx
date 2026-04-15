@@ -88,13 +88,20 @@ export function ApplicationStepImages({
                 />
               </div>
               <div className="app-field">
-                <label>Precio (COP)</label>
+                <label>Precio (Mín: $800.000 - Máx: $2.350.000 COP) *</label>
                 <input 
                   type="number" 
+                  min={800000}
+                  max={2350000}
                   value={img.price || ""} 
                   onChange={(e) => onUpdateImage(i, "price", Number(e.target.value))} 
-                  placeholder="1000000" 
+                  placeholder="Ej: 1500000" 
                 />
+                {img.price && (img.price < 800000 || img.price > 2350000) && (
+                  <span style={{ color: "red", fontSize: "0.8rem", marginTop: 4, display: "block" }}>
+                    El precio debe estar dentro del rango permitido.
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -111,7 +118,11 @@ export function ApplicationStepImages({
         <button className="app-btn-secondary" onClick={onBack}>← Atrás</button>
         <button 
           className="app-btn-primary" 
-          disabled={isSaving || artworkImages.length === 0} 
+          disabled={
+            isSaving || 
+            artworkImages.length === 0 || 
+            artworkImages.some(img => !img.price || img.price < 800000 || img.price > 2350000 || !img.title || !img.url)
+          } 
           onClick={onNext}
         >
           {isSaving ? "Guardando…" : "Guardar y revisar →"}

@@ -44,8 +44,11 @@ export const uploadPDF = async (file: File): Promise<UploadResponse> => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const { data } = await apiClient.post('/upload/pdf', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  const { data } = await apiClient.post('/s3/upload', formData, {
+    headers: { 
+      'Content-Type': 'multipart/form-data',
+      'x-service-secret': process.env.NEXT_PUBLIC_SERVICE_SECRET || 'change_this_secret'
+    },
     withCredentials: true,
   });
   return { url: data.url, key: data.key };

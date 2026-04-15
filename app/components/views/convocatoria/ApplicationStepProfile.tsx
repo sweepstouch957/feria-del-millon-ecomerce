@@ -8,7 +8,7 @@ interface ApplicationStepProfileProps {
   setProfilePhotoUrl: (url: string) => void;
   bio: string;
   setBio: (bio: string) => void;
-  onBack: () => void;
+  onBack?: () => void;
   onNext: () => void;
   isSaving: boolean;
 }
@@ -60,7 +60,9 @@ export function ApplicationStepProfile({
       </div>
 
       <div className="app-actions">
-        <button className="app-btn-secondary" onClick={onBack}>← Atrás</button>
+        {onBack && (
+          <button className="app-btn-secondary" onClick={onBack}>← Atrás</button>
+        )}
         <button className="app-btn-primary" disabled={isSaving} onClick={onNext}>
           {isSaving ? "Guardando…" : "Guardar y continuar →"}
         </button>

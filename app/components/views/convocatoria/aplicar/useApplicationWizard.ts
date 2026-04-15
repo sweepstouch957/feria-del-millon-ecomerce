@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { listTechniques } from "@services/techniques.service";
 import {
   getMyApplications,
+  getApplicationById,
   updateApplication,
   submitApplication,
   type ArtworkImageEntry,
@@ -45,9 +46,28 @@ export function useApplicationWizard() {
   const [montageImageUrl, setMontageImageUrl] = useState("");
 
   // ── Queries ─────────────────────────────────────────────────────────
-  const { data: apps, isLoading } = useQuery({
+
+  // PRIMARY: if we have an appId, fetch that specific application directly
+  const {
+    data: directApp,
+    isLoading: isLoadingDirect,
+  } = useQuery({
+    queryKey: ["application", appId],
+    queryFn: () => getApplicationById(appId!),
+    enabled: !!appId,
+    // Don't use stale cache — always re-fetch after payment redirect
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+
+  // FALLBACK: if no appId, get all user apps and pick the first one
+  const {
+    data: apps,
+    isLoading: isLoadingApps,
+  } = useQuery({
     queryKey: ["my-applications"],
     queryFn: getMyApplications,
+    enabled: !appId, // only fetch when we DON'T have an appId
   });
 
   const { data: techniques = [] } = useQuery({
@@ -56,10 +76,20 @@ export function useApplicationWizard() {
     staleTime: 1000 * 60 * 30,
   });
 
+  // Combined loading state
+  const isLoading = appId ? isLoadingDirect : isLoadingApps;
+
   // ── Sync server state → local form ─────────────────────────────────
   useEffect(() => {
-    if (!apps) return;
-    const current = appId ? apps.find((a) => a._id === appId) : apps[0];
+    // Determine which app to use
+    let current: ArtistApplication | null = null;
+
+    if (appId && directApp) {
+      current = directApp;
+    } else if (!appId && apps && apps.length > 0) {
+      current = apps[0];
+    }
+
     if (!current) return;
 
     setAppDoc(current as ArtistApplication);
@@ -71,12 +101,26 @@ export function useApplicationWizard() {
     setDetailImageUrl(current.detailImageUrl || "");
     setMontageImageUrl(current.montageImageUrl || "");
 
-    // Only advance step if paid
+    // Auto-advance step if paid
     if (current.isPaid) {
-      if (current.bio || current.cvUrl) setStep(2);
-      else setStep(1);
+      // If they already have artwork images, go to review step
+      if (current.artworkImages && current.artworkImages.length > 0) {
+        setStep(4);
+      }
+      // If they already have project review, go to images step
+      else if (current.projectReview) {
+        setStep(3);
+      }
+      // If they already have bio or cv, go to project step
+      else if (current.bio || current.cvUrl) {
+        setStep(2);
+      }
+      // Fresh paid app → start at profile step
+      else {
+        setStep(1);
+      }
     }
-  }, [apps, appId]);
+  }, [appId, directApp, apps]);
 
   // ── Mutations ───────────────────────────────────────────────────────
   const updateMutation = useMutation({
@@ -87,6 +131,9 @@ export function useApplicationWizard() {
     onSuccess: (updated) => {
       setAppDoc(updated as unknown as ArtistApplication);
       queryClient.invalidateQueries({ queryKey: ["my-applications"] });
+      if (appId) {
+        queryClient.invalidateQueries({ queryKey: ["application", appId] });
+      }
     },
     onError: (e: any) => {
       setError(e?.response?.data?.error || e?.message || "Error al guardar");
@@ -100,6 +147,9 @@ export function useApplicationWizard() {
         "¡Tu postulación fue enviada exitosamente! Recibirás un email de confirmación."
       );
       queryClient.invalidateQueries({ queryKey: ["my-applications"] });
+      if (appId) {
+        queryClient.invalidateQueries({ queryKey: ["application", appId] });
+      }
       router.push("/convocatoria/mi-solicitud");
     },
     onError: (e: any) => {

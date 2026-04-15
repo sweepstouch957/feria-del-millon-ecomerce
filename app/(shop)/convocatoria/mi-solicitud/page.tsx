@@ -1,12 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { getMyApplications, type ArtistApplication } from "@services/applications.service";
-import { STATUS_MAP } from "@components/views/convocatoria/ApplicationStatus";
 import { ApplicationCard } from "@components/views/convocatoria/ApplicationCard";
-
-
+import { Plus, Palette, Loader2, AlertCircle } from "lucide-react";
 
 export default function MiSolicitudPage() {
   const { data: apps = [], isLoading, error } = useQuery({
@@ -14,112 +11,70 @@ export default function MiSolicitudPage() {
     queryFn: getMyApplications,
   });
 
-  if (isLoading) return (
-    <div className="ms-loading">
-      <div className="ms-spinner" />
-      <p>Cargando tu solicitud…</p>
-    </div>
-  );
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] gap-6 text-zinc-400">
+        <Loader2 className="w-12 h-12 text-green-500 animate-spin" />
+        <p className="font-medium">Cargando tu solicitud…</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white pt-6 pb-20">
-      <main className="ms-page">
-        <div className="ms-header">
-        <div>
-          <h1 className="ms-header__title">Mi postulación</h1>
-          <p className="ms-header__sub">Seguimiento de tu postulación a la Feria del Millón 2026</p>
+    <div className="min-h-[calc(100vh-64px)] bg-black text-white relative overflow-hidden pt-12 pb-24">
+      {/* Background glow effects */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-green-500/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-green-600/10 blur-[100px] rounded-full pointer-events-none" />
+
+      <main className="max-w-4xl mx-auto px-6 relative z-10 font-sans">
+        <div className="flex flex-wrap items-center justify-between gap-6 mb-12">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-2">
+              Mi Postulación
+            </h1>
+            <p className="text-zinc-400 text-base md:text-lg">
+              Centro de control para tus obras de la <span className="font-semibold text-white">Feria del Millón 2026</span>
+            </p>
+          </div>
+          <Link 
+            href="/convocatoria/aplicar" 
+            className="flex items-center gap-2 bg-gradient-to-br from-green-500 to-green-600 text-black px-6 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:text-white border border-white/20"
+          >
+            <div className="bg-black/20 rounded-full p-1">
+              <Plus className="w-4 h-4" />
+            </div>
+            Nueva postulación
+          </Link>
         </div>
-        <Link href="/convocatoria/aplicar" className="ms-btn-new">+ Nueva postulación</Link>
-      </div>
 
-      {error && <div className="ms-error">⚠️ {(error as any)?.message || "Error al cargar"}</div>}
+        {error && (
+          <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl mb-8">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <p className="text-sm font-medium">{(error as any)?.message || "Error al cargar las postulaciones. Intenta nuevamente."}</p>
+          </div>
+        )}
 
-      {apps.length === 0 && !error && (
-        <div className="ms-empty">
-          <div className="ms-empty__icon">🎨</div>
-          <h2>Aún no tienes postulaciones</h2>
-          <p>Crea tu primera postulación a la Feria del Millón 2026.</p>
-          <Link href="/convocatoria" className="ms-btn-primary">Ver convocatorias</Link>
+        {apps.length === 0 && !error && (
+          <div className="flex flex-col items-center justify-center text-center p-16 md:p-24 bg-zinc-900/40 border border-white/5 rounded-3xl backdrop-blur-xl">
+            <Palette className="w-20 h-20 text-zinc-700 mb-6 animate-bounce" style={{ animationDuration: '3s' }} />
+            <h2 className="text-3xl font-extrabold text-white mb-3 tracking-tight">Tu lienzo está en blanco</h2>
+            <p className="text-zinc-400 max-w-md mx-auto mb-8 text-lg">
+              Inicia tu proceso de postulación y muestra tu talento a cientos de coleccionistas.
+            </p>
+            <Link 
+              href="/convocatoria" 
+              className="inline-flex items-center justify-center bg-white text-black px-8 py-3.5 rounded-xl font-bold transition-all hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(255,255,255,0.15)]"
+            >
+              Ver parámetros de la convocatoria
+            </Link>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-8">
+          {apps.map((app) => (
+            <ApplicationCard key={app._id} app={app as ArtistApplication} />
+          ))}
         </div>
-      )}
-
-      <div className="ms-cards">
-        {apps.map((app) => (
-          <ApplicationCard key={app._id} app={app as ArtistApplication} />
-        ))}
-      </div>
-
-      <style jsx>{`
-        .ms-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 16px; color: #888; }
-        .ms-spinner { width: 44px; height: 44px; border: 4px solid #222; border-top-color: #22c55e; border-radius: 50%; animation: spin .8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .ms-page { max-width: 860px; margin: auto; padding: 48px 20px 80px; font-family: 'Inter', sans-serif;}
-
-        .ms-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 40px; }
-        .ms-header__title { font-size: 32px; font-weight: 900; color: #fff; margin: 0 0 4px; letter-spacing: -1px; }
-        .ms-header__sub { color: #888; font-size: 15px; margin: 0; }
-        .ms-btn-new { background: #fff; color: #000; padding: 10px 22px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 700; white-space: nowrap; transition: all 0.2s; border: 1px solid transparent; }
-        .ms-btn-new:hover { background: #eee; transform: translateY(-1px); }
-
-        .ms-error { background: rgba(220,38,38,0.1); border: 1px solid #ef4444; color: #ef4444; padding: 14px; border-radius: 12px; margin-bottom: 24px; }
-
-        .ms-empty { text-align: center; padding: 80px 24px; }
-        .ms-empty__icon { font-size: 64px; margin-bottom: 16px; filter: grayscale(100%); opacity: 0.8;}
-        .ms-empty h2 { font-size: 24px; font-weight: 800; color: #fff; margin: 0 0 8px; }
-        .ms-empty p { color: #888; margin: 0 0 24px; }
-
-        .ms-btn-primary { background: #fff; color: #000; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-size: 14px; font-weight: 700; display: inline-block; transition: all 0.2s;}
-        .ms-btn-primary:hover { background: #eee; transform: translateY(-1px); }
-
-        .ms-cards { display: flex; flex-direction: column; gap: 28px; }
-
-        .ms-card { background: #0a0a0a; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 20px rgba(255,255,255,0.02); border: 1px solid #222; }
-        .ms-card__banner { display: flex; align-items: flex-start; gap: 14px; padding: 20px 24px; border-bottom: 1px solid; }
-        .ms-card__banner-icon { font-size: 32px; flex-shrink: 0; }
-        .ms-card__banner-title { font-size: 16px; font-weight: 800; margin-bottom: 2px; }
-        .ms-card__banner-desc { font-size: 13px; opacity: 0.8; }
-
-        .ms-card__body { padding: 28px 24px; color: #fff; }
-        .ms-card__section { margin-bottom: 24px; }
-        .ms-card__conv-name { font-size: 20px; font-weight: 800; color: #fff; margin: 0 0 16px; letter-spacing: -0.5px;}
-
-        .ms-card__meta-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 12px; }
-        .ms-card__meta { background: #111; border-radius: 10px; padding: 12px 14px; border: 1px solid #333;}
-        .ms-card__meta-label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #888; margin-bottom: 4px; }
-        .ms-card__meta-val { font-size: 14px; font-weight: 700; color: #fff; }
-        .ms-card__meta-val.green { color: #4ade80; }
-        .ms-card__meta-val.orange { color: #fbbf24; }
-
-        /* Timeline */
-        .ms-timeline { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 20px 0; border-top: 1px solid #222; border-bottom: 1px solid #222; margin-bottom: 20px; }
-        .ms-tl-item { display: flex; align-items: center; }
-        .ms-tl-dot { width: 26px; height: 26px; border-radius: 50%; background: #111; border: 1px solid #333; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #555; flex-shrink: 0; }
-        .ms-tl-item.done .ms-tl-dot { background: #222; border-color: #555; color: #fff; }
-        .ms-tl-item.active .ms-tl-dot { background: #fff; border-color: #fff; color: #000; }
-        .ms-tl-label { font-size: 11px; color: #666; margin: 0 4px; white-space: nowrap; }
-        .ms-tl-item.done .ms-tl-label { color: #ccc; }
-        .ms-tl-item.active .ms-tl-label { color: #fff; font-weight: 700; }
-        .ms-tl-line { width: 24px; height: 1px; background: #333; }
-        .ms-tl-line.done { background: #666; }
-
-        .ms-notes { padding: 14px; border-radius: 12px; font-size: 13px; margin-bottom: 16px; line-height: 1.6; }
-        .ms-notes--info { background: rgba(56,189,248,0.1); border: 1px solid #0284c7; color: #38bdf8; }
-        .ms-notes--warn { background: rgba(239,68,68,0.1); border: 1px solid #dc2626; color: #f87171; }
-
-        /* Thumbnails */
-        .ms-thumbs { margin-bottom: 20px; }
-        .ms-thumbs__title { font-size: 14px; font-weight: 700; color: #ccc; margin: 0 0 12px; }
-        .ms-thumbs__grid { display: flex; gap: 10px; flex-wrap: wrap; }
-        .ms-thumb { width: 80px; flex-shrink: 0; }
-        .ms-thumb__img { width: 80px; height: 80px; object-fit: cover; border-radius: 10px; display: block; border: 1px solid #333; }
-        .ms-thumb__placeholder { width: 80px; height: 80px; background: #111; border: 1px solid #333; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-        .ms-thumb__title { font-size: 11px; color: #888; display: block; margin-top: 4px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 80px; }
-        .ms-thumb--more { width: 80px; height: 80px; background: #222; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 16px; border: 1px solid #444;}
-
-        .ms-card__actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .ms-badge-waiting { background: rgba(255,255,255,0.05); color: #ccc; border: 1px solid #444; padding: 8px 16px; border-radius: 100px; font-size: 13px; font-weight: 600; }
-      `}</style>
       </main>
     </div>
   );

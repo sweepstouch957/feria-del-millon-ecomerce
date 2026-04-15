@@ -70,6 +70,14 @@ export default function AplicarPageClient() {
           {wiz.error && <div className={styles.error}>⚠️ {wiz.error}</div>}
           {wiz.success && <div className={styles.success}>✅ {wiz.success}</div>}
 
+          {/* Step 0 should never show in the wizard once paid — auto-advances.
+              If we land here briefly, show a transition state. */}
+          {wiz.step === 0 && (
+            <div style={{ textAlign: "center", padding: "48px 0", color: "#888" }}>
+              <p>Preparando formulario…</p>
+            </div>
+          )}
+
           {wiz.step === 1 && (
             <ApplicationStepProfile
               bio={wiz.bio}
@@ -78,7 +86,7 @@ export default function AplicarPageClient() {
               setCvUrl={wiz.setCvUrl}
               profilePhotoUrl={wiz.profilePhotoUrl}
               setProfilePhotoUrl={wiz.setProfilePhotoUrl}
-              onBack={() => wiz.setStep(0)}
+              onBack={undefined}
               onNext={() => wiz.handleSave(2)}
               isSaving={wiz.isSaving}
             />

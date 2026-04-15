@@ -71,6 +71,13 @@ export const mockPayment = async (id: string) => {
   return data as { ok: boolean; doc: ArtistApplication; mock?: boolean };
 };
 
+/** Ask the backend to re-check payment status with MercadoPago after redirect */
+export const checkPaymentStatus = async (id: string) => {
+  const { data } = await apiClient.post(`/applications/applications/${id}/payment/check`);
+  return data as { ok: boolean; paymentStatus: string; isPaid: boolean };
+};
+
+
 
 // ── Admin ──────────────────────────────────────────────────────────────────
 

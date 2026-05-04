@@ -37,7 +37,7 @@ export default function HomePage() {
       <Hero
         brand={BRAND}
         badgeText={EVENT_BADGE_TEXT}
-        subtitle="Semana del Arte 2025"
+        subtitle="Feria del Millón 2026"
         titleMain="Feria del Millón"
         ctas={[
           {
@@ -66,7 +66,7 @@ export default function HomePage() {
               <span className="text-sm font-medium">Evento Destacado</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Feria del Millón 2025 — Bogotá
+              Feria del Millón 2026 — Bogotá
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
               La plataforma más importante de arte emergente en Colombia,

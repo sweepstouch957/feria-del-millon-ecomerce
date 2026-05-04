@@ -63,12 +63,12 @@ export default function Navigation() {
   }, []);
 
   const navItems = [
-    { path: "/", label: "Inicio" },
-    { path: "/catalogo", label: "Catálogo" },
-    { path: "/tickets", label: "Tickets" },
-    { path: "/artistas", label: "Artistas" },
-    { path: "/convocatoria", label: "Convocatoria Artistas" },
-    { path: "/sobre-nosotros", label: "Sobre Nosotros" },
+    { path: "/", label: "Inicio", disabled: true },
+    { path: "/catalogo", label: "Catálogo", disabled: true },
+    { path: "/tickets", label: "Tickets", disabled: true },
+    { path: "/artistas", label: "Artistas", disabled: true },
+    { path: "/convocatoria", label: "Convocatorias", disabled: false },
+    { path: "/sobre-nosotros", label: "Sobre Nosotros", disabled: true },
   ];
 
   const isActive = (path: string) => pathname === path;
@@ -135,10 +135,10 @@ export default function Navigation() {
             </div>
             <div className="hidden sm:block">
               <div className="text-xl font-bold text-black">
-                Semana del Arte
+                Feria del Millón 2026
               </div>
               <div className="text-xs text-gray-500 font-medium">
-                2025 • Feria del Millón
+                2026 • Feria del Millón 14
               </div>
             </div>
           </Link>
@@ -146,21 +146,31 @@ export default function Navigation() {
           {/* Desktop nav */}
           <div className="hidden md:flex items-center space-x-1">
             {navItems.map((item) => (
-              <Link
-                key={item.path}
-                href={item.path}
-                className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 group ${
-                  isActive(item.path)
-                    ? "text-black bg-gray-100"
-                    : "text-gray-800 hover:text-black hover:bg-gray-50"
-                }`}
-              >
-                {item.label}
-                {isActive(item.path) && (
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-black rounded-full" />
-                )}
-                <div className="absolute inset-0 rounded-xl bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </Link>
+              item.disabled ? (
+                <span
+                  key={item.path}
+                  className="relative px-4 py-2 rounded-xl text-sm font-medium text-gray-300 cursor-not-allowed select-none"
+                  title="Próximamente"
+                >
+                  {item.label}
+                </span>
+              ) : (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 group ${
+                    isActive(item.path)
+                      ? "text-black bg-gray-100"
+                      : "text-gray-800 hover:text-black hover:bg-gray-50"
+                  }`}
+                >
+                  {item.label}
+                  {isActive(item.path) && (
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-black rounded-full" />
+                  )}
+                  <div className="absolute inset-0 rounded-xl bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </Link>
+              )
             ))}
           </div>
 
@@ -337,28 +347,45 @@ export default function Navigation() {
         >
           <div className="px-2 pt-2 pb-3 space-y-1 bg-gradient-to-b from-gray-50 to-white rounded-b-2xl border-t border-gray-100">
             {navItems.map((item, index) => (
-              <Link
-                key={item.path}
-                href={item.path}
-                className={`block px-4 py-3 rounded-xl text-base font-medium transition-all duration-300 ${
-                  isActive(item.path)
-                    ? "text-black bg-gray-100 border-l-4 border-black"
-                    : "text-gray-800 hover:text-black hover:bg-gray-100"
-                }`}
-                onClick={() => setIsMenuOpen(false)}
-                style={{
-                  animationDelay: `${
-                    index * 0.1
-                  }s` as React.CSSProperties["animationDelay"],
-                }}
-              >
-                <div className="flex items-center space-x-3">
-                  {isActive(item.path) && (
-                    <Sparkles className="h-4 w-4 text-black" />
-                  )}
-                  <span>{item.label}</span>
-                </div>
-              </Link>
+              item.disabled ? (
+                <span
+                  key={item.path}
+                  className="block px-4 py-3 rounded-xl text-base font-medium text-gray-300 cursor-not-allowed select-none"
+                  style={{
+                    animationDelay: `${
+                      index * 0.1
+                    }s` as React.CSSProperties["animationDelay"],
+                  }}
+                >
+                  <div className="flex items-center space-x-3">
+                    <span>{item.label}</span>
+                    <span className="text-xs text-gray-400 ml-auto">Próximamente</span>
+                  </div>
+                </span>
+              ) : (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`block px-4 py-3 rounded-xl text-base font-medium transition-all duration-300 ${
+                    isActive(item.path)
+                      ? "text-black bg-gray-100 border-l-4 border-black"
+                      : "text-gray-800 hover:text-black hover:bg-gray-100"
+                  }`}
+                  onClick={() => setIsMenuOpen(false)}
+                  style={{
+                    animationDelay: `${
+                      index * 0.1
+                    }s` as React.CSSProperties["animationDelay"],
+                  }}
+                >
+                  <div className="flex items-center space-x-3">
+                    {isActive(item.path) && (
+                      <Sparkles className="h-4 w-4 text-black" />
+                    )}
+                    <span>{item.label}</span>
+                  </div>
+                </Link>
+              )
             ))}
 
             {/* Auth area (mobile) */}

@@ -2,8 +2,8 @@
 import { Calendar, MapPin, Users } from "lucide-react";
 
 export const EVENT_ID = "6909aef219f26eec22af4220";
-export const EVENT_BADGE_TEXT = "12ª Edición • Noviembre 2025";
-export const EVENT_DATES_LABEL = "20-23 de noviembre, 2025";
+export const EVENT_BADGE_TEXT = "14ª Edición • 2026";
+export const EVENT_DATES_LABEL = "2026";
 
 export const EVENT_CARDS = [
   {
@@ -27,7 +27,7 @@ export const EVENT_CARDS = [
 ];
 
 export const STATS = [
-  { number: "12", label: "Años de Trayectoria", suffix: "+" },
+  { number: "14", label: "Años de Trayectoria", suffix: "+" },
   { number: "500", label: "Artistas Participantes", suffix: "+" },
   { number: "2000", label: "Obras Exhibidas", suffix: "+" },
   { number: "50", label: "Ciudades Alcanzadas", suffix: "+" },

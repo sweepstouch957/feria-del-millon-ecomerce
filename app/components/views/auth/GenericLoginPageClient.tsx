@@ -289,8 +289,13 @@ export default function GenericLoginPageClient() {
         }
         @keyframes gl-in { from{opacity:0;transform:translateY(18px) scale(.98)} to{opacity:1;transform:none} }
         @media (max-width: 780px) {
-          .gl-shell { grid-template-columns: 1fr; }
-          .gl-side  { display: none; }
+          .gl-shell {
+            grid-template-columns: 1fr;
+            max-width: 480px;
+            min-height: unset;
+            border-radius: 18px;
+          }
+          .gl-side { display: none; }
         }
 
         /* ══ LEFT SIDE ═══════════════════════════════ */
@@ -368,118 +373,178 @@ export default function GenericLoginPageClient() {
         .gl-stat__l { font-size: 11px; color: var(--tx3); }
 
         /* ══ RIGHT FORM ══════════════════════════════ */
-        .gl-form-col { background: var(--s1); display: flex; align-items: center; justify-content: center; }
-        .gl-form-inner { width: 100%; max-width: 400px; padding: 48px 40px; }
-        @media (max-width: 560px) { .gl-form-inner { padding: 32px 20px; } }
+        .gl-form-col {
+          background: var(--s1);
+          display: flex; align-items: center; justify-content: center;
+        }
+        .gl-form-inner {
+          width: 100%; max-width: 400px;
+          padding: 48px 44px;
+        }
+        @media (max-width: 780px) {
+          .gl-form-inner { padding: 40px 32px; max-width: 460px; }
+        }
+        @media (max-width: 480px) {
+          .gl-form-inner { padding: 32px 22px; }
+        }
 
-        /* Role toggle */
+        /* ── Role toggle (segmented control) ── */
         .gl-toggle {
-          display: flex; gap: 4px;
-          background: var(--s2); border: 1px solid var(--bd2);
-          border-radius: 10px; padding: 4px;
-          margin-bottom: 32px;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          background: var(--s2);
+          border: 1px solid var(--bd2);
+          border-radius: 12px;
+          padding: 4px;
+          margin-bottom: 28px;
+          gap: 3px;
         }
         .gl-toggle__btn {
-          flex: 1; text-align: center;
-          padding: 8px 12px; border-radius: 7px;
-          font-size: 13px; font-weight: 600; color: var(--tx3);
+          text-align: center;
+          padding: 9px 14px;
+          border-radius: 9px;
+          font-size: 13.5px;
+          font-weight: 600;
+          color: rgba(255,255,255,.38);
           text-decoration: none;
-          transition: all .18s var(--e);
+          letter-spacing: .01em;
+          transition: background .18s var(--e), color .18s var(--e), box-shadow .18s var(--e);
         }
-        .gl-toggle__btn:hover { color: var(--tx2); }
+        .gl-toggle__btn:hover:not(.gl-toggle__btn--on) {
+          color: var(--g);
+          background: rgba(34,197,94,.07);
+        }
         .gl-toggle__btn--on {
-          background: var(--g); color: #000;
-          box-shadow: 0 2px 10px rgba(34,197,94,.3);
+          background: var(--g);
+          color: #000 !important;
           font-weight: 700;
+          box-shadow: 0 2px 14px rgba(34,197,94,.35), 0 1px 3px rgba(0,0,0,.3);
         }
 
-        /* Form head */
-        .gl-fhead { margin-bottom: 24px; }
-        .gl-fhead__h { font-size: 22px; font-weight: 900; letter-spacing: -.6px; margin: 0 0 4px; }
-        .gl-fhead__sub { font-size: 13px; color: var(--tx2); margin: 0; }
+        /* ── Form head ── */
+        .gl-fhead { margin-bottom: 22px; }
+        .gl-fhead__h {
+          font-size: 23px; font-weight: 900; letter-spacing: -.7px;
+          margin: 0 0 5px;
+          color: rgba(255,255,255,.95) !important;
+        }
+        .gl-fhead__sub {
+          font-size: 13px;
+          color: rgba(255,255,255,.5) !important;
+          margin: 0; line-height: 1.5;
+        }
 
-        /* Error */
+        /* ── Error ── */
         .gl-error {
           display: flex; align-items: center; gap: 10px;
           background: rgba(248,113,113,.06); border: 1px solid rgba(248,113,113,.2);
-          border-radius: 10px; padding: 10px 14px; color: var(--er);
-          font-size: 13px; margin-bottom: 20px;
+          border-radius: 10px; padding: 10px 14px; color: #f87171 !important;
+          font-size: 13px; margin-bottom: 18px;
         }
-        .gl-error__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--er); flex-shrink: 0; }
+        .gl-error__dot { width: 6px; height: 6px; border-radius: 50%; background: #f87171; flex-shrink: 0; }
 
-        /* Form */
-        .gl-form { display: flex; flex-direction: column; gap: 16px; }
+        /* ── Form fields ── */
+        .gl-form { display: flex; flex-direction: column; gap: 14px; }
         .gl-field { display: flex; flex-direction: column; gap: 6px; }
         .gl-field label {
-          font-size: 12px; font-weight: 700; color: var(--tx2);
-          letter-spacing: .01em;
+          font-size: 11.5px !important;
+          font-weight: 700 !important;
+          color: rgba(255,255,255,.55) !important;
+          letter-spacing: .04em !important;
+          text-transform: uppercase !important;
+          margin: 0 !important;
         }
-        .gl-field__row { display: flex; align-items: center; justify-content: space-between; }
-        .gl-forgot { font-size: 12px; font-weight: 600; color: var(--tx3); text-decoration: none; transition: color .15s; }
-        .gl-forgot:hover { color: var(--g); }
+        .gl-field__row {
+          display: flex; align-items: center; justify-content: space-between;
+        }
+        .gl-forgot {
+          font-size: 11.5px; font-weight: 600;
+          color: rgba(255,255,255,.3) !important;
+          text-decoration: none;
+          transition: color .15s;
+          letter-spacing: 0;
+          text-transform: none !important;
+        }
+        .gl-forgot:hover { color: var(--g) !important; }
 
-        /* Input with icon */
+        /* ── Input with icon ── */
         .gl-input-wrap {
           position: relative; display: flex; align-items: center;
         }
         .gl-ico {
-          position: absolute; left: 14px; z-index: 1;
-          color: var(--tx3); display: flex; align-items: center;
+          position: absolute; left: 13px; z-index: 1;
+          color: rgba(255,255,255,.3);
+          display: flex; align-items: center;
           pointer-events: none;
           transition: color .15s;
         }
         .gl-input-wrap:focus-within .gl-ico { color: var(--g); }
         .gl-input-wrap input {
           width: 100%;
-          background: var(--s2);
-          border: 1.5px solid var(--bd2);
-          border-radius: 10px;
-          padding: 11px 14px 11px 42px;
-          font-size: 14px;
-          color: var(--tx);
-          font-family: inherit;
-          outline: none;
+          background: #111 !important;
+          border: 1.5px solid rgba(255,255,255,.12) !important;
+          border-radius: 11px;
+          padding: 12px 14px 12px 40px !important;
+          font-size: 14px !important;
+          color: rgba(255,255,255,.9) !important;
+          font-family: inherit !important;
+          outline: none !important;
           box-sizing: border-box;
+          box-shadow: none !important;
           transition: border-color .15s var(--e), background .15s var(--e), box-shadow .15s var(--e);
         }
-        .gl-input-wrap input::placeholder { color: var(--tx3); }
-        .gl-input-wrap input:hover { border-color: rgba(255,255,255,.22); background: var(--s3); }
-        .gl-input-wrap input:focus { border-color: var(--g); background: var(--s3); box-shadow: 0 0 0 3px var(--g-ring); }
+        .gl-input-wrap input::placeholder { color: rgba(255,255,255,.22) !important; }
+        .gl-input-wrap input:hover {
+          border-color: rgba(255,255,255,.2) !important;
+          background: #181818 !important;
+        }
+        .gl-input-wrap input:focus {
+          border-color: var(--g) !important;
+          background: #181818 !important;
+          box-shadow: 0 0 0 3px rgba(34,197,94,.18) !important;
+        }
 
-        /* Pw toggle */
+        /* ── Pw toggle ── */
         .gl-pw-btn {
           position: absolute; right: 10px;
-          font-size: 11px; font-weight: 700; color: var(--tx3);
-          background: rgba(255,255,255,.06); border: 1px solid var(--bd2);
+          font-size: 11px; font-weight: 700; color: rgba(255,255,255,.3) !important;
+          background: rgba(255,255,255,.05) !important;
+          border: 1px solid rgba(255,255,255,.1) !important;
           padding: 3px 8px; border-radius: 6px; cursor: pointer;
           transition: color .15s, border-color .15s;
         }
-        .gl-pw-btn:hover { color: var(--tx); border-color: rgba(255,255,255,.22); }
+        .gl-pw-btn:hover { color: rgba(255,255,255,.8) !important; border-color: rgba(255,255,255,.2) !important; }
 
-        /* CTA */
+        /* ── CTA ── */
         .gl-cta {
-          width: 100%; background: var(--g); color: #000; border: none;
-          border-radius: 11px; padding: 13px 20px; font-size: 14.5px; font-weight: 700;
+          width: 100%; background: var(--g); color: #000 !important; border: none;
+          border-radius: 12px; padding: 14px 20px; font-size: 15px; font-weight: 800;
           font-family: inherit; cursor: pointer;
           display: flex; align-items: center; justify-content: center; gap: 8px;
-          transition: all .2s var(--e);
-          box-shadow: 0 4px 22px rgba(34,197,94,.22);
-          margin-top: 4px;
+          transition: all .22s var(--e);
+          box-shadow: 0 4px 24px rgba(34,197,94,.25);
+          letter-spacing: -.01em;
+          margin-top: 6px;
         }
         .gl-cta:hover:not(:disabled) {
-          background: #4ade80; transform: translateY(-1px);
-          box-shadow: 0 8px 30px rgba(34,197,94,.38);
+          background: #4ade80;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 32px rgba(34,197,94,.4);
         }
-        .gl-cta:active:not(:disabled) { transform: translateY(0); }
-        .gl-cta:disabled { opacity: .28; cursor: not-allowed; box-shadow: none; }
+        .gl-cta:active:not(:disabled) { transform: translateY(0); box-shadow: 0 2px 12px rgba(34,197,94,.2); }
+        .gl-cta:disabled { opacity: .25; cursor: not-allowed; box-shadow: none; transform: none; }
 
-        /* Footer */
-        .gl-foot { margin-top: 24px; text-align: center; padding-top: 20px; border-top: 1px solid var(--bd); }
+        /* ── Footer ── */
+        .gl-foot {
+          margin-top: 22px; text-align: center;
+          padding-top: 18px; border-top: 1px solid rgba(255,255,255,.06);
+        }
         .gl-foot__link {
-          font-size: 13px; font-weight: 600; color: var(--tx3);
+          font-size: 13px; font-weight: 600;
+          color: rgba(255,255,255,.38) !important;
           text-decoration: none; transition: color .15s;
         }
-        .gl-foot__link:hover { color: var(--g); }
+        .gl-foot__link:hover { color: var(--g) !important; }
 
         @keyframes gl-spin { to { transform: rotate(360deg); } }
       `}</style>

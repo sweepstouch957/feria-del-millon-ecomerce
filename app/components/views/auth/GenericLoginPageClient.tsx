@@ -517,14 +517,20 @@ export default function GenericLoginPageClient() {
           display: flex; align-items: center; justify-content: space-between;
         }
         .gl-forgot {
-          font-size: 11px; font-weight: 500;
-          color: rgba(255,255,255,.25) !important;
-          text-decoration: none;
-          transition: color .18s;
+          font-size: 11.5px; font-weight: 600;
+          color: rgba(255,255,255,.45) !important;
+          text-decoration: underline !important;
+          text-underline-offset: 3px !important;
+          text-decoration-color: rgba(255,255,255,.15) !important;
+          transition: color .15s, text-decoration-color .15s;
           letter-spacing: 0;
           text-transform: none !important;
+          cursor: pointer;
         }
-        .gl-forgot:hover { color: var(--g) !important; }
+        .gl-forgot:hover {
+          color: var(--g) !important;
+          text-decoration-color: rgba(34,197,94,.5) !important;
+        }
 
         /* ── Input with icon ── */
         .gl-input-wrap {
@@ -611,10 +617,17 @@ export default function GenericLoginPageClient() {
         }
         .gl-foot__link {
           font-size: 13px; font-weight: 600;
-          color: rgba(255,255,255,.38) !important;
-          text-decoration: none; transition: color .15s;
+          color: rgba(255,255,255,.5) !important;
+          text-decoration: underline !important;
+          text-underline-offset: 3px !important;
+          text-decoration-color: rgba(255,255,255,.2) !important;
+          transition: color .15s, text-decoration-color .15s;
+          cursor: pointer;
         }
-        .gl-foot__link:hover { color: var(--g) !important; }
+        .gl-foot__link:hover {
+          color: var(--g) !important;
+          text-decoration-color: rgba(34,197,94,.5) !important;
+        }
 
         @keyframes gl-spin { to { transform: rotate(360deg); } }
       `}</style>

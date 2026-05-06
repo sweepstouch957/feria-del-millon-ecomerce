@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getApplicationById, checkPaymentStatus } from "@services/applications.service";
+import { checkPaymentStatusPublic, checkPaymentStatus } from "@services/applications.service";
 
 export default function PagoPendienteClient() {
   const searchParams = useSearchParams();
@@ -13,9 +13,16 @@ export default function PagoPendienteClient() {
   const reconcile = useCallback(async () => {
     if (!appId) { setChecking(false); return; }
     try {
-      await checkPaymentStatus(appId);
-      const doc = await getApplicationById(appId);
-      if (doc.isPaid) {
+      // Use public endpoint first (no auth required — safer after MP redirect)
+      let result: { ok: boolean; paymentStatus: string; isPaid: boolean };
+      try {
+        result = await checkPaymentStatusPublic(appId);
+      } catch {
+        // Fallback to authenticated endpoint
+        result = await checkPaymentStatus(appId);
+      }
+
+      if (result.isPaid) {
         setStatus("approved");
       } else {
         setStatus("pending");

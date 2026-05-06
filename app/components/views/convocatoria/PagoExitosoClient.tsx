@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getApplicationById, checkPaymentStatus } from "@services/applications.service";
+import { checkPaymentStatusPublic, checkPaymentStatus, getApplicationById } from "@services/applications.service";
 
 export default function PagoExitosoClient() {
   const searchParams = useSearchParams();
@@ -12,22 +12,58 @@ export default function PagoExitosoClient() {
   const [checking, setChecking] = useState(true);
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState("");
+  const retryCount = useRef(0);
+  const maxRetries = 5;
 
   const reconcile = useCallback(async () => {
     if (!appId) { setChecking(false); return; }
     try {
-      // Ask backend to verify with MercadoPago
-      await checkPaymentStatus(appId);
-      const doc = await getApplicationById(appId);
-      setConfirmed(doc.isPaid === true);
-    } catch {
-      setError("No se pudo verificar. Revisa tu solicitud en unos minutos.");
+      // Use public endpoint first (no auth required — safer after MP redirect)
+      let result: { ok: boolean; paymentStatus: string; isPaid: boolean };
+      try {
+        result = await checkPaymentStatusPublic(appId);
+      } catch {
+        // Fallback to authenticated endpoint
+        try {
+          result = await checkPaymentStatus(appId);
+        } catch {
+          // If both fail and we haven't retried too many times, schedule a retry
+          if (retryCount.current < maxRetries) {
+            retryCount.current++;
+            setError("");
+            setTimeout(reconcile, 3000); // retry in 3 seconds
+            return;
+          }
+          throw new Error("No se pudo verificar el pago después de varios intentos.");
+        }
+      }
+
+      if (result.isPaid) {
+        setConfirmed(true);
+        setError("");
+      } else if (result.paymentStatus === "not_found" && retryCount.current < maxRetries) {
+        // Payment might not be indexed yet in MP — retry
+        retryCount.current++;
+        setTimeout(reconcile, 3000);
+        return;
+      }
+    } catch (e: any) {
+      setError(e?.message || "No se pudo verificar. Revisa tu solicitud en unos minutos.");
     } finally {
       setChecking(false);
     }
   }, [appId]);
 
   useEffect(() => { reconcile(); }, [reconcile]);
+
+  // Auto-retry every 10 seconds if not confirmed yet (up to maxRetries)
+  useEffect(() => {
+    if (confirmed || retryCount.current >= maxRetries) return;
+    const t = setInterval(() => {
+      if (retryCount.current < maxRetries) reconcile();
+    }, 10000);
+    return () => clearInterval(t);
+  }, [confirmed, reconcile]);
 
   return (
     <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white flex items-center justify-center">

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getApplicationById, checkPaymentStatus } from "@services/applications.service";
+import { checkPaymentStatusPublic, checkPaymentStatus } from "@services/applications.service";
 
 type PaymentInfo = {
   collectionStatus: string | null;
@@ -36,10 +36,14 @@ export default function PagoFallidoClient() {
       return;
     }
     try {
-      // Tell the backend about the redirect so it can record the abandoned attempt
-      await checkPaymentStatus(appId);
-      const doc = await getApplicationById(appId);
-      setAppStatus(doc.status);
+      // Use public endpoint first (no auth required — safer after MP redirect)
+      let result: { ok: boolean; paymentStatus: string; isPaid: boolean };
+      try {
+        result = await checkPaymentStatusPublic(appId);
+      } catch {
+        result = await checkPaymentStatus(appId);
+      }
+      setAppStatus(result.paymentStatus);
     } catch {
       setErrorDetail("No se pudo verificar el estado del pago.");
     } finally {

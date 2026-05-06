@@ -77,6 +77,13 @@ export const checkPaymentStatus = async (id: string) => {
   return data as { ok: boolean; paymentStatus: string; isPaid: boolean };
 };
 
+/** Public (no auth) payment verification — used after MercadoPago redirect
+ *  when the auth cookie may have been lost during cross-domain redirect */
+export const checkPaymentStatusPublic = async (id: string) => {
+  const { data } = await apiClient.get(`/applications/applications/${id}/payment/verify`);
+  return data as { ok: boolean; paymentStatus: string; isPaid: boolean };
+};
+
 
 
 // ── Admin ──────────────────────────────────────────────────────────────────

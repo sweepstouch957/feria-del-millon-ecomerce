@@ -172,7 +172,6 @@ export default function ConvocatoriaRegisterPage() {
 
               {/* ── Personal ── */}
               <div className="cr-section">
-                <p className="cr-section__lbl">Información personal</p>
                 <div className="cr-row">
                   <Fld label="Nombre" req htmlFor="cr-fn">
                     <input id="cr-fn" type="text" value={form.firstName} onChange={set("firstName")}
@@ -191,7 +190,6 @@ export default function ConvocatoriaRegisterPage() {
 
               {/* ── Contraseña ── */}
               <div className="cr-section">
-                <p className="cr-section__lbl">Contraseña</p>
                 <div className="cr-row">
                   <Fld label="Contraseña" req htmlFor="cr-pw">
                     <div className="cr-pw-wrap">
@@ -213,7 +211,6 @@ export default function ConvocatoriaRegisterPage() {
 
               {/* ── Contacto ── */}
               <div className="cr-section">
-                <p className="cr-section__lbl">Contacto y ubicación</p>
                 <div className="cr-row">
                   <Fld label="Teléfono" htmlFor="cr-tel" hint="Colombia · 10 dígitos">
                     <input id="cr-tel" type="tel" value={formatColPhone(form.mobile)}
@@ -243,7 +240,6 @@ export default function ConvocatoriaRegisterPage() {
 
               {/* ── Documento ── */}
               <div className="cr-section">
-                <p className="cr-section__lbl">Documento e Instagram</p>
                 <div className="cr-row cr-row--3">
                   <Fld label="Tipo doc." htmlFor="cr-dt">
                     <select id="cr-dt" value={form.documentType} onChange={set("documentType")}>
@@ -437,15 +433,15 @@ export default function ConvocatoriaRegisterPage() {
 
         /* ══ RIGHT FORM ════════════════════════════════ */
         .cr-form-col { background: var(--s1); overflow-y: auto; }
-        .cr-form-wrap { padding: 40px 40px 32px; max-width: 600px; }
-        @media (max-width: 560px) { .cr-form-wrap { padding: 28px 20px; } }
+        .cr-form-wrap { padding: 32px 36px 28px; max-width: 600px; }
+        @media (max-width: 560px) { .cr-form-wrap { padding: 24px 18px; } }
 
-        .cr-fhead { margin-bottom: 28px; }
+        .cr-fhead { margin-bottom: 20px; }
         .cr-fhead__step {
           font-size: 10.5px; font-weight: 700; letter-spacing: .12em;
-          text-transform: uppercase; color: var(--g); margin: 0 0 6px;
+          text-transform: uppercase; color: var(--g); margin: 0 0 4px;
         }
-        .cr-fhead__h { font-size: 22px; font-weight: 900; letter-spacing: -.6px; margin: 0 0 4px; }
+        .cr-fhead__h { font-size: 22px; font-weight: 900; letter-spacing: -.6px; margin: 0 0 3px; }
         .cr-fhead__sub { font-size: 13px; color: var(--tx2); margin: 0; }
 
         /* Error */
@@ -453,20 +449,14 @@ export default function ConvocatoriaRegisterPage() {
           display: flex; align-items: center; gap: 10px;
           background: rgba(248,113,113,.06); border: 1px solid rgba(248,113,113,.2);
           border-radius: 10px; padding: 10px 14px; color: var(--er);
-          font-size: 13px; margin-bottom: 20px; line-height: 1.4;
+          font-size: 13px; margin-bottom: 14px; line-height: 1.4;
         }
         .cr-error__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--er); flex-shrink: 0; }
 
         /* Form layout */
         .cr-form { display: flex; flex-direction: column; gap: 0; }
-        .cr-section { margin-bottom: 22px; display: flex; flex-direction: column; gap: 12px; }
-        .cr-section__lbl {
-          font-size: 10px; font-weight: 700; letter-spacing: .1em;
-          text-transform: uppercase; color: var(--tx3);
-          padding-bottom: 10px; border-bottom: 1px solid var(--bd);
-          margin: 0;
-        }
-        .cr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .cr-section { margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
+        .cr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .cr-row--3 { grid-template-columns: 90px 1fr 1fr; }
         @media (max-width: 520px) {
           .cr-row, .cr-row--3 { grid-template-columns: 1fr; }
@@ -482,7 +472,7 @@ export default function ConvocatoriaRegisterPage() {
           background: var(--s2);
           border: 1.5px solid var(--bd2);
           border-radius: 10px;
-          padding: 10px 13px;
+          padding: 9px 12px;
           font-size: 14px;
           color: var(--tx);
           font-family: inherit;
@@ -547,7 +537,7 @@ export default function ConvocatoriaRegisterPage() {
         .cr-terms {
           display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
           background: var(--s2); border: 1.5px solid var(--bd2); border-radius: 10px;
-          padding: 12px 14px; margin-bottom: 20px;
+          padding: 10px 12px; margin-bottom: 14px;
           transition: border-color .15s var(--e), background .15s var(--e);
         }
         .cr-terms:hover { border-color: rgba(255,255,255,.22); }
@@ -579,7 +569,7 @@ export default function ConvocatoriaRegisterPage() {
 
         /* Footer */
         .cr-foot {
-          text-align: center; padding-top: 18px; margin-top: 10px;
+          text-align: center; padding-top: 14px; margin-top: 6px;
           border-top: 1px solid var(--bd);
         }
         .cr-foot p { font-size: 13px; color: var(--tx3); margin: 0; }

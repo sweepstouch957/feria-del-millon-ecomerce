@@ -388,9 +388,9 @@ export default function GenericLoginPageClient() {
         }
         .gl-toggle__btn:hover { color: var(--tx2); }
         .gl-toggle__btn.--on {
-          background: var(--s3); color: var(--tx);
-          box-shadow: 0 1px 4px rgba(0,0,0,.4);
-          border: 1px solid var(--bd2);
+          background: var(--g); color: #000;
+          box-shadow: 0 2px 10px rgba(34,197,94,.3);
+          font-weight: 700;
         }
 
         /* Form head */

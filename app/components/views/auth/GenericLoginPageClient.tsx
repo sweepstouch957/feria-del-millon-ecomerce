@@ -158,13 +158,13 @@ export default function GenericLoginPageClient() {
             <div className="gl-toggle">
               <Link
                 href="/login?role=buyer"
-                className={`gl-toggle__btn${role === "buyer" ? " --on" : ""}`}
+                className={`gl-toggle__btn${role === "buyer" ? " gl-toggle__btn--on" : ""}`}
               >
                 Coleccionista
               </Link>
               <Link
                 href="/login?role=artist"
-                className={`gl-toggle__btn${role === "artist" ? " --on" : ""}`}
+                className={`gl-toggle__btn${role === "artist" ? " gl-toggle__btn--on" : ""}`}
               >
                 Artista
               </Link>
@@ -187,7 +187,7 @@ export default function GenericLoginPageClient() {
               <div className="gl-field">
                 <label htmlFor="gl-em">Correo electrónico</label>
                 <div className="gl-input-wrap">
-                  <MailSvg />
+                  <span className="gl-ico" aria-hidden><MailSvg /></span>
                   <input
                     id="gl-em" type="email" value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -204,7 +204,7 @@ export default function GenericLoginPageClient() {
                   </Link>
                 </div>
                 <div className="gl-input-wrap">
-                  <LockSvg />
+                  <span className="gl-ico" aria-hidden><LockSvg /></span>
                   <input
                     id="gl-pw" type={showPwd ? "text" : "password"}
                     value={password} onChange={e => setPassword(e.target.value)}
@@ -387,7 +387,7 @@ export default function GenericLoginPageClient() {
           transition: all .18s var(--e);
         }
         .gl-toggle__btn:hover { color: var(--tx2); }
-        .gl-toggle__btn.--on {
+        .gl-toggle__btn--on {
           background: var(--g); color: #000;
           box-shadow: 0 2px 10px rgba(34,197,94,.3);
           font-weight: 700;
@@ -422,13 +422,13 @@ export default function GenericLoginPageClient() {
         .gl-input-wrap {
           position: relative; display: flex; align-items: center;
         }
-        .gl-input-wrap > svg {
-          position: absolute; left: 14px;
-          color: var(--tx3); flex-shrink: 0;
+        .gl-ico {
+          position: absolute; left: 14px; z-index: 1;
+          color: var(--tx3); display: flex; align-items: center;
           pointer-events: none;
           transition: color .15s;
         }
-        .gl-input-wrap:focus-within > svg { color: var(--g); }
+        .gl-input-wrap:focus-within .gl-ico { color: var(--g); }
         .gl-input-wrap input {
           width: 100%;
           background: var(--s2);

@@ -154,26 +154,27 @@ export default function GenericLoginPageClient() {
         <section className="gl-form-col">
           <div className="gl-form-inner">
 
-            {/* Role toggle — pill switcher */}
-            <div className="gl-toggle">
-              <Link
-                href="/login?role=buyer"
-                className={`gl-toggle__btn${role === "buyer" ? " gl-toggle__btn--on" : ""}`}
-              >
-                <span className="gl-toggle__ico"><GemSmSvg /></span>
-                <span>Coleccionista</span>
+            {/* Role selector — premium cards */}
+            <div className="gl-roles">
+              <Link href="/login?role=buyer" className={`gl-role${role === "buyer" ? " gl-role--on" : ""}`}>
+                <span className="gl-role__ico"><GemSmSvg /></span>
+                <div className="gl-role__body">
+                  <span className="gl-role__name">Coleccionista</span>
+                  <span className="gl-role__sub">Compra y descubre</span>
+                </div>
+                <span className="gl-role__dot" aria-hidden />
               </Link>
-              <Link
-                href="/login?role=artist"
-                className={`gl-toggle__btn${role === "artist" ? " gl-toggle__btn--on" : ""}`}
-              >
-                <span className="gl-toggle__ico"><PaletteSvg /></span>
-                <span>Artista</span>
+              <Link href="/login?role=artist" className={`gl-role${role === "artist" ? " gl-role--on" : ""}`}>
+                <span className="gl-role__ico"><PaletteSvg /></span>
+                <div className="gl-role__body">
+                  <span className="gl-role__name">Artista</span>
+                  <span className="gl-role__sub">Postula tu obra</span>
+                </div>
+                <span className="gl-role__dot" aria-hidden />
               </Link>
             </div>
 
             <header className="gl-fhead">
-              <p className="gl-fhead__eyebrow">{role === "artist" ? "Portal artístico" : "Para coleccionistas"}</p>
               <h1 className="gl-fhead__h">{ui.title}</h1>
               <p className="gl-fhead__sub">{ui.subtitle}</p>
             </header>
@@ -391,67 +392,107 @@ export default function GenericLoginPageClient() {
           .gl-form-inner { padding: 32px 22px; }
         }
 
-        /* ── Role toggle — floating pills ── */
-        .gl-toggle {
+        /* ── Role selector cards ── */
+        .gl-roles {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 8px;
-          margin-bottom: 28px;
+          gap: 10px;
+          margin-bottom: 32px;
         }
-        .gl-toggle__btn {
+        .gl-role {
           display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 6px;
-          padding: 10px 16px;
-          border-radius: 100px;
-          font-size: 13.5px;
-          font-weight: 600;
-          color: rgba(255,255,255,.35);
+          gap: 11px;
+          padding: 14px 14px;
+          border-radius: 16px;
           text-decoration: none;
-          letter-spacing: .01em;
-          border: 1.5px solid rgba(255,255,255,.09);
-          background: rgba(255,255,255,.02);
-          transition: all .2s var(--e);
+          border: 1.5px solid rgba(255,255,255,.07);
+          background: rgba(255,255,255,.025);
+          transition: all .22s var(--e);
+          position: relative;
+          overflow: hidden;
         }
-        .gl-toggle__btn:hover:not(.gl-toggle__btn--on) {
-          color: rgba(255,255,255,.75);
-          border-color: rgba(34,197,94,.28);
-          background: rgba(34,197,94,.05);
+        .gl-role::after {
+          content: '';
+          position: absolute; inset: 0;
+          border-radius: inherit;
+          background: radial-gradient(ellipse at 0% 0%, rgba(34,197,94,.08) 0%, transparent 70%);
+          opacity: 0; transition: opacity .22s;
+          pointer-events: none;
         }
-        .gl-toggle__btn--on {
-          background: var(--g);
-          color: #000 !important;
-          font-weight: 700;
-          border-color: var(--g);
-          box-shadow: 0 4px 22px rgba(34,197,94,.32), 0 1px 4px rgba(0,0,0,.4);
+        .gl-role--on::after { opacity: 1; }
+        .gl-role:hover:not(.gl-role--on) {
+          border-color: rgba(255,255,255,.13);
+          background: rgba(255,255,255,.04);
+          transform: translateY(-1px);
         }
-        .gl-toggle__ico {
-          display: flex; align-items: center;
-          opacity: .7;
-          transition: opacity .2s;
+        .gl-role--on {
+          border-color: rgba(34,197,94,.4);
+          background: rgba(34,197,94,.07);
+          box-shadow: 0 0 0 1px rgba(34,197,94,.12), 0 8px 28px rgba(34,197,94,.12);
+          transform: translateY(-1px);
         }
-        .gl-toggle__btn--on .gl-toggle__ico { opacity: 1; }
-        .gl-toggle__btn:hover:not(.gl-toggle__btn--on) .gl-toggle__ico { opacity: .9; }
 
-        /* ── Form eyebrow ── */
-        .gl-fhead__eyebrow {
-          font-size: 10px; font-weight: 800; letter-spacing: .14em;
-          text-transform: uppercase; color: var(--g);
-          margin: 0 0 6px; opacity: .8;
+        .gl-role__ico {
+          width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center;
+          background: rgba(255,255,255,.06);
+          color: rgba(255,255,255,.3);
+          transition: all .22s var(--e);
+        }
+        .gl-role--on .gl-role__ico {
+          background: var(--g);
+          color: #000;
+          box-shadow: 0 4px 14px rgba(34,197,94,.4);
+        }
+        .gl-role:hover:not(.gl-role--on) .gl-role__ico {
+          background: rgba(255,255,255,.09);
+          color: rgba(255,255,255,.6);
+        }
+
+        .gl-role__body {
+          display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0;
+        }
+        .gl-role__name {
+          font-size: 13px; font-weight: 700;
+          color: rgba(255,255,255,.35);
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          transition: color .22s;
+          display: block;
+        }
+        .gl-role__sub {
+          font-size: 10.5px; color: rgba(255,255,255,.2);
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          transition: color .22s;
+          display: block;
+        }
+        .gl-role--on .gl-role__name { color: rgba(255,255,255,.92); }
+        .gl-role--on .gl-role__sub  { color: rgba(34,197,94,.7); }
+        .gl-role:hover:not(.gl-role--on) .gl-role__name { color: rgba(255,255,255,.65); }
+
+        .gl-role__dot {
+          width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+          border: 1.5px solid rgba(255,255,255,.15);
+          margin-left: auto;
+          transition: all .22s var(--e);
+        }
+        .gl-role--on .gl-role__dot {
+          background: var(--g);
+          border-color: var(--g);
+          box-shadow: 0 0 8px rgba(34,197,94,.7);
         }
 
         /* ── Form head ── */
-        .gl-fhead { margin-bottom: 22px; }
+        .gl-fhead { margin-bottom: 24px; padding-top: 4px; }
         .gl-fhead__h {
-          font-size: 23px; font-weight: 900; letter-spacing: -.7px;
-          margin: 0 0 5px;
-          color: rgba(255,255,255,.95) !important;
+          font-size: 26px; font-weight: 900; letter-spacing: -1px;
+          margin: 0 0 6px; line-height: 1.08;
+          color: rgba(255,255,255,.96) !important;
         }
         .gl-fhead__sub {
-          font-size: 13px;
-          color: rgba(255,255,255,.5) !important;
-          margin: 0; line-height: 1.5;
+          font-size: 13.5px;
+          color: rgba(255,255,255,.42) !important;
+          margin: 0; line-height: 1.55;
         }
 
         /* ── Error ── */
@@ -464,13 +505,13 @@ export default function GenericLoginPageClient() {
         .gl-error__dot { width: 6px; height: 6px; border-radius: 50%; background: #f87171; flex-shrink: 0; }
 
         /* ── Form fields ── */
-        .gl-form { display: flex; flex-direction: column; gap: 14px; }
-        .gl-field { display: flex; flex-direction: column; gap: 6px; }
+        .gl-form { display: flex; flex-direction: column; gap: 16px; }
+        .gl-field { display: flex; flex-direction: column; gap: 7px; }
         .gl-field label {
-          font-size: 11.5px !important;
+          font-size: 11px !important;
           font-weight: 700 !important;
-          color: rgba(255,255,255,.55) !important;
-          letter-spacing: .04em !important;
+          color: rgba(255,255,255,.4) !important;
+          letter-spacing: .08em !important;
           text-transform: uppercase !important;
           margin: 0 !important;
         }
@@ -478,10 +519,10 @@ export default function GenericLoginPageClient() {
           display: flex; align-items: center; justify-content: space-between;
         }
         .gl-forgot {
-          font-size: 11.5px; font-weight: 600;
-          color: rgba(255,255,255,.3) !important;
+          font-size: 11px; font-weight: 500;
+          color: rgba(255,255,255,.25) !important;
           text-decoration: none;
-          transition: color .15s;
+          transition: color .18s;
           letter-spacing: 0;
           text-transform: none !important;
         }
@@ -492,36 +533,36 @@ export default function GenericLoginPageClient() {
           position: relative; display: flex; align-items: center;
         }
         .gl-ico {
-          position: absolute; left: 13px; z-index: 1;
-          color: rgba(255,255,255,.3);
+          position: absolute; left: 14px; z-index: 1;
+          color: rgba(255,255,255,.25);
           display: flex; align-items: center;
           pointer-events: none;
-          transition: color .15s;
+          transition: color .2s var(--e);
         }
         .gl-input-wrap:focus-within .gl-ico { color: var(--g); }
         .gl-input-wrap input {
           width: 100%;
-          background: #111 !important;
-          border: 1.5px solid rgba(255,255,255,.12) !important;
-          border-radius: 11px;
-          padding: 12px 14px 12px 40px !important;
+          background: rgba(255,255,255,.04) !important;
+          border: 1.5px solid rgba(255,255,255,.1) !important;
+          border-radius: 13px;
+          padding: 13px 16px 13px 42px !important;
           font-size: 14px !important;
-          color: rgba(255,255,255,.9) !important;
+          color: rgba(255,255,255,.92) !important;
           font-family: inherit !important;
           outline: none !important;
           box-sizing: border-box;
-          box-shadow: none !important;
-          transition: border-color .15s var(--e), background .15s var(--e), box-shadow .15s var(--e);
+          box-shadow: inset 0 1px 2px rgba(0,0,0,.2) !important;
+          transition: border-color .2s var(--e), background .2s var(--e), box-shadow .2s var(--e);
         }
-        .gl-input-wrap input::placeholder { color: rgba(255,255,255,.22) !important; }
+        .gl-input-wrap input::placeholder { color: rgba(255,255,255,.18) !important; }
         .gl-input-wrap input:hover {
-          border-color: rgba(255,255,255,.2) !important;
-          background: #181818 !important;
+          border-color: rgba(255,255,255,.18) !important;
+          background: rgba(255,255,255,.06) !important;
         }
         .gl-input-wrap input:focus {
-          border-color: var(--g) !important;
-          background: #181818 !important;
-          box-shadow: 0 0 0 3px rgba(34,197,94,.18) !important;
+          border-color: rgba(34,197,94,.6) !important;
+          background: rgba(34,197,94,.04) !important;
+          box-shadow: 0 0 0 4px rgba(34,197,94,.12), inset 0 1px 2px rgba(0,0,0,.2) !important;
         }
 
         /* ── Pw toggle ── */
@@ -537,22 +578,33 @@ export default function GenericLoginPageClient() {
 
         /* ── CTA ── */
         .gl-cta {
-          width: 100%; background: var(--g); color: #000 !important; border: none;
-          border-radius: 12px; padding: 14px 20px; font-size: 15px; font-weight: 800;
+          width: 100%;
+          background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+          color: #000 !important; border: none;
+          border-radius: 13px; padding: 15px 20px;
+          font-size: 15px; font-weight: 800;
           font-family: inherit; cursor: pointer;
           display: flex; align-items: center; justify-content: center; gap: 8px;
-          transition: all .22s var(--e);
-          box-shadow: 0 4px 24px rgba(34,197,94,.25);
-          letter-spacing: -.01em;
-          margin-top: 6px;
+          transition: all .25s var(--e);
+          box-shadow: 0 4px 24px rgba(34,197,94,.28), 0 1px 2px rgba(0,0,0,.3);
+          letter-spacing: -.02em;
+          margin-top: 8px;
+          position: relative; overflow: hidden;
         }
+        .gl-cta::before {
+          content: '';
+          position: absolute; inset: 0;
+          background: linear-gradient(135deg, rgba(255,255,255,.15) 0%, transparent 60%);
+          opacity: 0; transition: opacity .25s;
+          border-radius: inherit;
+        }
+        .gl-cta:hover:not(:disabled)::before { opacity: 1; }
         .gl-cta:hover:not(:disabled) {
-          background: #4ade80;
           transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(34,197,94,.4);
+          box-shadow: 0 10px 36px rgba(34,197,94,.42), 0 2px 6px rgba(0,0,0,.3);
         }
         .gl-cta:active:not(:disabled) { transform: translateY(0); box-shadow: 0 2px 12px rgba(34,197,94,.2); }
-        .gl-cta:disabled { opacity: .25; cursor: not-allowed; box-shadow: none; transform: none; }
+        .gl-cta:disabled { opacity: .22; cursor: not-allowed; box-shadow: none; transform: none; }
 
         /* ── Footer ── */
         .gl-foot {

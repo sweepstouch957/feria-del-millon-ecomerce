@@ -52,6 +52,7 @@ export function useApplicationWizard() {
   const {
     data: directApp,
     isLoading: isLoadingDirect,
+    error: directError,
   } = useQuery({
     queryKey: ["application", appId],
     queryFn: () => getApplicationById(appId!),
@@ -59,17 +60,28 @@ export function useApplicationWizard() {
     // Don't use stale cache — always re-fetch after payment redirect
     staleTime: 0,
     refetchOnMount: "always",
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 401) return false;
+      return failureCount < 2;
+    },
   });
 
   // FALLBACK: if no appId, get all user apps and pick the first one
   const {
     data: apps,
     isLoading: isLoadingApps,
+    error: appsError,
   } = useQuery({
     queryKey: ["my-applications"],
     queryFn: getMyApplications,
     enabled: !appId, // only fetch when we DON'T have an appId
+    retry: (failureCount, error: any) => {
+      if (error?.response?.status === 401) return false;
+      return failureCount < 2;
+    },
   });
+
+  const loadError = appId ? directError : appsError;
 
   const { data: techniques = [] } = useQuery({
     queryKey: ["techniques"],
@@ -266,6 +278,7 @@ export function useApplicationWizard() {
     // UI
     error,
     success,
+    loadError,
     isSaving: updateMutation.isPending,
     isSubmitting: submitMutation.isPending,
   };

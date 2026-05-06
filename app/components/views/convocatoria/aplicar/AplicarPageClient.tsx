@@ -36,6 +36,25 @@ export default function AplicarPageClient() {
     );
   }
 
+  if (wiz.loadError) {
+    const status = (wiz.loadError as any)?.response?.status;
+    if (status === 401) {
+      // Redirect to login preserving the intention to apply
+      if (typeof window !== "undefined") {
+        const currentUrl = window.location.pathname + window.location.search;
+        window.location.href = `/login?callbackUrl=${encodeURIComponent(currentUrl)}`;
+      }
+      return null;
+    }
+    return (
+      <div className={styles.wrapper} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ padding: 24, background: "#331111", border: "1px solid #ff4444", borderRadius: 8, color: "#fff" }}>
+          Error al cargar postulación. {(wiz.loadError as any)?.message}
+        </div>
+      </div>
+    );
+  }
+
   // ── No application yet → picker ──────────────────────────────────────
   if (!wiz.appDoc) {
     return (

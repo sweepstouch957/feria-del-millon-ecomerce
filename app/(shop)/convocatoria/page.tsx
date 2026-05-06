@@ -1,7 +1,10 @@
 "use client";
 import Link from "next/link";
+import { useAuth } from "@provider/authProvider";
 
 export default function ConvocatoriaLandingPage() {
+  const { isAuthenticated } = useAuth();
+  const postularHref = isAuthenticated ? "/convocatoria/aplicar" : "/convocatoria/register";
   return (
     <main className="convocatoria-landing">
       {/* Hero */}
@@ -14,8 +17,8 @@ export default function ConvocatoriaLandingPage() {
           Bogotá · Edición 2026 · Postula tu proyecto artístico y sé parte del evento de arte más inclusivo de Colombia
         </p>
         <div className="conv-hero__ctas">
-          <Link href="/convocatoria/register" className="bg-white text-black px-8 py-4 rounded-xl text-base font-bold shadow-[0_4px_24px_rgba(255,255,255,0.15)] hover:bg-gray-100 hover:-translate-y-1 transition-all duration-300">
-            Postular ahora →
+          <Link href={postularHref} className="bg-white text-black px-8 py-4 rounded-xl text-base font-bold shadow-[0_4px_24px_rgba(255,255,255,0.15)] hover:bg-gray-100 hover:-translate-y-1 transition-all duration-300">
+            {isAuthenticated ? "Continuar mi postulación →" : "Postular ahora →"}
           </Link>
           <a href="#requisitos" className="bg-transparent text-white px-8 py-4 rounded-xl text-base font-semibold border border-white/30 hover:bg-white/10 hover:border-white/60 transition-all duration-300">
             Ver requisitos
@@ -81,8 +84,8 @@ export default function ConvocatoriaLandingPage() {
       <section className="conv-cta-bottom">
         <h2>¿Lista/o para postular?</h2>
         <p>Únete a cientos de artistas que hacen de la Feria del Millón el evento más diverso del arte en Colombia.</p>
-        <Link href="/convocatoria/register" className="inline-block bg-white text-black px-8 py-4 rounded-xl text-base font-bold shadow-[0_4px_24px_rgba(255,255,255,0.15)] hover:bg-gray-100 hover:-translate-y-1 transition-all duration-300">
-          Comenzar postulación →
+        <Link href={postularHref} className="inline-block bg-white text-black px-8 py-4 rounded-xl text-base font-bold shadow-[0_4px_24px_rgba(255,255,255,0.15)] hover:bg-gray-100 hover:-translate-y-1 transition-all duration-300">
+          {isAuthenticated ? "Continuar mi postulación →" : "Comenzar postulación →"}
         </Link>
       </section>
 

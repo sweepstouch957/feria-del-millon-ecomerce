@@ -6,6 +6,7 @@ import { register } from "@services/auth.service";
 import { useAuth } from "@provider/authProvider";
 import { useCities } from "@hooks/queries/useCities";
 import type { CityDoc } from "@services/city.service";
+import { LoggedInArtistGate } from "@components/views/convocatoria/LoggedInArtistGate";
 
 function formatColPhone(raw: string): string {
   const digits = raw.replace(/\D/g, "").slice(0, 10);
@@ -94,6 +95,7 @@ export default function ConvocatoriaRegisterPage() {
   };
 
   return (
+    <LoggedInArtistGate>
     <div className="r-root">
       <div className="r-shell">
 
@@ -666,6 +668,7 @@ export default function ConvocatoriaRegisterPage() {
         .r-spin { animation: r-spin .7s linear infinite; display: flex; }
       `}</style>
     </div>
+    </LoggedInArtistGate>
   );
 }
 

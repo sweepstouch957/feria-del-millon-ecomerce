@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { getMyApplications, type ArtistApplication } from "@services/applications.service";
@@ -9,7 +10,18 @@ export default function MiSolicitudPage() {
   const { data: apps = [], isLoading, error } = useQuery({
     queryKey: ["my-applications"],
     queryFn: getMyApplications,
+    retry: (failureCount, err: any) => {
+      if (err?.response?.status === 401) return false;
+      return failureCount < 2;
+    },
   });
+
+  // If 401, redirect to login
+  useEffect(() => {
+    if (error && (error as any)?.response?.status === 401) {
+      window.location.href = `/login?redirect=${encodeURIComponent("/convocatoria/mi-solicitud")}`;
+    }
+  }, [error]);
 
   if (isLoading) {
     return (

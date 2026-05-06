@@ -7,22 +7,38 @@ import { getMyApplications, type ArtistApplication } from "@services/application
 
 /**
  * Determines the best next URL for an artist based on their application state.
+ *
+ * stepNum corresponds to which step the user currently NEEDS to complete:
+ *   1 = Cuenta creada  (always done if they have an app)
+ *   2 = Pagar inscripción
+ *   3 = Perfil artista
+ *   4 = Subir obras
+ *   5 = Enviar postulación
+ *
+ * Steps < stepNum render as ✅ done, stepNum renders as active (white).
  */
 function getSmartRedirect(app: ArtistApplication): { url: string; stepLabel: string; stepNum: number } {
+  // Step 2: needs to pay
   if (!app.isPaid || app.status === "pending_payment") {
     return { url: `/convocatoria/pagar?appId=${app._id}`, stepLabel: "Pagar inscripción", stepNum: 2 };
   }
+  // Paid + draft → steps 3–5 depending on progress
   if (app.status === "draft") {
     const hasImages = app.artworkImages && app.artworkImages.length > 0;
     const hasProject = !!app.projectReview;
     const hasBio = !!app.bio || !!app.cvUrl;
+    // Has images → step 5: review & submit
     if (hasImages) return { url: `/convocatoria/aplicar?appId=${app._id}`, stepLabel: "Revisar y enviar", stepNum: 5 };
+    // Has project review → step 4: upload artwork
     if (hasProject) return { url: `/convocatoria/aplicar?appId=${app._id}`, stepLabel: "Subir obras", stepNum: 4 };
-    if (hasBio) return { url: `/convocatoria/aplicar?appId=${app._id}`, stepLabel: "Tu proyecto", stepNum: 3 };
-    return { url: `/convocatoria/aplicar?appId=${app._id}`, stepLabel: "Perfil artista", stepNum: 2 };
+    // Has bio/cv → step 4: project info (mapped to wizard step 2→3)
+    if (hasBio) return { url: `/convocatoria/aplicar?appId=${app._id}`, stepLabel: "Tu proyecto", stepNum: 4 };
+    // Fresh paid app → step 3: fill profile
+    return { url: `/convocatoria/aplicar?appId=${app._id}`, stepLabel: "Perfil artista", stepNum: 3 };
   }
+  // Already submitted or beyond
   if (["submitted", "under_review", "accepted", "rejected"].includes(app.status)) {
-    return { url: `/convocatoria/mi-solicitud`, stepLabel: "Ver estado", stepNum: 5 };
+    return { url: `/convocatoria/mi-solicitud`, stepLabel: "Ver estado", stepNum: 6 };
   }
   return { url: `/convocatoria/aplicar`, stepLabel: "Continuar", stepNum: 1 };
 }

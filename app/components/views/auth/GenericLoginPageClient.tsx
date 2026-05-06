@@ -154,23 +154,26 @@ export default function GenericLoginPageClient() {
         <section className="gl-form-col">
           <div className="gl-form-inner">
 
-            {/* Role toggle */}
+            {/* Role toggle — pill switcher */}
             <div className="gl-toggle">
               <Link
                 href="/login?role=buyer"
                 className={`gl-toggle__btn${role === "buyer" ? " gl-toggle__btn--on" : ""}`}
               >
-                Coleccionista
+                <span className="gl-toggle__ico"><GemSmSvg /></span>
+                <span>Coleccionista</span>
               </Link>
               <Link
                 href="/login?role=artist"
                 className={`gl-toggle__btn${role === "artist" ? " gl-toggle__btn--on" : ""}`}
               >
-                Artista
+                <span className="gl-toggle__ico"><PaletteSvg /></span>
+                <span>Artista</span>
               </Link>
             </div>
 
             <header className="gl-fhead">
+              <p className="gl-fhead__eyebrow">{role === "artist" ? "Portal artístico" : "Para coleccionistas"}</p>
               <h1 className="gl-fhead__h">{ui.title}</h1>
               <p className="gl-fhead__sub">{ui.subtitle}</p>
             </header>
@@ -388,37 +391,54 @@ export default function GenericLoginPageClient() {
           .gl-form-inner { padding: 32px 22px; }
         }
 
-        /* ── Role toggle (segmented control) ── */
+        /* ── Role toggle — floating pills ── */
         .gl-toggle {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          background: var(--s2);
-          border: 1px solid var(--bd2);
-          border-radius: 12px;
-          padding: 4px;
+          gap: 8px;
           margin-bottom: 28px;
-          gap: 3px;
         }
         .gl-toggle__btn {
-          text-align: center;
-          padding: 9px 14px;
-          border-radius: 9px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 10px 16px;
+          border-radius: 100px;
           font-size: 13.5px;
           font-weight: 600;
-          color: rgba(255,255,255,.38);
+          color: rgba(255,255,255,.35);
           text-decoration: none;
           letter-spacing: .01em;
-          transition: background .18s var(--e), color .18s var(--e), box-shadow .18s var(--e);
+          border: 1.5px solid rgba(255,255,255,.09);
+          background: rgba(255,255,255,.02);
+          transition: all .2s var(--e);
         }
         .gl-toggle__btn:hover:not(.gl-toggle__btn--on) {
-          color: var(--g);
-          background: rgba(34,197,94,.07);
+          color: rgba(255,255,255,.75);
+          border-color: rgba(34,197,94,.28);
+          background: rgba(34,197,94,.05);
         }
         .gl-toggle__btn--on {
           background: var(--g);
           color: #000 !important;
           font-weight: 700;
-          box-shadow: 0 2px 14px rgba(34,197,94,.35), 0 1px 3px rgba(0,0,0,.3);
+          border-color: var(--g);
+          box-shadow: 0 4px 22px rgba(34,197,94,.32), 0 1px 4px rgba(0,0,0,.4);
+        }
+        .gl-toggle__ico {
+          display: flex; align-items: center;
+          opacity: .7;
+          transition: opacity .2s;
+        }
+        .gl-toggle__btn--on .gl-toggle__ico { opacity: 1; }
+        .gl-toggle__btn:hover:not(.gl-toggle__btn--on) .gl-toggle__ico { opacity: .9; }
+
+        /* ── Form eyebrow ── */
+        .gl-fhead__eyebrow {
+          font-size: 10px; font-weight: 800; letter-spacing: .14em;
+          text-transform: uppercase; color: var(--g);
+          margin: 0 0 6px; opacity: .8;
         }
 
         /* ── Form head ── */
@@ -553,6 +573,21 @@ export default function GenericLoginPageClient() {
 }
 
 /* ── SVG icons ── */
+function GemSmSvg() {
+  return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <path d="M8 14L1 6l2-3h10l2 3-7 8z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+    <path d="M1 6h14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+  </svg>;
+}
+function PaletteSvg() {
+  return <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4"/>
+    <circle cx="5.5" cy="6" r="1.2" fill="currentColor"/>
+    <circle cx="8"   cy="4.5" r="1.2" fill="currentColor"/>
+    <circle cx="10.5" cy="6" r="1.2" fill="currentColor"/>
+    <path d="M11.5 10.5c0 1-1 2-3.5 2s-4-1-4-2.5c0-.8.7-1 1.5-1h4.5c.8 0 1.5.6 1.5 1.5z" fill="currentColor" opacity=".4"/>
+  </svg>;
+}
 function GemSvg() {
   return <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden>
     <path d="M8 14L1 6l2-3h10l2 3-7 8z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>

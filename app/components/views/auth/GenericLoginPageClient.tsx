@@ -178,7 +178,7 @@ export default function GenericLoginPageClient() {
                     Contraseña
                   </label>
                   <Link
-                    href="/recuperar"
+                    href="/convocatoria/recuperar"
                     className="text-[13px] font-semibold text-zinc-500 hover:text-white transition-colors"
                   >
                     ¿Olvidaste tu contraseña?
@@ -235,7 +235,7 @@ export default function GenericLoginPageClient() {
             <p className="text-[14px] font-medium text-zinc-400">
               {role === "artist" ? "¿Aún no tienes cuenta para postular?" : "¿Nuevo en la feria?"}{" "}
               <Link
-                href={role === "artist" ? "/artist/registro" : "/registro"}
+                href={role === "artist" ? "/convocatoria/register" : "/registro"}
                 className="font-bold text-white relative after:content-[''] after:absolute after:w-full after:h-[2px] after:bg-green-500 after:left-0 after:-bottom-1 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:origin-left"
               >
                 Crear una cuenta gratis

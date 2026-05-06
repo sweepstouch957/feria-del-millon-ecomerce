@@ -156,21 +156,27 @@ export default function GenericLoginPageClient() {
 
             {/* Role selector — premium cards */}
             <div className="gl-roles">
-              <Link href="/login?role=buyer" className={`gl-role${role === "buyer" ? " gl-role--on" : ""}`}>
+              <Link
+                href="/login?role=buyer"
+                className={`gl-role${role === "buyer" ? " gl-role--on" : ""}`}
+                style={{ display:"flex", flexDirection:"row", alignItems:"center", gap:11 }}
+              >
                 <span className="gl-role__ico"><GemSmSvg /></span>
-                <div className="gl-role__body">
+                <span className="gl-role__body">
                   <span className="gl-role__name">Coleccionista</span>
                   <span className="gl-role__sub">Compra y descubre</span>
-                </div>
-                <span className="gl-role__dot" aria-hidden />
+                </span>
               </Link>
-              <Link href="/login?role=artist" className={`gl-role${role === "artist" ? " gl-role--on" : ""}`}>
+              <Link
+                href="/login?role=artist"
+                className={`gl-role${role === "artist" ? " gl-role--on" : ""}`}
+                style={{ display:"flex", flexDirection:"row", alignItems:"center", gap:11 }}
+              >
                 <span className="gl-role__ico"><PaletteSvg /></span>
-                <div className="gl-role__body">
+                <span className="gl-role__body">
                   <span className="gl-role__name">Artista</span>
                   <span className="gl-role__sub">Postula tu obra</span>
-                </div>
-                <span className="gl-role__dot" aria-hidden />
+                </span>
               </Link>
             </div>
 
@@ -400,12 +406,13 @@ export default function GenericLoginPageClient() {
           margin-bottom: 32px;
         }
         .gl-role {
-          display: flex;
-          align-items: center;
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: center !important;
           gap: 11px;
-          padding: 14px 14px;
+          padding: 14px;
           border-radius: 16px;
-          text-decoration: none;
+          text-decoration: none !important;
           border: 1.5px solid rgba(255,255,255,.07);
           background: rgba(255,255,255,.025);
           transition: all .22s var(--e);
@@ -451,36 +458,27 @@ export default function GenericLoginPageClient() {
         }
 
         .gl-role__body {
-          display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0;
+          display: flex !important; flex-direction: column !important;
+          gap: 2px; flex: 1; min-width: 0;
         }
         .gl-role__name {
           font-size: 13px; font-weight: 700;
           color: rgba(255,255,255,.35);
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
           transition: color .22s;
-          display: block;
+          display: block !important;
+          line-height: 1.2;
         }
         .gl-role__sub {
           font-size: 10.5px; color: rgba(255,255,255,.2);
           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
           transition: color .22s;
-          display: block;
+          display: block !important;
+          line-height: 1.2;
         }
         .gl-role--on .gl-role__name { color: rgba(255,255,255,.92); }
-        .gl-role--on .gl-role__sub  { color: rgba(34,197,94,.7); }
+        .gl-role--on .gl-role__sub  { color: rgba(34,197,94,.65); }
         .gl-role:hover:not(.gl-role--on) .gl-role__name { color: rgba(255,255,255,.65); }
-
-        .gl-role__dot {
-          width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-          border: 1.5px solid rgba(255,255,255,.15);
-          margin-left: auto;
-          transition: all .22s var(--e);
-        }
-        .gl-role--on .gl-role__dot {
-          background: var(--g);
-          border-color: var(--g);
-          box-shadow: 0 0 8px rgba(34,197,94,.7);
-        }
 
         /* ── Form head ── */
         .gl-fhead { margin-bottom: 24px; padding-top: 4px; }

@@ -1,212 +1,393 @@
 "use client";
 import Link from "next/link";
-import { STATUS_MAP } from "./ApplicationStatus";
 import { type ArtistApplication } from "@services/applications.service";
-import { CheckCircle2, Clock, Hourglass, CreditCard, Edit3, Image as ImageIcon, Info, AlertTriangle, Check } from "lucide-react";
 
-interface ApplicationCardProps {
-  app: ArtistApplication;
+/* ── Status config ─────────────────────────────────────────────── */
+const S: Record<string, { label: string; color: string; icon: string; desc: string }> = {
+  pending_payment: { label: "Pago pendiente",      color: "#fbbf24", icon: "💳", desc: "Completa el pago de inscripción para continuar."   },
+  draft:           { label: "En progreso",          color: "#60a5fa", icon: "✏️", desc: "Completa tu perfil y sube tus obras."              },
+  submitted:       { label: "Enviada",              color: "#22c55e", icon: "📨", desc: "Tu postulación fue enviada. Está en espera de revisión." },
+  under_review:    { label: "En revisión",          color: "#a78bfa", icon: "🔍", desc: "Un curador está evaluando tu postulación."         },
+  accepted:        { label: "¡Aceptada!",           color: "#22c55e", icon: "🎉", desc: "¡Felicitaciones! Tu proyecto fue seleccionado."    },
+  rejected:        { label: "No seleccionada",      color: "#ef4444", icon: "📋", desc: "Tu proyecto no fue seleccionado en esta edición."  },
+};
+
+/* ── Steps ── */
+const STEPS = [
+  { key: "account",  label: "Crear cuenta" },
+  { key: "payment",  label: "Pagar inscripción" },
+  { key: "artwork",  label: "Subir obras" },
+  { key: "review",   label: "En revisión" },
+  { key: "result",   label: "Resolución" },
+];
+
+function getCompletedStepIndex(app: ArtistApplication): number {
+  // Returns the index of the last COMPLETED step (0-based)
+  if (["accepted", "rejected"].includes(app.status)) return 4;
+  if (app.status === "under_review") return 3;
+  if (app.status === "submitted") return 3;
+  if (app.status === "draft" && app.isPaid) return 2;
+  if (app.isPaid) return 1;
+  return 0;
 }
 
-export function ApplicationCard({ app }: ApplicationCardProps) {
+function getActiveStepIndex(app: ArtistApplication): number {
+  // The step user is currently ON
+  if (["accepted", "rejected"].includes(app.status)) return 4;
+  if (app.status === "under_review") return 3;
+  if (app.status === "submitted") return 3;
+  if (app.status === "draft" && app.isPaid) return 2;
+  if (app.isPaid) return 1;
+  return 0;
+}
+
+export function ApplicationCard({ app }: { app: ArtistApplication }) {
   const conv = typeof app.convocatoria === "object" ? app.convocatoria : null;
-  const s = STATUS_MAP[app.status] || { 
-    label: app.status, 
-    color: "#374151", 
-    bg: "#f3f4f6", 
-    icon: "❓", 
-    desc: "" 
-  };
+  const st = S[app.status] || { label: app.status, color: "#555", icon: "❓", desc: "" };
+  const completedIdx = getCompletedStepIndex(app);
+  const activeIdx = getActiveStepIndex(app);
+  const isFinished = ["accepted", "rejected"].includes(app.status);
+
+  const fmtDate = (d?: string) =>
+    d ? new Date(d).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }) : "—";
 
   return (
-    <div className="bg-black/40 backdrop-blur-xl rounded-[24px] border border-white/10 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_20px_40px_rgba(0,0,0,0.8),0_0_40px_rgba(34,197,94,0.05)]">
-      {/* Status banner */}
-      <div 
-        className="flex items-center gap-4 px-8 py-6 border-b border-white/5 relative overflow-hidden"
-        style={{ backgroundColor: `${s.color}15`, borderColor: `${s.color}30` }}
-      >
-        <span className="text-3xl relative z-10 drop-shadow-md">{s.icon}</span>
-        <div className="relative z-10">
-          <div className="text-lg font-extrabold tracking-tight uppercase mb-1" style={{ color: s.color }}>
-            {s.label}
-          </div>
-          <div className="text-sm font-medium text-white/90">
-            {s.desc}
-          </div>
+    <div className="ac-root">
+      {/* ── Status banner ── */}
+      <div className="ac-banner" style={{ "--sc": st.color } as React.CSSProperties}>
+        <div className="ac-banner__ico">{st.icon}</div>
+        <div>
+          <div className="ac-banner__label">{st.label}</div>
+          <div className="ac-banner__desc">{st.desc}</div>
         </div>
       </div>
 
-      {/* Main info */}
-      <div className="p-8">
-        <div className="mb-8">
-          <h3 className="text-2xl font-black text-white mb-6 tracking-tight bg-gradient-to-br from-white to-zinc-400 bg-clip-text text-transparent">
-            {conv?.name || "Convocatoria"}
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col justify-center">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2 flex items-center gap-1.5">
-                Estado del pago
-              </span>
-              <span className={`text-base font-bold flex items-center gap-1.5 ${app.isPaid ? "text-green-400 shadow-green-400/20" : "text-amber-400 shadow-amber-400/20"}`} style={{ textShadow: app.isPaid ? "0 0 10px rgba(74,222,128,0.3)" : "0 0 10px rgba(251,191,36,0.3)" }}>
-                {app.isPaid ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-                {app.isPaid ? "Confirmado" : "Pendiente"}
-              </span>
-            </div>
-            
-            <div className="bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col justify-center">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-                Postulación enviada
-              </span>
-              <span className="text-base font-bold text-white">
-                {app.submittedAt 
-                  ? new Date(app.submittedAt).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }) 
-                  : "—"}
-              </span>
-            </div>
+      {/* ── Body ── */}
+      <div className="ac-body">
+        <h3 className="ac-title">{conv?.name || "Convocatoria"}</h3>
 
-            <div className="bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col justify-center">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-                Obras cargadas
-              </span>
-              <span className="text-base font-bold text-white">
-                {app.artworkImages?.length || 0} <span className="text-zinc-500">/ 15</span>
-              </span>
+        {/* Stat cards */}
+        <div className="ac-stats">
+          <div className="ac-stat">
+            <span className="ac-stat__label">Pago</span>
+            <span className={`ac-stat__val ${app.isPaid ? "ac-stat__val--ok" : "ac-stat__val--warn"}`}>
+              {app.isPaid ? "✅ Confirmado" : "⏳ Pendiente"}
+            </span>
+          </div>
+          <div className="ac-stat">
+            <span className="ac-stat__label">Enviada</span>
+            <span className="ac-stat__val">{fmtDate(app.submittedAt)}</span>
+          </div>
+          <div className="ac-stat">
+            <span className="ac-stat__label">Obras</span>
+            <span className="ac-stat__val">
+              {app.artworkImages?.length || 0}
+              <span className="ac-stat__dim"> / 15</span>
+            </span>
+          </div>
+          {conv && (
+            <div className="ac-stat">
+              <span className="ac-stat__label">Cierre</span>
+              <span className="ac-stat__val">{fmtDate(conv.endDate)}</span>
             </div>
+          )}
+        </div>
 
-            {conv && (
-              <div className="bg-black/40 rounded-2xl p-4 border border-white/5 flex flex-col justify-center">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-2">
-                  Cierre de convocatoria
-                </span>
-                <span className="text-base font-bold text-white">
-                  {conv.endDate 
-                    ? new Date(conv.endDate).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" }) 
-                    : "—"}
-                </span>
-              </div>
-            )}
+        {/* ── Progress bar ── */}
+        <div className="ac-progress">
+          <div className="ac-progress__track">
+            <div
+              className="ac-progress__fill"
+              style={{ width: `${Math.min(100, (completedIdx / (STEPS.length - 1)) * 100)}%` }}
+            />
+          </div>
+          <div className="ac-steps">
+            {STEPS.map((s, i) => {
+              const done = i < completedIdx;
+              const active = i === activeIdx;
+              return (
+                <div key={s.key} className={`ac-step ${done ? "ac-step--done" : ""} ${active ? "ac-step--active" : ""}`}>
+                  <div className="ac-step__dot">
+                    {done ? <CheckSvg /> : i + 1}
+                  </div>
+                  <span className="ac-step__label">{s.label}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Progress timeline */}
-        <div className="relative flex items-center justify-between py-8 mb-8 before:content-[''] before:absolute before:left-0 before:right-0 before:h-[2px] before:bg-white/5 before:top-1/2 before:-translate-y-1/2 before:z-0">
-          {[
-            { key: "pending_payment", label: "Crear cuenta" },
-            { key: "draft", label: "Pagar inscripción" },
-            { key: "submitted", label: "Subir obras" },
-            { key: "under_review", label: "En revisión" },
-            { key: ["accepted", "rejected"], label: "Resolución" },
-          ].map((item, i) => {
-            const keys = Array.isArray(item.key) ? item.key : [item.key];
-            const statuses = ["pending_payment", "draft", "submitted", "under_review", "accepted", "rejected"];
-            const currentIdx = statuses.indexOf(app.status);
-            const firstItemKey = keys[0];
-            const itemIdx = statuses.indexOf(firstItemKey);
-            
-            const isDone = currentIdx > itemIdx || keys.includes(app.status);
-            const isActive = keys.includes(app.status);
-            
-            return (
-              <div key={i} className={`relative z-10 flex flex-col items-center justify-center w-[60px] gap-3`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] font-extrabold transition-all duration-500
-                  ${isDone && !isActive 
-                    ? "bg-green-500 text-black border-green-400 shadow-[0_0_0_4px_rgba(0,0,0,0.8),0_0_20px_rgba(34,197,94,0.4)]" 
-                    : isActive 
-                      ? "bg-white text-black border-white shadow-[0_0_0_4px_rgba(0,0,0,0.8),0_0_20px_rgba(255,255,255,0.4)] scale-110" 
-                      : "bg-[#0a0a0a] text-zinc-600 border border-white/10 shadow-[0_0_0_4px_rgba(0,0,0,0.8)]"}
-                `}>
-                  {isDone && !isActive ? <Check className="w-4 h-4 stroke-[3]" /> : i + 1}
-                </div>
-                <span className={`text-xs font-semibold text-center absolute top-12 whitespace-nowrap w-[100px]
-                  ${isActive ? "text-white drop-shadow-md" : isDone ? "text-zinc-400" : "text-zinc-600"}
-                `}>
-                  {item.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Admin notes / rejection reason */}
+        {/* ── Admin notes ── */}
         {app.adminNotes && (
-          <div className="flex items-start gap-3 bg-sky-500/5 border border-sky-500/20 text-sky-300 p-5 rounded-2xl mb-6 text-sm leading-relaxed">
-            <Info className="w-5 h-5 shrink-0 mt-0.5" />
-            <div>
-              <strong className="block text-[15px] mb-1 font-bold">Nota del curador:</strong>
-              {app.adminNotes}
-            </div>
+          <div className="ac-note ac-note--info">
+            <div className="ac-note__head">💬 Nota del curador</div>
+            <p className="ac-note__body">{app.adminNotes}</p>
           </div>
         )}
         {app.rejectionReason && (
-          <div className="flex items-start gap-3 bg-red-500/5 border border-red-500/20 text-red-300 p-5 rounded-2xl mb-6 text-sm leading-relaxed">
-            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
-            <div>
-              <strong className="block text-[15px] mb-1 font-bold">Observaciones:</strong>
-              {app.rejectionReason}
+          <div className="ac-note ac-note--error">
+            <div className="ac-note__head">📝 Observaciones</div>
+            <p className="ac-note__body">{app.rejectionReason}</p>
+          </div>
+        )}
+
+        {/* ── Artist profile preview ── */}
+        {(app.profilePhotoUrl || app.bio) && (
+          <div className="ac-profile">
+            {app.profilePhotoUrl && (
+              <img src={app.profilePhotoUrl} alt="Foto de perfil" className="ac-profile__photo" />
+            )}
+            <div className="ac-profile__info">
+              {app.bio && <p className="ac-profile__bio">{app.bio.length > 120 ? app.bio.slice(0, 120) + "…" : app.bio}</p>}
+              {app.projectReview && (
+                <p className="ac-profile__project">
+                  <span>Reseña:</span> {app.projectReview.length > 100 ? app.projectReview.slice(0, 100) + "…" : app.projectReview}
+                </p>
+              )}
             </div>
           </div>
         )}
 
-        {/* Artwork thumbnails */}
+        {/* ── Artwork gallery ── */}
         {app.artworkImages && app.artworkImages.length > 0 && (
-          <div className="mb-8 pt-4">
-            <h4 className="text-base font-extrabold text-white mb-4 tracking-tight">Obras cargadas ({app.artworkImages.length})</h4>
-            <div className="flex gap-3.5 flex-wrap">
-              {app.artworkImages.slice(0, 6).map((img, i) => (
-                <div key={i} className="w-[90px] shrink-0 cursor-pointer group">
-                  <div className="w-[90px] h-[90px] rounded-[14px] overflow-hidden border border-white/10 shadow-[0_8px_16px_rgba(0,0,0,0.4)] transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-105">
-                    {img.url ? (
-                      <img src={img.url} alt={img.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-white/5 border border-dashed border-white/10 flex items-center justify-center">
-                        <ImageIcon className="w-8 h-8 text-zinc-600" />
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-xs font-medium text-zinc-400 block mt-2 text-center truncate px-1">
-                    {img.title || `Obra ${i + 1}`}
-                  </span>
+          <div className="ac-gallery">
+            <div className="ac-gallery__head">
+              🎨 Obras cargadas
+              <span className="ac-gallery__count">{app.artworkImages.length}</span>
+            </div>
+            <div className="ac-gallery__grid">
+              {app.artworkImages.slice(0, 8).map((img, i) => (
+                <div key={i} className="ac-thumb">
+                  {img.url ? (
+                    <img src={img.url} alt={img.title || `Obra ${i + 1}`} />
+                  ) : (
+                    <div className="ac-thumb__empty">📷</div>
+                  )}
+                  <span className="ac-thumb__title">{img.title || `Obra ${i + 1}`}</span>
                 </div>
               ))}
-              {app.artworkImages.length > 6 && (
-                <div className="w-[90px] shrink-0">
-                  <div className="w-[90px] h-[90px] bg-white/5 backdrop-blur-sm rounded-[14px] flex items-center justify-center text-white font-black text-lg border border-white/10">
-                    +{app.artworkImages.length - 6}
-                  </div>
+              {app.artworkImages.length > 8 && (
+                <div className="ac-thumb ac-thumb--more">
+                  +{app.artworkImages.length - 8}
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* CTA buttons */}
-        <div className="flex items-center gap-3 flex-wrap">
+        {/* ── Extra images ── */}
+        {(app.detailImageUrl || app.montageImageUrl) && (
+          <div className="ac-extras">
+            {app.detailImageUrl && (
+              <div className="ac-extra">
+                <img src={app.detailImageUrl} alt="Detalle" />
+                <span>Detalle de obra</span>
+              </div>
+            )}
+            {app.montageImageUrl && (
+              <div className="ac-extra">
+                <img src={app.montageImageUrl} alt="Montaje" />
+                <span>Foto de montaje</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CTAs ── */}
+        <div className="ac-actions">
           {app.status === "pending_payment" && (
-            <Link 
-              href={`/convocatoria/pagar?appId=${app._id}`} 
-              className="inline-flex items-center gap-2 bg-white text-black px-7 py-3.5 rounded-xl text-[15px] font-extrabold transition-all duration-300 hover:-translate-y-0.5 hover:bg-zinc-200 hover:shadow-[0_6px_20px_rgba(255,255,255,0.2)]"
-            >
-              <CreditCard className="w-5 h-5" />
-              Completar pago
+            <Link href={`/convocatoria/pagar?appId=${app._id}`} className="ac-btn ac-btn--primary">
+              💳 Completar pago
             </Link>
           )}
           {app.status === "draft" && (
-            <Link 
-              href={`/convocatoria/aplicar?appId=${app._id}`} 
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 text-black px-7 py-3.5 rounded-xl text-[15px] font-extrabold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(34,197,94,0.3)]"
-            >
-              <Edit3 className="w-5 h-5" />
-              Completar formulario
+            <Link href={`/convocatoria/aplicar?appId=${app._id}`} className="ac-btn ac-btn--green">
+              ✏️ Completar formulario
             </Link>
           )}
           {["submitted", "under_review"].includes(app.status) && (
-            <span className="inline-flex items-center gap-2 bg-white/5 text-zinc-300 border border-white/10 px-6 py-3 rounded-full text-sm font-semibold backdrop-blur-md">
-              <Hourglass className="w-4 h-4 animate-pulse" />
+            <div className="ac-waiting">
+              <div className="ac-waiting__dot" />
               Esperando resolución del curador
-            </span>
+            </div>
+          )}
+          {isFinished && app.status === "accepted" && (
+            <div className="ac-accepted">🎉 ¡Prepárate para la feria!</div>
           )}
         </div>
       </div>
+
+      <style jsx>{`
+        .ac-root {
+          --g: #22c55e; --g-dim: rgba(34,197,94,.08); --g-ring: rgba(34,197,94,.2);
+          --s1: #0a0a0a; --s2: #111; --bd: rgba(255,255,255,.08); --bd2: rgba(255,255,255,.12);
+          --tx: rgba(255,255,255,.93); --tx2: rgba(255,255,255,.55); --tx3: rgba(255,255,255,.28);
+          font-family: 'Inter', system-ui, sans-serif;
+          background: var(--s1); border-radius: 20px;
+          border: 1px solid var(--bd2); overflow: hidden;
+          transition: all .25s ease;
+        }
+        .ac-root:hover { border-color: rgba(255,255,255,.18); box-shadow: 0 24px 60px rgba(0,0,0,.7); }
+
+        /* Banner */
+        .ac-banner {
+          display: flex; align-items: center; gap: 14px;
+          padding: 20px 28px; border-bottom: 1px solid var(--bd);
+          background: color-mix(in srgb, var(--sc) 8%, transparent);
+          position: relative;
+        }
+        .ac-banner::after {
+          content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 120px;
+          background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--sc) 6%, transparent));
+        }
+        .ac-banner__ico { font-size: 28px; z-index: 1; }
+        .ac-banner__label { font-size: 16px; font-weight: 800; color: var(--sc); text-transform: uppercase; letter-spacing: .3px; }
+        .ac-banner__desc { font-size: 13px; color: var(--tx2); margin-top: 2px; }
+
+        /* Body */
+        .ac-body { padding: 28px; }
+        .ac-title { font-size: 22px; font-weight: 900; color: var(--tx); margin: 0 0 20px; letter-spacing: -.5px; }
+
+        /* Stats */
+        .ac-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 24px; }
+        .ac-stat {
+          background: #080808; border: 1px solid var(--bd); border-radius: 14px;
+          padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;
+        }
+        .ac-stat__label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--tx3); }
+        .ac-stat__val { font-size: 14px; font-weight: 700; color: var(--tx); }
+        .ac-stat__val--ok { color: #4ade80; }
+        .ac-stat__val--warn { color: #fbbf24; }
+        .ac-stat__dim { color: var(--tx3); font-weight: 500; }
+
+        /* Progress */
+        .ac-progress { margin-bottom: 24px; }
+        .ac-progress__track {
+          height: 4px; background: var(--bd); border-radius: 4px;
+          overflow: hidden; margin-bottom: 16px;
+        }
+        .ac-progress__fill {
+          height: 100%; background: var(--g);
+          border-radius: 4px;
+          transition: width .6s ease;
+          box-shadow: 0 0 12px rgba(34,197,94,.4);
+        }
+        .ac-steps { display: flex; justify-content: space-between; }
+        .ac-step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+        .ac-step__dot {
+          width: 28px; height: 28px; border-radius: 50%;
+          border: 1.5px solid var(--bd2); background: var(--s2);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 11px; font-weight: 800; color: var(--tx3);
+          transition: all .3s ease;
+        }
+        .ac-step--done .ac-step__dot { background: var(--g); border-color: var(--g); color: #000; }
+        .ac-step--active .ac-step__dot {
+          background: #fff; border-color: #fff; color: #000;
+          box-shadow: 0 0 0 4px rgba(255,255,255,.15), 0 0 16px rgba(255,255,255,.2);
+          transform: scale(1.1);
+        }
+        .ac-step__label { font-size: 10px; font-weight: 600; color: var(--tx3); text-align: center; max-width: 72px; line-height: 1.3; }
+        .ac-step--done .ac-step__label { color: var(--tx2); }
+        .ac-step--active .ac-step__label { color: var(--tx); font-weight: 700; }
+
+        /* Notes */
+        .ac-note { border-radius: 14px; padding: 16px 18px; margin-bottom: 16px; }
+        .ac-note--info { background: rgba(56,189,248,.05); border: 1px solid rgba(56,189,248,.15); }
+        .ac-note--error { background: rgba(239,68,68,.05); border: 1px solid rgba(239,68,68,.15); }
+        .ac-note__head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+        .ac-note--info .ac-note__head { color: #38bdf8; }
+        .ac-note--error .ac-note__head { color: #f87171; }
+        .ac-note__body { font-size: 13px; color: var(--tx2); margin: 0; line-height: 1.6; }
+
+        /* Profile preview */
+        .ac-profile {
+          display: flex; align-items: flex-start; gap: 16px;
+          padding: 16px 18px; background: #080808; border: 1px solid var(--bd);
+          border-radius: 14px; margin-bottom: 16px;
+        }
+        .ac-profile__photo { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; border: 1px solid var(--bd2); flex-shrink: 0; }
+        .ac-profile__info { flex: 1; min-width: 0; }
+        .ac-profile__bio { font-size: 12.5px; color: var(--tx2); margin: 0 0 4px; line-height: 1.5; }
+        .ac-profile__project { font-size: 11.5px; color: var(--tx3); margin: 0; line-height: 1.5; }
+        .ac-profile__project span { color: var(--tx2); font-weight: 600; }
+
+        /* Gallery */
+        .ac-gallery { margin-bottom: 16px; }
+        .ac-gallery__head {
+          font-size: 13px; font-weight: 700; color: var(--tx2); margin-bottom: 12px;
+          display: flex; align-items: center; gap: 8px;
+        }
+        .ac-gallery__count {
+          font-size: 11px; font-weight: 700; color: var(--g);
+          background: var(--g-dim); border: 1px solid var(--g-ring);
+          padding: 2px 8px; border-radius: 100px;
+        }
+        .ac-gallery__grid { display: flex; gap: 10px; flex-wrap: wrap; }
+        .ac-thumb { width: 80px; }
+        .ac-thumb img {
+          width: 80px; height: 80px; object-fit: cover; border-radius: 12px;
+          border: 1px solid var(--bd2); transition: all .2s;
+        }
+        .ac-thumb:hover img { transform: translateY(-2px) scale(1.05); border-color: rgba(255,255,255,.2); }
+        .ac-thumb__empty {
+          width: 80px; height: 80px; border-radius: 12px; border: 1px dashed var(--bd2);
+          background: #080808; display: flex; align-items: center; justify-content: center;
+          font-size: 20px;
+        }
+        .ac-thumb__title { font-size: 10px; color: var(--tx3); text-align: center; margin-top: 4px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ac-thumb--more {
+          width: 80px; height: 80px; border-radius: 12px;
+          background: rgba(255,255,255,.04); border: 1px solid var(--bd);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 16px; font-weight: 800; color: var(--tx3);
+        }
+
+        /* Extras */
+        .ac-extras { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .ac-extra { display: flex; flex-direction: column; gap: 4px; }
+        .ac-extra img {
+          width: 120px; height: 80px; object-fit: cover; border-radius: 12px;
+          border: 1px solid var(--bd2); transition: transform .2s;
+        }
+        .ac-extra:hover img { transform: scale(1.03); }
+        .ac-extra span { font-size: 10px; color: var(--tx3); text-align: center; }
+
+        /* Actions */
+        .ac-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 8px; }
+        .ac-btn {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 700;
+          text-decoration: none; transition: all .2s;
+          font-family: inherit;
+        }
+        .ac-btn--primary { background: #fff; color: #000; box-shadow: 0 4px 16px rgba(255,255,255,.1); }
+        .ac-btn--primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,255,255,.15); }
+        .ac-btn--green { background: var(--g); color: #000; box-shadow: 0 4px 16px rgba(34,197,94,.2); }
+        .ac-btn--green:hover { background: #4ade80; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(34,197,94,.35); }
+
+        .ac-waiting {
+          display: flex; align-items: center; gap: 10px;
+          background: rgba(255,255,255,.04); border: 1px solid var(--bd);
+          padding: 12px 20px; border-radius: 100px; font-size: 13px; font-weight: 600; color: var(--tx2);
+        }
+        .ac-waiting__dot {
+          width: 8px; height: 8px; border-radius: 50%; background: var(--g);
+          animation: ac-pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes ac-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
+
+        .ac-accepted {
+          background: var(--g-dim); border: 1px solid var(--g-ring);
+          padding: 12px 20px; border-radius: 100px; font-size: 14px; font-weight: 700; color: var(--g);
+        }
+      `}</style>
     </div>
   );
+}
+
+function CheckSvg() {
+  return <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>;
 }

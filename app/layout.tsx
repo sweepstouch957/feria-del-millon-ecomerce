@@ -1,4 +1,5 @@
 import Navigation from "@components/Navigation";
+import { ApplicationContinueBanner } from "@components/ApplicationContinueBanner";
 import "./globals.css";
 import { AuthProvider } from "@provider/authProvider";
 import ReactQueryProvider from "@provider/reactQueryProvider";
@@ -29,6 +30,7 @@ export default function RootLayout({
           <AuthProvider>
             <Navigation />
             {children}
+            <ApplicationContinueBanner />
             <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
           </AuthProvider>
         </ReactQueryProvider>

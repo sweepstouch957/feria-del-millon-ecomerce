@@ -127,10 +127,23 @@ export function ApplicationContinueBanner() {
   const hiddenPaths = ["/convocatoria/aplicar", "/convocatoria/pagar"];
   const onHiddenPath = hiddenPaths.some((p) => pathname?.startsWith(p));
 
-  const info =
-    !onHiddenPath && !dismissed && isAuthenticated && !isAuthLoading && apps
-      ? (apps.map(getActionable).find(Boolean) ?? null)
-      : null;
+  let info: ActionableInfo | null = null;
+  if (!onHiddenPath && !dismissed && isAuthenticated && !isAuthLoading && apps) {
+    const activeInfo = apps.map(getActionable).find(Boolean);
+    if (activeInfo) {
+      info = activeInfo;
+    } else if (apps.length === 0) {
+      info = {
+        app: null as any,
+        convName: "Feria del Millón 2026",
+        stepLabel: "Pago inscripción",
+        stepIndex: 0,
+        href: "/convocatoria/aplicar",
+        ctaText: "Iniciar postulación",
+        variant: "payment",
+      };
+    }
+  }
 
   const isPaying = info?.variant === "payment";
   const isRevision = (info?.variant as string) === "revision";

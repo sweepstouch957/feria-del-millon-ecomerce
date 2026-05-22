@@ -90,91 +90,135 @@ export default function ConvocatoriaLandingPage() {
       </section>
 
       <style jsx>{`
-        .convocatoria-landing { font-family: 'Inter', sans-serif; }
+        * { box-sizing: border-box; }
+        .convocatoria-landing { font-family: 'Inter', sans-serif; overflow-x: hidden; }
 
-        /* Hero */
+        /* ── Hero ── */
         .conv-hero {
           min-height: 90vh;
-          background: #000;
+          background: #060606;
           display: flex; flex-direction: column; align-items: center; justify-content: center;
-          text-align: center; padding: 80px 24px 60px; position: relative; overflow: hidden;
+          text-align: center; padding: 80px 20px 64px; position: relative; overflow: hidden;
         }
         .conv-hero::before {
           content: ''; position: absolute; inset: 0;
-          background: radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.05) 0%, transparent 60%);
+          background: radial-gradient(ellipse at 50% 30%, rgba(255,255,255,0.04) 0%, transparent 65%);
+          pointer-events: none;
         }
         .conv-hero__badge {
-          background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-          color: #fff; padding: 8px 20px; border-radius: 100px; font-size: 14px;
-          margin-bottom: 28px; display: inline-block; position: relative;
+          background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14);
+          color: #ccc; padding: 7px 18px; border-radius: 100px; font-size: 13px; font-weight: 600;
+          margin-bottom: 28px; display: inline-block; position: relative; letter-spacing: 0.2px;
         }
         .conv-hero__title {
-          font-size: clamp(48px, 8vw, 96px); font-weight: 900; color: #fff;
-          line-height: 1; margin: 0 0 16px; position: relative; letter-spacing: -2px;
+          font-size: clamp(44px, 8vw, 96px); font-weight: 900; color: #f0f0f0;
+          line-height: 1; margin: 0 0 18px; position: relative; letter-spacing: -2px;
         }
-        .conv-hero__accent { color: #9ca3af; /* elegant gray instead of purple */ }
+        .conv-hero__accent { color: #8a8a8a; }
         .conv-hero__subtitle {
-          font-size: clamp(16px, 2vw, 20px); color: rgba(255,255,255,0.65);
-          max-width: 600px; margin: 0 auto 40px; line-height: 1.6; position: relative;
+          font-size: clamp(15px, 2vw, 19px); color: rgba(255,255,255,0.5);
+          max-width: 560px; margin: 0 auto 44px; line-height: 1.65; position: relative;
         }
-        .conv-hero__ctas { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; position: relative; margin-bottom: 60px; }
-        .btn-primary-lg {
-          background: #fff;
-          color: #000; padding: 16px 36px; border-radius: 12px; font-size: 16px;
-          font-weight: 700; text-decoration: none; transition: all .2s;
-          box-shadow: 0 4px 24px rgba(255,255,255,0.1); border: 1px solid transparent;
+        .conv-hero__ctas {
+          display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+          position: relative; margin-bottom: 56px; width: 100%;
         }
-        .btn-primary-lg:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,255,255,0.2); background: #f3f4f6; }
-        .btn-ghost-lg {
-          background: transparent; color: #fff;
-          padding: 16px 36px; border-radius: 12px; font-size: 16px; font-weight: 600;
-          text-decoration: none; border: 1px solid rgba(255,255,255,0.3); transition: all .2s;
+        .conv-hero__ctas a {
+          min-width: 180px; flex: 0 1 auto;
         }
-        .btn-ghost-lg:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.6); }
-        .conv-hero__stats { display: flex; gap: 32px; flex-wrap: wrap; justify-content: center; position: relative; }
-        .conv-stat { display: flex; flex-direction: column; align-items: center; color: rgba(255,255,255,0.6); font-size: 14px; }
-        .conv-stat__num { font-size: 32px; font-weight: 900; color: #fff; line-height: 1; margin-bottom: 4px; }
+        .conv-hero__stats {
+          display: flex; gap: 24px; flex-wrap: wrap; justify-content: center;
+          position: relative; padding: 0 8px;
+        }
+        .conv-stat {
+          display: flex; flex-direction: column; align-items: center;
+          color: rgba(255,255,255,0.45); font-size: 13px; min-width: 64px;
+        }
+        .conv-stat__num { font-size: 30px; font-weight: 900; color: #e8e8e8; line-height: 1; margin-bottom: 4px; }
 
-        /* Steps */
-        .conv-steps { padding: 80px 24px; background: #0a0a0a; border-top: 1px solid #222; border-bottom: 1px solid #222;}
-        .conv-steps__inner { max-width: 1200px; margin: auto; }
+        /* ── Steps ── */
+        .conv-steps {
+          padding: 80px 20px;
+          background: #0a0a0a;
+          border-top: 1px solid rgba(255,255,255,0.06);
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .conv-steps__inner { max-width: 1100px; margin: auto; }
         .conv-section-title {
-          text-align: center; font-size: clamp(28px, 4vw, 48px);
-          font-weight: 900; color: #fff; margin-bottom: 48px; letter-spacing: -1px;
+          text-align: center; font-size: clamp(26px, 4vw, 44px);
+          font-weight: 900; color: #f0f0f0; margin-bottom: 48px; letter-spacing: -0.8px;
         }
-        .conv-steps__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px; }
+        .conv-steps__grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 20px;
+        }
         .conv-step-card {
-          background: #111; border-radius: 20px; padding: 36px 28px;
-          text-align: center; transition: all .3s;
-          border: 1px solid #222;
+          background: #0f0f0f; border-radius: 20px; padding: 32px 24px;
+          text-align: center; transition: border-color .3s, transform .3s;
+          border: 1px solid rgba(255,255,255,0.06);
         }
-        .conv-step-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(255,255,255,0.02); border-color: #444; }
-        .conv-step-card__num { font-size: 13px; font-weight: 800; color: #fff; letter-spacing: 2px; margin-bottom: 16px; opacity: 0.6; }
-        .conv-step-card__icon { font-size: 40px; margin-bottom: 20px; display: block; opacity: 1; }
-        .conv-step-card__title { font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 12px; }
-        .conv-step-card__desc { font-size: 14px; color: #888; line-height: 1.6; margin: 0; }
+        .conv-step-card:hover {
+          border-color: rgba(255,255,255,0.14);
+          transform: translateY(-3px);
+        }
+        .conv-step-card__num {
+          font-size: 11px; font-weight: 800; color: #444;
+          letter-spacing: 2px; margin-bottom: 16px; text-transform: uppercase;
+        }
+        .conv-step-card__icon { font-size: 36px; margin-bottom: 18px; display: block; }
+        .conv-step-card__title { font-size: 17px; font-weight: 800; color: #efefef; margin: 0 0 10px; }
+        .conv-step-card__desc { font-size: 14px; color: #666; line-height: 1.65; margin: 0; }
 
-        /* Requirements */
-        .conv-requirements { padding: 80px 24px; background: #000; border-top: 1px solid #111; }
-        .conv-requirements__inner { max-width: 1100px; margin: auto; }
-        .conv-req__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+        /* ── Requirements ── */
+        .conv-requirements {
+          padding: 80px 20px;
+          background: #060606;
+          border-top: 1px solid rgba(255,255,255,0.04);
+        }
+        .conv-requirements__inner { max-width: 1060px; margin: auto; }
+        .conv-req__grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 12px;
+        }
         .conv-req-card {
-          display: flex; gap: 16px; align-items: flex-start;
-          padding: 20px; border-radius: 12px; background: #0a0a0a;
-          border: 1px solid #222; transition: border-color .2s;
+          display: flex; gap: 14px; align-items: flex-start;
+          padding: 18px 16px; border-radius: 12px; background: #0c0c0c;
+          border: 1px solid rgba(255,255,255,0.06); transition: border-color .2s;
         }
-        .conv-req-card:hover { border-color: #555; }
-        .conv-req-card__icon { font-size: 28px; flex-shrink: 0; opacity: 1; }
-        .conv-req-card__title { font-size: 15px; font-weight: 800; color: #fff; margin: 0 0 4px; }
-        .conv-req-card__desc { font-size: 13px; color: #888; line-height: 1.5; margin: 0; }
+        .conv-req-card:hover { border-color: rgba(255,255,255,0.14); }
+        .conv-req-card__icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+        .conv-req-card__title { font-size: 14px; font-weight: 800; color: #efefef; margin: 0 0 3px; }
+        .conv-req-card__desc { font-size: 12px; color: #666; line-height: 1.55; margin: 0; }
 
-        /* CTA bottom */
+        /* ── CTA bottom ── */
         .conv-cta-bottom {
-          background: #000;
-          color: #fff; text-align: center; padding: 100px 24px;
+          background: #060606;
+          color: #f0f0f0; text-align: center; padding: 96px 20px;
+          border-top: 1px solid rgba(255,255,255,0.04);
         }
-        .conv-cta-bottom h2 { font-size: clamp(28px, 4vw, 44px); font-weight: 900; margin: 0 0 16px; letter-spacing: -1px; }
-        .conv-cta-bottom p { color: rgba(255,255,255,0.65); font-size: 17px; margin: 0 auto 36px; max-width: 500px; }
+        .conv-cta-bottom h2 {
+          font-size: clamp(26px, 4vw, 42px);
+          font-weight: 900; margin: 0 0 14px; letter-spacing: -0.8px; color: #efefef;
+        }
+        .conv-cta-bottom p {
+          color: rgba(255,255,255,0.45); font-size: 16px;
+          margin: 0 auto 36px; max-width: 480px; line-height: 1.6;
+        }
+
+        /* ── Mobile ── */
+        @media (max-width: 540px) {
+          .conv-hero { padding: 64px 16px 48px; min-height: 80vh; }
+          .conv-hero__ctas { gap: 10px; }
+          .conv-hero__ctas a { min-width: 0; width: 100%; max-width: 320px; text-align: center; }
+          .conv-hero__stats { gap: 16px; }
+          .conv-stat__num { font-size: 24px; }
+          .conv-steps { padding: 56px 16px; }
+          .conv-requirements { padding: 56px 16px; }
+          .conv-cta-bottom { padding: 64px 16px; }
+          .conv-req__grid { grid-template-columns: 1fr; }
+        }
       `}</style>
     </main>
   );

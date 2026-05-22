@@ -44,7 +44,7 @@ export default function PagoPendienteClient() {
   }, [status, reconcile]);
 
   return (
-    <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white flex items-center justify-center">
+    <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white flex items-center justify-center" style={{overflowX: "hidden"}}>
       <main className="pp-page w-full">
         <div className="pp-bg-glow pp-bg-glow--1" />
         <div className="pp-bg-glow pp-bg-glow--2" />
@@ -219,7 +219,12 @@ export default function PagoPendienteClient() {
           .pp-btn--ghost { background:rgba(255,255,255,0.04);color:#aaa;border:1px solid #222; }
           .pp-btn--ghost:hover { background:rgba(255,255,255,0.08);color:#fff;border-color:#444; }
 
-          @media (max-width:540px) { .pp-card{padding:40px 24px;border-radius:20px} .pp-title{font-size:26px} }
+          .pp-page { box-sizing: border-box; }
+          @media (max-width:540px) {
+            .pp-card { padding: 36px 20px; border-radius: 20px; }
+            .pp-title { font-size: 24px; }
+            .pp-subtitle { font-size: 14px; }
+          }
         `}</style>
       </main>
     </div>

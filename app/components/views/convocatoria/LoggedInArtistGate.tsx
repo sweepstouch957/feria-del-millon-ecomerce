@@ -210,12 +210,13 @@ function GateStyles() {
     <style jsx global>{`
       .gate-root {
         min-height: calc(100vh - 64px);
-        background: #000;
+        background: #050505;
         display: flex; align-items: center; justify-content: center;
         padding: 40px 16px;
         font-family: 'Inter', system-ui, sans-serif;
-        color: #fff;
+        color: #f5f5f5;
         position: relative; overflow: hidden;
+        box-sizing: border-box;
       }
       .gate-glow {
         position: absolute; border-radius: 50%;
@@ -304,37 +305,40 @@ function GateStyles() {
       /* Steps */
       .gate-steps {
         display: flex; align-items: flex-start; justify-content: center;
-        gap: 0; margin-bottom: 24px; padding: 0 8px;
+        gap: 0; margin-bottom: 24px; padding: 0 4px;
+        overflow: hidden;
       }
       .gate-step {
         display: flex; flex-direction: column; align-items: center;
         position: relative; flex: 1; min-width: 0;
       }
       .gate-step__circle {
-        width: 32px; height: 32px; border-radius: 50%;
-        background: #1a1a1a; border: 2px solid #333;
+        width: 30px; height: 30px; border-radius: 50%;
+        background: #1a1a1a; border: 2px solid #2a2a2a;
         display: flex; align-items: center; justify-content: center;
-        font-size: 12px; font-weight: 800; color: #555;
+        font-size: 11px; font-weight: 800; color: #444;
         transition: all 0.3s; flex-shrink: 0; position: relative; z-index: 2;
       }
       .gate-step--done .gate-step__circle {
         background: #22c55e; border-color: #22c55e; color: #000;
       }
       .gate-step--active .gate-step__circle {
-        background: #fff; border-color: #fff; color: #000;
-        box-shadow: 0 0 0 4px rgba(255,255,255,0.1), 0 0 20px rgba(255,255,255,0.15);
+        background: #f5f5f5; border-color: #f5f5f5; color: #000;
+        box-shadow: 0 0 0 4px rgba(245,245,245,0.08);
         transform: scale(1.1);
       }
       .gate-step__label {
-        font-size: 10px; font-weight: 600; color: #444;
-        margin-top: 8px; text-align: center; white-space: nowrap;
+        font-size: 9px; font-weight: 600; color: #3a3a3a;
+        margin-top: 7px; text-align: center;
+        word-break: break-word; hyphens: auto;
+        line-height: 1.3; max-width: 54px;
       }
       .gate-step--done .gate-step__label { color: #4ade80; }
-      .gate-step--active .gate-step__label { color: #fff; font-weight: 700; }
+      .gate-step--active .gate-step__label { color: #f5f5f5; font-weight: 700; }
       .gate-step__line {
-        position: absolute; top: 15px; left: calc(50% + 18px);
-        width: calc(100% - 36px); height: 2px;
-        background: #222; z-index: 1;
+        position: absolute; top: 14px; left: calc(50% + 17px);
+        width: calc(100% - 34px); height: 2px;
+        background: #1e1e1e; z-index: 1;
       }
       .gate-step__line--done { background: #22c55e; }
 
@@ -380,10 +384,25 @@ function GateStyles() {
       }
 
       @media (max-width: 540px) {
-        .gate-card { padding: 32px 20px; border-radius: 20px; }
+        .gate-card { padding: 32px 16px; border-radius: 20px; }
         .gate-title { font-size: 22px; }
-        .gate-step__label { font-size: 9px; }
         .gate-stats { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 400px) {
+        .gate-step__label { display: none; }
+        .gate-step--active .gate-step__label {
+          display: block;
+          position: absolute;
+          top: 38px;
+          left: 50%;
+          transform: translateX(-50%);
+          white-space: nowrap;
+          max-width: none;
+          font-size: 10px;
+          color: #f5f5f5;
+        }
+        .gate-steps { margin-bottom: 52px; }
+        .gate-card { padding: 28px 14px; }
       }
     `}</style>
   );

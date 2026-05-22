@@ -66,7 +66,7 @@ export default function PagoExitosoClient() {
   }, [confirmed, reconcile]);
 
   return (
-    <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white flex items-center justify-center">
+    <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white flex items-center justify-center" style={{overflowX: "hidden"}}>
       <main className="ps-page w-full">
         {/* Background glows */}
         <div className="ps-bg-glow ps-bg-glow--1" />
@@ -178,6 +178,7 @@ export default function PagoExitosoClient() {
             display: flex; align-items: center; justify-content: center;
             padding: 32px 16px; font-family: 'Inter', sans-serif;
             position: relative; overflow: hidden;
+            box-sizing: border-box;
           }
 
           /* Background glows */
@@ -354,8 +355,9 @@ export default function PagoExitosoClient() {
           }
 
           @media (max-width: 540px) {
-            .ps-card { padding: 40px 24px; border-radius: 20px; }
-            .ps-title { font-size: 26px; }
+            .ps-card { padding: 36px 20px; border-radius: 20px; }
+            .ps-title { font-size: 24px; }
+            .ps-subtitle { font-size: 14px; }
           }
         `}</style>
       </main>

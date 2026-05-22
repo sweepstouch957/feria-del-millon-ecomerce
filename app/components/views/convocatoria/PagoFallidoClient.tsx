@@ -84,7 +84,7 @@ export default function PagoFallidoClient() {
   const msg = getMessage();
 
   return (
-    <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white flex items-center justify-center">
+    <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white flex items-center justify-center" style={{overflowX: "hidden"}}>
       <main className="pf-page w-full">
         {/* Background glow effects */}
         <div className="pf-bg-glow pf-bg-glow--1" />
@@ -224,6 +224,7 @@ export default function PagoFallidoClient() {
             display: flex; align-items: center; justify-content: center;
             padding: 32px 16px; font-family: 'Inter', sans-serif;
             position: relative; overflow: hidden;
+            box-sizing: border-box;
           }
 
           /* Background glows */
@@ -410,8 +411,9 @@ export default function PagoFallidoClient() {
           .pf-help strong { color: #888; }
 
           @media (max-width: 540px) {
-            .pf-card { padding: 40px 24px; border-radius: 20px; }
-            .pf-title { font-size: 26px; }
+            .pf-card { padding: 36px 20px; border-radius: 20px; }
+            .pf-title { font-size: 24px; }
+            .pf-subtitle { font-size: 14px; }
           }
         `}</style>
       </main>

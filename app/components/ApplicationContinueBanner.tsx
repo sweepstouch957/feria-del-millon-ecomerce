@@ -35,6 +35,20 @@ function getActionable(app: ArtistApplication): ActionableInfo | null {
     return null;
   }
 
+  // revision_requested — admin asked artist to fix and re-submit
+  if (app.status === "revision_requested") {
+    const conv = typeof app.convocatoria === "object" ? app.convocatoria : null;
+    return {
+      app,
+      convName: conv?.name ?? "Convocatoria",
+      stepLabel: "Correcciones solicitadas",
+      stepIndex: 3,
+      href: `/convocatoria/aplicar?appId=${app._id}`,
+      ctaText: "Ver y corregir",
+      variant: "revision" as any,
+    };
+  }
+
   const conv = typeof app.convocatoria === "object" ? app.convocatoria : null;
   const convName = conv?.name ?? "Convocatoria";
 
@@ -119,11 +133,16 @@ export function ApplicationContinueBanner() {
       : null;
 
   const isPaying = info?.variant === "payment";
-  const accent = isPaying ? "oklch(0.82 0.17 80)" : "oklch(0.72 0.2 145)";
-  const accentDim = isPaying
+  const isRevision = (info?.variant as string) === "revision";
+  const accent = isPaying
+    ? "oklch(0.82 0.17 80)"
+    : isRevision
+    ? "oklch(0.82 0.17 80)"
+    : "oklch(0.72 0.2 145)";
+  const accentDim = isPaying || isRevision
     ? "rgba(251,191,36,.08)"
     : "rgba(34,197,94,.08)";
-  const accentRing = isPaying
+  const accentRing = isPaying || isRevision
     ? "rgba(251,191,36,.22)"
     : "rgba(34,197,94,.22)";
 
@@ -150,10 +169,12 @@ export function ApplicationContinueBanner() {
             <div className="acb-header">
               <div className="acb-pulse-wrap">
                 <span className="acb-pulse" />
-                <span className="acb-icon">{isPaying ? "💳" : "✏️"}</span>
+                <span className="acb-icon">{isPaying ? "💳" : isRevision ? "⚠️" : "✏️"}</span>
               </div>
               <div className="acb-title-block">
-                <p className="acb-eyebrow">Postulación en progreso</p>
+                <p className="acb-eyebrow">
+                {isRevision ? "Correcciones solicitadas" : "Postulación en progreso"}
+              </p>
                 <p className="acb-conv">{info.convName}</p>
               </div>
               <button

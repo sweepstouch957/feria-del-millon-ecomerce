@@ -80,9 +80,37 @@ export default function AplicarPageClient() {
   }
 
   // ── Wizard form ──────────────────────────────────────────────────────
+  const isRevision = docStatus === "revision_requested";
+  const revisionNotes = (wiz.appDoc as any).revisionNotes as string | undefined;
+
   return (
     <div className={styles.wrapper}>
       <main className={styles.page}>
+        {/* Admin-requested revision alert */}
+        {isRevision && (
+          <div style={{
+            background: "rgba(251,191,36,.07)",
+            border: "1px solid rgba(251,191,36,.3)",
+            borderRadius: 16,
+            padding: "18px 24px",
+            margin: "0 auto 20px",
+            maxWidth: 760,
+            display: "flex",
+            gap: 16,
+            alignItems: "flex-start",
+          }}>
+            <span style={{ fontSize: 24, flexShrink: 0, marginTop: 1 }}>✏️</span>
+            <div>
+              <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 800, color: "#fbbf24" }}>
+                El curador te invita a corregir tu postulación
+              </p>
+              <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,.6)", lineHeight: 1.6 }}>
+                {revisionNotes || "Realiza los cambios indicados y vuelve a enviar tu postulación para revisión."}
+              </p>
+            </div>
+          </div>
+        )}
+
         <ApplicationStepper labels={STEP_LABELS} current={wiz.step} />
 
         <div className={styles.container}>

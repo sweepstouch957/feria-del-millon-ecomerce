@@ -4,7 +4,7 @@ export interface ArtistApplication {
   _id: string;
   convocatoria: { _id: string; name: string; slug: string; fee: number; currency: string; startDate: string; endDate: string; status: string } | string;
   artist: string;
-  status: "pending_payment" | "draft" | "submitted" | "under_review" | "accepted" | "rejected";
+  status: "pending_payment" | "draft" | "submitted" | "under_review" | "revision_requested" | "accepted" | "rejected";
   paymentStatus: "pending" | "approved" | "rejected" | "cancelled";
   isPaid: boolean;
   paidAt?: string;
@@ -17,6 +17,8 @@ export interface ArtistApplication {
   montageImageUrl?: string;
   adminNotes?: string;
   rejectionReason?: string;
+  revisionNotes?: string;
+  revisionRequestedAt?: string;
   submittedAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -82,6 +84,16 @@ export const checkPaymentStatus = async (id: string) => {
 export const checkPaymentStatusPublic = async (id: string) => {
   const { data } = await apiClient.get(`/applications/applications/${id}/payment/verify`);
   return data as { ok: boolean; paymentStatus: string; isPaid: boolean };
+};
+
+/** Admin: request artist to revise and re-submit their application */
+export const requestRevision = async (id: string, notes: string) => {
+  const { data } = await apiClient.patch(
+    `/applications/applications/${id}/request-revision`,
+    { notes },
+    { headers: { "x-user-admin": "true" } }
+  );
+  return data as { ok: boolean; doc: ArtistApplication };
 };
 
 

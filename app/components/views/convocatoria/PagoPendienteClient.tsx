@@ -187,7 +187,7 @@ export default function PagoPendienteClient() {
           @keyframes pp-blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
           .pp-title { font-size:32px;font-weight:900;color:#fff;margin:0 0 12px;letter-spacing:-1px; }
-          .pp-subtitle { color:#777;font-size:15px;line-height:1.65;margin:0 0 28px;max-width:400px;margin-left:auto;margin-right:auto; }
+          .pp-subtitle { color:#999;font-size:15px;line-height:1.65;margin:0 0 28px;max-width:400px;margin-left:auto;margin-right:auto; }
 
           .pp-checking {
             display:flex;align-items:center;justify-content:center;gap:10px;

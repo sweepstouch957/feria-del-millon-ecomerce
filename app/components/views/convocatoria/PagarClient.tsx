@@ -297,13 +297,13 @@ export default function PagarClient() {
         .pay-step.active .pay-step__dot { background: #f5f5f5; border-color: #f5f5f5; color: #000; box-shadow: 0 0 0 4px rgba(245,245,245,0.1); }
         .pay-step.done .pay-step__dot { background: #1a1a1a; border-color: #555; color: #ccc; }
         .pay-step__label {
-          font-size: 10px; font-weight: 600; color: #444;
+          font-size: 10px; font-weight: 600; color: #888;
           margin-top: 8px; text-align: center;
           word-break: break-word; hyphens: auto;
           max-width: 72px; line-height: 1.3;
         }
         .pay-step.active .pay-step__label { color: #f5f5f5; font-weight: 700; }
-        .pay-step.done .pay-step__label { color: #666; }
+        .pay-step.done .pay-step__label { color: #999; }
         .pay-step__line {
           position: absolute;
           top: 15px;
@@ -329,7 +329,7 @@ export default function PagarClient() {
         @keyframes pay-in { from{opacity:0;transform:translateY(20px) scale(.97)} to{opacity:1;transform:none} }
         .pay-card__icon { font-size: 48px; margin-bottom: 16px; display: block; }
         .pay-card__title { font-size: 28px; font-weight: 800; color: #f5f5f5; margin: 0 0 8px; letter-spacing: -0.8px; }
-        .pay-card__subtitle { color: #777; font-size: 15px; margin: 0 0 32px; line-height: 1.6; }
+        .pay-card__subtitle { color: #999; font-size: 15px; margin: 0 0 32px; line-height: 1.6; }
 
         /* ── Amount ── */
         .pay-amount {
@@ -363,12 +363,12 @@ export default function PagarClient() {
         }
         .pay-btn:hover:not(:disabled) { transform: translateY(-1px); background: #e5e5e5; box-shadow: 0 4px 20px rgba(255,255,255,0.1); }
         .pay-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .pay-legal { font-size: 12px; color: #444; line-height: 1.6; }
+        .pay-legal { font-size: 12px; color: #888; line-height: 1.6; }
 
         /* ── MercadoPago badge ── */
         .pay-mp-badge {
           display: flex; align-items: center; justify-content: center; gap: 8px;
-          margin-top: 16px; font-size: 13px; color: #555;
+          margin-top: 16px; font-size: 13px; color: #888;
         }
         .pay-mp-badge strong { color: #009ee3; }
 

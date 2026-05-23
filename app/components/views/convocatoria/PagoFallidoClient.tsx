@@ -322,7 +322,7 @@ export default function PagoFallidoClient() {
             margin: 0 0 12px; letter-spacing: -1px; line-height: 1.1;
           }
           .pf-subtitle {
-            color: #777; font-size: 15px; line-height: 1.65;
+            color: #999; font-size: 15px; line-height: 1.65;
             margin: 0 0 28px; max-width: 400px; margin-left: auto; margin-right: auto;
           }
 

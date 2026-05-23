@@ -126,7 +126,7 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3 group">
+          <Link href="/" className="flex items-center space-x-3 group" aria-label="Ir al inicio - Feria del Millón">
             <div className="relative">
               <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                 <Palette className="h-5 w-5 text-white" />
@@ -294,9 +294,10 @@ export default function Navigation() {
               <Button
                 variant="outline"
                 size="sm"
+                aria-label="Ir al carrito"
                 className="relative border-gray-300 hover:border-black hover:bg-gray-50 transition-all duration-300 group-hover:scale-105"
               >
-                <ShoppingCart className="h-4 w-4 group-hover:text-black transition-colors" />
+                <ShoppingCart className="h-4 w-4 group-hover:text-black transition-colors" aria-hidden="true" />
                 {cartCount > 0 && (
                   <>
                     <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">

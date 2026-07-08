@@ -14,11 +14,8 @@ export const uploadCampaignImage = async (
   formData.append('image', image);
   formData.append('folder', folder);
 
-  const response = await apiClient.post('/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  // no manual Content-Type: the browser sets multipart/form-data with the boundary
+  const response = await apiClient.post('/upload', formData);
 
   return response.data; // { url, public_id }
 };
@@ -33,7 +30,6 @@ export const uploadImage = async (
   formData.append('folder', folder);
 
   const { data } = await apiClient.post('/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
     withCredentials: true,
   });
   return { url: data.url, public_id: data.public_id };
@@ -44,11 +40,9 @@ export const uploadPDF = async (file: File): Promise<UploadResponse> => {
   const formData = new FormData();
   formData.append('file', file);
 
+  // x-service-secret now injected by the api-gateway; sending it from the
+  // browser leaked the secret and forced a preflight the gateway didn't answer
   const { data } = await apiClient.post('/s3/upload', formData, {
-    headers: { 
-      'Content-Type': 'multipart/form-data',
-      'x-service-secret': process.env.NEXT_PUBLIC_SERVICE_SECRET || 'change_this_secret'
-    },
     withCredentials: true,
   });
   return { url: data.url, key: data.key };

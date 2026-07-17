@@ -8,7 +8,7 @@ function RecuperarContent() {
   const search    = useSearchParams();
   const tokenParam = search.get("token") || "";
 
-  const [step,            setStep]            = useState<"email"|"token"|"done">(tokenParam ? "token" : "email");
+  const [step,            setStep]            = useState<"email"|"sent"|"token"|"done">(tokenParam ? "token" : "email");
   const [email,           setEmail]           = useState("");
   const [token,           setToken]           = useState(tokenParam);
   const [newPassword,     setNewPassword]     = useState("");
@@ -24,7 +24,7 @@ function RecuperarContent() {
     setLoading(true);
     try {
       await requestPasswordReset(email);
-      setStep("token");
+      setStep("sent");
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } }; message?: string };
       setError(e?.response?.data?.error || "Error al enviar el correo");
@@ -86,32 +86,60 @@ function RecuperarContent() {
           </>
         )}
 
+        {/* ── Step: sent ── */}
+        {step === "sent" && (
+          <>
+            <div className="rc-icon-wrap">
+              <InboxSvg />
+            </div>
+            <h1 className="rc-title">Revisa tu correo</h1>
+            <p className="rc-sub">
+              Te enviamos un correo de recuperación a <strong>{email}</strong>.
+              Ábrelo y haz clic en el botón de <strong>restablecer contraseña</strong> para continuar.
+            </p>
+
+            {error && <Err msg={error} />}
+
+            <button type="button" className="rc-cta" disabled={loading} onClick={handleRequestReset}>
+              {loading ? <><Spin /> Reenviando…</> : <>Reenviar correo <ArrowSvg /></>}
+            </button>
+            <button type="button" className="rc-ghost"
+              onClick={() => { setStep("email"); setError(""); }}>
+              ← Usar otro correo
+            </button>
+          </>
+        )}
+
         {/* ── Step: token ── */}
         {step === "token" && (
           <>
             <div className="rc-icon-wrap">
               <InboxSvg />
             </div>
-            <h1 className="rc-title">Ingresa el código</h1>
+            <h1 className="rc-title">Nueva contraseña</h1>
             <p className="rc-sub">
-              Revisa tu correo{email && <> (<strong>{email}</strong>)</>}. Pega el código y
-              establece tu nueva contraseña.
+              {tokenParam
+                ? "Establece tu nueva contraseña para continuar."
+                : <>Revisa tu correo{email && <> (<strong>{email}</strong>)</>}. Pega el código y establece tu nueva contraseña.</>}
             </p>
 
             {error && <Err msg={error} />}
 
             <form onSubmit={handleResetPassword} className="rc-form">
-              <Fld label="Código de recuperación" htmlFor="rc-tok">
-                <input id="rc-tok" type="text" value={token}
-                  onChange={e => setToken(e.target.value)}
-                  placeholder="Pega el código del correo"
-                  autoComplete="off" autoFocus />
-              </Fld>
+              {!tokenParam && (
+                <Fld label="Código de recuperación" htmlFor="rc-tok">
+                  <input id="rc-tok" type="text" value={token}
+                    onChange={e => setToken(e.target.value)}
+                    placeholder="Pega el código del correo"
+                    autoComplete="off" autoFocus />
+                </Fld>
+              )}
               <Fld label="Nueva contraseña" htmlFor="rc-npw">
                 <div className="rc-pw-wrap">
                   <input id="rc-npw" type={showPwd ? "text" : "password"}
                     value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 8 caracteres" autoComplete="new-password" />
+                    placeholder="Mínimo 8 caracteres" autoComplete="new-password"
+                    autoFocus={!!tokenParam} />
                   <button type="button" className="rc-pw-btn" onClick={() => setShowPwd(v => !v)}>
                     {showPwd ? "Ocultar" : "Ver"}
                   </button>
@@ -126,7 +154,7 @@ function RecuperarContent() {
                 {loading ? <><Spin /> Restableciendo…</> : <>Restablecer contraseña <ArrowSvg /></>}
               </button>
               <button type="button" className="rc-ghost"
-                onClick={() => { setStep("email"); setError(""); }}>
+                onClick={() => { setStep(email ? "sent" : "email"); setError(""); }}>
                 ← Volver a enviar código
               </button>
             </form>

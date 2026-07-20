@@ -49,6 +49,7 @@ export default function TicketsUI({
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerPhone, setBuyerPhone] = useState(""); // ⭐ nuevo estado teléfono
 
+  const submittingRef = React.useRef(false);
   const [showPreview, setShowPreview] = useState(false);
   const [generatedTickets, setGeneratedTickets] = useState<Ticket[]>([]);
   const [readyToPay, setReadyToPay] = useState(false);
@@ -162,6 +163,11 @@ export default function TicketsUI({
               );
             },
             onSubmit: async (cardFormData: MercadoPagoCardFormData) => {
+              // Guard contra doble submit concurrente (doble click, Brick
+              // reinvocando onSubmit antes de que resuelva el primero).
+              if (submittingRef.current) return;
+              submittingRef.current = true;
+
               const {
                 token,
                 installments,
@@ -169,6 +175,14 @@ export default function TicketsUI({
                 issuer_id,
                 payer,
               } = cardFormData;
+
+              // Clave estable por intento de cobro: si el request se
+              // reintenta (timeout, red lenta) con esta misma llamada,
+              // el backend/Mercado Pago no cobran ni emiten boletos 2 veces.
+              const idempotencyKey =
+                typeof crypto !== "undefined" && crypto.randomUUID
+                  ? crypto.randomUUID()
+                  : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
               const loadingId = toast.loading(
                 "Procesando pago y generando tus boletos...",
@@ -181,6 +195,7 @@ export default function TicketsUI({
                   quantity: qty,
                   channel: "online",
                   presale: false,
+                  idempotencyKey,
                   buyer: {
                     // 👇 estos vienen de tu propio formulario (NO confiamos en el Brick)
                     name: buyerName.trim(),
@@ -220,6 +235,8 @@ export default function TicketsUI({
                     "Ocurrió un error procesando el pago. Intenta de nuevo.",
                   );
                 }
+              } finally {
+                submittingRef.current = false;
               }
             },
 

@@ -182,6 +182,8 @@ export interface PayWithMercadoPagoPayload {
   quantity: number;
   channel?: TicketChannel;
   presale?: boolean;
+  /** Clave estable por intento de cobro — evita cobro doble en reintentos. */
+  idempotencyKey?: string;
   buyer: TicketBuyer; // { name, email }
   card: {
     token: string;

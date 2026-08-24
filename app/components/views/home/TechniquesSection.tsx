@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Target } from "lucide-react";
 import { useTechniques } from "@hooks/queries/useTechniques";
 
 type Brand = {
@@ -54,7 +54,7 @@ function TechniqueCard({
             `}
             aria-hidden="true"
           >
-            🎯
+            <Target className="h-8 w-8" />
           </div>
         </div>
 

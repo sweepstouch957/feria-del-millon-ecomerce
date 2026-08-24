@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import type { ComponentProps } from 'react';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
-import { Shield, CreditCard } from 'lucide-react';
+import { Shield, CreditCard, Lock, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 /* ================================
    Utils de formato/validación
@@ -328,9 +328,9 @@ export default function PaymentForm({ total, isProcessing, onPay, onBack }: Paym
 
       {/* Badges de confianza */}
       <div className="mt-6 grid sm:grid-cols-3 gap-3 text-sm text-gray-600">
-        <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">🔒 Cifrado TLS 1.2+</div>
-        <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">🛡️ Prevención de fraude</div>
-        <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">✅ Garantía de autenticidad</div>
+        <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-200"><Lock size={16} style={{ verticalAlign: '-2px' }} /> Cifrado TLS 1.2+</div>
+        <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-200"><ShieldCheck size={16} style={{ verticalAlign: '-2px' }} /> Prevención de fraude</div>
+        <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-200"><CheckCircle2 size={16} style={{ verticalAlign: '-2px' }} /> Garantía de autenticidad</div>
       </div>
     </div>
   );

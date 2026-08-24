@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useAuth } from "@provider/authProvider";
+import { Calendar, User, CreditCard, Palette, Mail, FileText, Image, Pencil, ClipboardList, Search, Ruler } from "lucide-react";
 
 export default function ConvocatoriaLandingPage() {
   const { isAuthenticated } = useAuth();
@@ -9,7 +10,7 @@ export default function ConvocatoriaLandingPage() {
     <main className="convocatoria-landing">
       {/* Hero */}
       <section className="conv-hero">
-        <div className="conv-hero__badge">📅 Convocatoria Abierta 2026</div>
+        <div className="conv-hero__badge"><Calendar size={14} style={{ verticalAlign: "-2px" }} /> Convocatoria Abierta 2026</div>
         <h1 className="conv-hero__title">
           Feria del <span className="conv-hero__accent">Millón</span>
         </h1>
@@ -38,14 +39,14 @@ export default function ConvocatoriaLandingPage() {
           <h2 className="conv-section-title">¿Cómo participar?</h2>
           <div className="conv-steps__grid">
             {[
-              { num: "01", icon: "👤", title: "Crea tu cuenta", desc: "Regístrate como artista. Puedes postular a diferentes convocatorias y salones desde una sola cuenta." },
-              { num: "02", icon: "💳", title: "Paga la inscripción", desc: "Inscripción de $40,000 COP via MercadoPago. Seguro y rápido. Activa tu acceso al formulario." },
-              { num: "03", icon: "🎨", title: "Sube tu proyecto", desc: "Completa el formulario: CV, foto de perfil, reseña de proyecto, imágenes de obras y fichas técnicas." },
-              { num: "04", icon: "✉️", title: "Espera la respuesta", desc: "Nuestro equipo de curaduría evaluará tu postulación. Recibirás una notificación por email con el resultado." },
+              { num: "01", icon: User, title: "Crea tu cuenta", desc: "Regístrate como artista. Puedes postular a diferentes convocatorias y salones desde una sola cuenta." },
+              { num: "02", icon: CreditCard, title: "Paga la inscripción", desc: "Inscripción de $40,000 COP via MercadoPago. Seguro y rápido. Activa tu acceso al formulario." },
+              { num: "03", icon: Palette, title: "Sube tu proyecto", desc: "Completa el formulario: CV, foto de perfil, reseña de proyecto, imágenes de obras y fichas técnicas." },
+              { num: "04", icon: Mail, title: "Espera la respuesta", desc: "Nuestro equipo de curaduría evaluará tu postulación. Recibirás una notificación por email con el resultado." },
             ].map((step) => (
               <div key={step.num} className="conv-step-card">
                 <div className="conv-step-card__num">{step.num}</div>
-                <div className="conv-step-card__icon">{step.icon}</div>
+                <div className="conv-step-card__icon"><step.icon size={32} /></div>
                 <h3 className="conv-step-card__title">{step.title}</h3>
                 <p className="conv-step-card__desc">{step.desc}</p>
               </div>
@@ -60,16 +61,16 @@ export default function ConvocatoriaLandingPage() {
           <h2 className="conv-section-title">Documentos requeridos</h2>
           <div className="conv-req__grid">
             {[
-              { icon: "📄", title: "CV del artista", desc: "PDF · máx 2MB · Incluye formación, exposiciones, premios y trayectoria artística." },
-              { icon: "🖼️", title: "Foto de perfil", desc: "JPG o PNG · 640×480px · Foto profesional del artista o colectivo." },
-              { icon: "✍️", title: "Biografía", desc: "Máx 500 caracteres · Ciudad de nacimiento, técnica, trayectoria." },
-              { icon: "📋", title: "Reseña del proyecto", desc: "Máx 750 caracteres · Descripción de la serie, ejes temáticos y conceptuales." },
-              { icon: "🖼️", title: "Imágenes del proyecto", desc: "Hasta 15 imágenes · JPG/PNG · máx 2MB por imagen · Con ficha técnica." },
-              { icon: "🔍", title: "Imagen de detalle", desc: "1 imagen · JPG o PNG · Aspecto relevante de la técnica o proceso de creación." },
-              { icon: "📐", title: "Plano de montaje", desc: "JPG o PNG · Disposición de obras en espacio de 3.60m × 2.44m." },
+              { icon: FileText, title: "CV del artista", desc: "PDF · máx 2MB · Incluye formación, exposiciones, premios y trayectoria artística." },
+              { icon: Image, title: "Foto de perfil", desc: "JPG o PNG · 640×480px · Foto profesional del artista o colectivo." },
+              { icon: Pencil, title: "Biografía", desc: "Máx 500 caracteres · Ciudad de nacimiento, técnica, trayectoria." },
+              { icon: ClipboardList, title: "Reseña del proyecto", desc: "Máx 750 caracteres · Descripción de la serie, ejes temáticos y conceptuales." },
+              { icon: Image, title: "Imágenes del proyecto", desc: "Hasta 15 imágenes · JPG/PNG · máx 2MB por imagen · Con ficha técnica." },
+              { icon: Search, title: "Imagen de detalle", desc: "1 imagen · JPG o PNG · Aspecto relevante de la técnica o proceso de creación." },
+              { icon: Ruler, title: "Plano de montaje", desc: "JPG o PNG · Disposición de obras en espacio de 3.60m × 2.44m." },
             ].map((req) => (
               <div key={req.title} className="conv-req-card">
-                <span className="conv-req-card__icon">{req.icon}</span>
+                <span className="conv-req-card__icon"><req.icon size={22} /></span>
                 <div>
                   <h4 className="conv-req-card__title">{req.title}</h4>
                   <p className="conv-req-card__desc">{req.desc}</p>

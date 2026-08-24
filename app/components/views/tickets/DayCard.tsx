@@ -15,7 +15,7 @@ type Props = {
 };
 
 export function DayCard({ day, selected, onSelect, currency = "COP" }: Props) {
-  // 👇 fallback bonito si no existe el badge para ese kind
+  // fallback bonito si no existe el badge para ese kind
   const k =
     badges[day.kind] ??
     ({

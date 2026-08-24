@@ -91,7 +91,7 @@ export const getEventBySlug = async (slug: string) => {
   return normalizeId(data);
 };
 
-// GET /event/events/artist/:artistId  🔥 NUEVO ENDPOINT
+// GET /event/events/artist/:artistId NUEVO ENDPOINT
 export const getEventByArtistId = async (
   artistId: string,
   status?: EventStatus

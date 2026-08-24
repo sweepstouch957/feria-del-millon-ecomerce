@@ -37,7 +37,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       data-slot="dialog-content"
-      // 🔒 z-index alto + fondo 100% opaco + aislamiento de stacking context
+      // z-index alto + fondo 100% opaco + aislamiento de stacking context
       className={cn(
         "fixed left-1/2 top-1/2 z-[100] grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2",
         "isolate rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl sm:max-w-3xl",

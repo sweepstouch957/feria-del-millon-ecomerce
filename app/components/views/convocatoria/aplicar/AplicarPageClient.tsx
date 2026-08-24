@@ -7,6 +7,7 @@ import { ApplicationStepReview } from "@components/views/convocatoria/Applicatio
 import { ApplicationStepper } from "./ApplicationStepper";
 import { ApplicationStatusGate } from "./ApplicationStatusGate";
 import { useApplicationWizard } from "./useApplicationWizard";
+import { Pencil, AlertTriangle, CheckCircle2 } from "lucide-react";
 import styles from "./aplicar.module.css";
 
 const STEP_LABELS = [
@@ -99,7 +100,7 @@ export default function AplicarPageClient() {
             gap: 16,
             alignItems: "flex-start",
           }}>
-            <span style={{ fontSize: 24, flexShrink: 0, marginTop: 1 }}>✏️</span>
+            <span style={{ fontSize: 24, flexShrink: 0, marginTop: 1 }}><Pencil size={22} /></span>
             <div>
               <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 800, color: "#fbbf24" }}>
                 El curador te invita a corregir tu postulación
@@ -114,8 +115,8 @@ export default function AplicarPageClient() {
         <ApplicationStepper labels={STEP_LABELS} current={wiz.step} />
 
         <div className={styles.container}>
-          {wiz.error && <div className={styles.error}>⚠️ {wiz.error}</div>}
-          {wiz.success && <div className={styles.success}>✅ {wiz.success}</div>}
+          {wiz.error && <div className={styles.error}><AlertTriangle size={16} style={{ verticalAlign: "-3px" }} /> {wiz.error}</div>}
+          {wiz.success && <div className={styles.success}><CheckCircle2 size={16} style={{ verticalAlign: "-3px" }} /> {wiz.success}</div>}
 
           {/* Step 0 should never show in the wizard once paid — auto-advances.
               If we land here briefly, show a transition state. */}

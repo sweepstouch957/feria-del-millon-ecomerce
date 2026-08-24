@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { getMyApplications, type ArtistApplication } from "@services/applications.service";
 import { ApplicationCard } from "@components/views/convocatoria/ApplicationCard";
-import { Plus, Palette, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Palette, Loader2, AlertCircle, CreditCard, Hourglass } from "lucide-react";
 
 export default function MiSolicitudPage() {
   const { data: apps = [], isLoading, error } = useQuery({
@@ -70,7 +70,7 @@ export default function MiSolicitudPage() {
           <div className="ac-root">
             {/* ── Status banner ── */}
             <div className="ac-banner" style={{ "--sc": "#fbbf24" } as React.CSSProperties}>
-              <div className="ac-banner__ico">💳</div>
+              <div className="ac-banner__ico"><CreditCard size={26} /></div>
               <div>
                 <div className="ac-banner__label">Pago pendiente</div>
                 <div className="ac-banner__desc">Inicia tu proceso de postulación completando el pago de inscripción para continuar.</div>
@@ -86,7 +86,7 @@ export default function MiSolicitudPage() {
                 <div className="ac-stat">
                   <span className="ac-stat__label">Pago</span>
                   <span className="ac-stat__val ac-stat__val--warn">
-                    ⏳ Pendiente
+                    <Hourglass size={14} style={{ verticalAlign: "-2px" }} /> Pendiente
                   </span>
                 </div>
                 <div className="ac-stat">
@@ -144,7 +144,7 @@ export default function MiSolicitudPage() {
               {/* ── CTAs ── */}
               <div className="ac-actions">
                 <Link href="/convocatoria/aplicar" className="ac-btn ac-btn--green">
-                  💳 Iniciar postulación y pagar
+                  <CreditCard size={16} /> Iniciar postulación y pagar
                 </Link>
               </div>
             </div>

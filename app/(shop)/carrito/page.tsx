@@ -35,7 +35,7 @@ const formatPrice = (price: number) =>
   }).format(price);
 
 export default function CartPage() {
-  // 🛒 Zustand selectors
+  // Zustand selectors
   const items = useCart((s) => s.items) as CartViewItem[];
   const updateQty = useCart((s) => s.updateQty);
   const remove = useCart((s) => s.remove);

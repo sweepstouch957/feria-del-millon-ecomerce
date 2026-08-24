@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Button } from "@components/ui/button";
-import { ExternalLink, Edit3, Share2, Loader2, QrCode } from "lucide-react";
+import { ExternalLink, Edit3, Share2, Loader2, QrCode, Sparkles } from "lucide-react";
 import { ArtworkRow } from "@hooks/queries/useArtworksCursor";
 
 export default function ArtworksTable({
@@ -14,7 +14,7 @@ export default function ArtworksTable({
   onLoadMore,
   hasMore,
   loadingMore,
-  onOpenQr, // 👈 nuevo
+  onOpenQr, // nuevo
 }: {
   rows: ArtworkRow[];
   loading: boolean;
@@ -24,7 +24,7 @@ export default function ArtworksTable({
   onLoadMore: () => void;
   hasMore: boolean;
   loadingMore: boolean;
-  onOpenQr: (id: string) => void; // 👈 nuevo
+  onOpenQr: (id: string) => void; // nuevo
 }) {
   const formatMoney = (n?: number, currency: string = "COP") =>
     typeof n === "number"
@@ -43,7 +43,7 @@ export default function ArtworksTable({
       } else {
         await navigator.clipboard.writeText(url);
       }
-      onShare("Enlace listo para compartir ✨");
+      onShare("Enlace listo para compartir");
     } catch {
       await navigator.clipboard.writeText(url);
       onShare("Enlace copiado al portapapeles");
@@ -81,7 +81,7 @@ export default function ArtworksTable({
                   colSpan={6}
                   className="px-4 py-12 text-center text-gray-500"
                 >
-                  No hay obras aún. ¡Crea tu primera obra! ✨
+                  No hay obras aún. ¡Crea tu primera obra! <Sparkles className="inline w-4 h-4" style={{ verticalAlign: "-2px" }} />
                 </td>
               </tr>
             ) : (

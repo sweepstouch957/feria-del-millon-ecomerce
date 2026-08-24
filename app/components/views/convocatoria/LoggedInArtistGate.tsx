@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@provider/authProvider";
 import { getMyApplications, type ArtistApplication } from "@services/applications.service";
+import { CheckCircle2, Hourglass } from "lucide-react";
 
 /**
  * Determines the best next URL for an artist based on their application state.
@@ -15,7 +16,7 @@ import { getMyApplications, type ArtistApplication } from "@services/application
  *   4 = Subir obras
  *   5 = Enviar postulación
  *
- * Steps < stepNum render as ✅ done, stepNum renders as active (white).
+ * Steps < stepNum render as done, stepNum renders as active (white).
  */
 function getSmartRedirect(app: ArtistApplication): { url: string; stepLabel: string; stepNum: number } {
   // Step 2: needs to pay
@@ -44,11 +45,11 @@ function getSmartRedirect(app: ArtistApplication): { url: string; stepLabel: str
 }
 
 const FLOW_STEPS = [
-  { icon: "✅", label: "Cuenta creada" },
-  { icon: "💳", label: "Pagar inscripción" },
-  { icon: "👤", label: "Perfil artista" },
-  { icon: "🎨", label: "Subir obras" },
-  { icon: "📬", label: "Enviar postulación" },
+  { icon: "", label: "Cuenta creada" },
+  { icon: "", label: "Pagar inscripción" },
+  { icon: "", label: "Perfil artista" },
+  { icon: "", label: "Subir obras" },
+  { icon: "", label: "Enviar postulación" },
 ];
 
 /**
@@ -178,7 +179,7 @@ export function LoggedInArtistGate({ children }: { children: React.ReactNode }) 
           <div className="gate-stat">
             <span className="gate-stat__label">Pago</span>
             <span className={`gate-stat__value ${app.isPaid ? "gate-stat__value--green" : "gate-stat__value--amber"}`}>
-              {app.isPaid ? "✅ Confirmado" : "⏳ Pendiente"}
+              {app.isPaid ? <><CheckCircle2 size={14} style={{ verticalAlign: "-2px" }} /> Confirmado</> : <><Hourglass size={14} style={{ verticalAlign: "-2px" }} /> Pendiente</>}
             </span>
           </div>
           <div className="gate-stat">

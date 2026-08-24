@@ -356,7 +356,7 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
                 applyFilters();
               }}
               onClear={() => clearAllAndRefetch(refetch)}
-              // 🎨 artistas para desktop
+              // artistas para desktop
               artistId={artistId}
               setArtistId={setArtistId}
               artistOptions={artistOptions}
@@ -505,7 +505,7 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
                 onClear={() => {
                   clearAllAndRefetch(refetch);
                 }}
-                // 🎨 artistas también en mobile
+                // artistas también en mobile
                 artistId={artistId}
                 setArtistId={setArtistId}
                 artistOptions={artistOptions}

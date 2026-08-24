@@ -117,9 +117,9 @@ export default function CreateEditArtworkModal({
     watch,
     formState: { isSubmitting, errors },
   } = useForm<FormValues>({
-    // 👇 Alineamos los tipos del resolver con el genérico del formulario
+    // Alineamos los tipos del resolver con el genérico del formulario
     resolver: zodResolver(FormSchema) as Resolver<FormValues>,
-    // 👇 Defaults seguros (parcial): no forzamos números vacíos
+    // Defaults seguros (parcial): no forzamos números vacíos
     defaultValues: {
       title: "",
       currency: "COP",
@@ -182,7 +182,7 @@ export default function CreateEditArtworkModal({
   const mCreate = useMutation({
     mutationFn: async (payload: CreateArtworkInput) => createArtwork(payload),
     onSuccess: () => {
-      toast.success("Obra creada ✨");
+      toast.success("Obra creada");
       qc.invalidateQueries({ queryKey: ["artworks"] });
       onDone();
     },
@@ -200,7 +200,7 @@ export default function CreateEditArtworkModal({
       payload: PatchArtworkDto;
     }) => patchArtwork(id, payload),
     onSuccess: (resp) => {
-      toast.success("Obra actualizada ✅");
+      toast.success("Obra actualizada");
       qc.invalidateQueries({ queryKey: ["artworks"] });
       qc.invalidateQueries({ queryKey: ["artwork-detail", resp.doc.id] });
       onDone();

@@ -1,5 +1,6 @@
 "use client";
 import { ImageUpload, PDFUpload } from "@components/ui/FileUpload";
+import { User } from "lucide-react";
 
 interface ApplicationStepProfileProps {
   cvUrl: string;
@@ -26,7 +27,7 @@ export function ApplicationStepProfile({
 }: ApplicationStepProfileProps) {
   return (
     <div className="app-section">
-      <h2 className="app-section__title">👤 Perfil del artista</h2>
+      <h2 className="app-section__title"><User size={18} style={{ verticalAlign: "-3px" }} /> Perfil del artista</h2>
       <p className="app-section__desc">Completa tu información personal antes de continuar con el proyecto.</p>
 
       <div className="app-field">

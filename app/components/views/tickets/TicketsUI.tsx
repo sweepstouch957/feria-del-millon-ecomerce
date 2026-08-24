@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, Mail, Phone, QrCode, Sparkles, User } from "lucide-react";
+import { BadgeCheck, CreditCard, Mail, Phone, QrCode, Sparkles, Ticket as TicketIcon, User } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { TicketDay, TicketsUIProps, classNames } from "./ticketTypes";
@@ -47,7 +47,7 @@ export default function TicketsUI({
   const [qty, setQty] = useState<number>(initialQty);
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
-  const [buyerPhone, setBuyerPhone] = useState(""); // ⭐ nuevo estado teléfono
+  const [buyerPhone, setBuyerPhone] = useState(""); // nuevo estado teléfono
 
   const submittingRef = React.useRef(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -105,7 +105,7 @@ export default function TicketsUI({
     setReadyToPay(true);
 
     toast("Ahora completa los datos de tu tarjeta para pagar.", {
-      icon: "💳",
+      icon: <CreditCard size={16} />,
     });
 
     // Opcional: hacer scroll al formulario
@@ -146,7 +146,7 @@ export default function TicketsUI({
       try {
         await bricksBuilder.create("cardPayment", "mp-card-form", {
           initialization: {
-            amount: total, // 💯 toma el 100% del total
+            amount: total, // toma el 100% del total
           },
           customization: {
             // Aquí puedes meter opciones de estilo/labels si quieres
@@ -197,7 +197,7 @@ export default function TicketsUI({
                   presale: false,
                   idempotencyKey,
                   buyer: {
-                    // 👇 estos vienen de tu propio formulario (NO confiamos en el Brick)
+                    // estos vienen de tu propio formulario (NO confiamos en el Brick)
                     name: buyerName.trim(),
                     email: buyerEmail.trim(),
                   },
@@ -215,7 +215,7 @@ export default function TicketsUI({
                 if (res.ok && res.tickets?.length) {
                   setGeneratedTickets(res.tickets);
                   setShowPreview(true);
-                  toast.success("Pago registrado y boletos generados 🎟️");
+                  toast.success(<span>Pago registrado y boletos generados <TicketIcon size={16} style={{ verticalAlign: "-2px" }} /></span>);
                 } else {
                   console.error("Respuesta de payTicketsWithMercadoPago:", res);
                   toast.error(

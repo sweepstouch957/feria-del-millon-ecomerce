@@ -264,7 +264,7 @@ export default function MiEstudioClient() {
                 setEditingId(id);
                 setModalOpen(true);
               }}
-              onOpenQr={(id) => setQrForId(id)} // 👈 integra QR aquí
+              onOpenQr={(id) => setQrForId(id)} // integra QR aquí
               onShare={(msg) => toast.success(msg)}
               onLoadMore={() => artworksQuery.loadMore()}
               hasMore={!!artworksQuery.hasNextPage}
@@ -288,7 +288,7 @@ export default function MiEstudioClient() {
         open={!!detailId}
         loading={loadingDetail}
         onClose={() => setDetailId(null)}
-        onOpenQr={(id) => setQrForId(id)} // 👈 también desde el detalle
+        onOpenQr={(id) => setQrForId(id)} // también desde el detalle
       />
 
       {/* Modal crear/editar (unificado) */}

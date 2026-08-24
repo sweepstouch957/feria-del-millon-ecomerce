@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, DragEvent, ChangeEvent } from "react";
+import { X, Image as ImageIcon, FileText, Paperclip, AlertTriangle } from "lucide-react";
 import { uploadImage, uploadPDF } from "@services/upload.service";
 
 /* ── Shared ─────────────────────────────────────────────── */
@@ -53,7 +54,7 @@ export function ImageUpload({ value, onChange, disabled, folder = "convocatoria"
               Cambiar imagen
             </button>
             <button type="button" className="fu-preview__remove" onClick={() => onChange("")} disabled={disabled || uploading}>
-              ✕
+              <X size={14} />
             </button>
           </div>
         </div>
@@ -69,7 +70,7 @@ export function ImageUpload({ value, onChange, disabled, folder = "convocatoria"
             <div className="fu-spinner" />
           ) : (
             <>
-              <div className="fu-zone__icon">🖼️</div>
+              <div className="fu-zone__icon"><ImageIcon size={32} /></div>
               <p className="fu-zone__text">Arrastra una imagen aquí o <span className="fu-zone__link">haz clic para seleccionar</span></p>
               <p className="fu-zone__sub">JPG, PNG, WEBP · Máx. 5MB</p>
             </>
@@ -78,7 +79,7 @@ export function ImageUpload({ value, onChange, disabled, folder = "convocatoria"
       )}
 
       <input ref={inputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onInput} disabled={disabled || uploading} />
-      {error && <span className="fu-error">⚠ {error}</span>}
+      {error && <span className="fu-error"><AlertTriangle size={12} style={{ verticalAlign: "-2px" }} /> {error}</span>}
       {hint && !error && <span className="fu-hint">{hint}</span>}
 
       <style jsx>{`
@@ -164,7 +165,7 @@ export function PDFUpload({ value, onChange, disabled, label = "Documento PDF", 
 
       {value ? (
         <div className="fu-pdf-card">
-          <div className="fu-pdf-card__icon">📄</div>
+          <div className="fu-pdf-card__icon"><FileText size={32} /></div>
           <div className="fu-pdf-card__info">
             <span className="fu-pdf-card__name">{filename}</span>
             <a href={value} target="_blank" rel="noopener noreferrer" className="fu-pdf-card__link">Ver PDF ↗</a>
@@ -173,7 +174,7 @@ export function PDFUpload({ value, onChange, disabled, label = "Documento PDF", 
             <button type="button" className="fu-pdf-card__change" onClick={() => inputRef.current?.click()} disabled={disabled || uploading}>
               Reemplazar
             </button>
-            <button type="button" className="fu-pdf-card__remove" onClick={() => onChange("")} disabled={disabled || uploading}>✕</button>
+            <button type="button" className="fu-pdf-card__remove" onClick={() => onChange("")} disabled={disabled || uploading}><X size={14} /></button>
           </div>
         </div>
       ) : (
@@ -188,7 +189,7 @@ export function PDFUpload({ value, onChange, disabled, label = "Documento PDF", 
             <div className="fu-spinner" />
           ) : (
             <>
-              <div className="fu-zone__icon">📎</div>
+              <div className="fu-zone__icon"><Paperclip size={32} /></div>
               <p className="fu-zone__text">Arrastra tu CV aquí o <span className="fu-zone__link">haz clic para seleccionar</span></p>
               <p className="fu-zone__sub">Solo PDF · Máx. 10MB</p>
             </>
@@ -197,7 +198,7 @@ export function PDFUpload({ value, onChange, disabled, label = "Documento PDF", 
       )}
 
       <input ref={inputRef} type="file" accept="application/pdf,.pdf" style={{ display: "none" }} onChange={onInput} disabled={disabled || uploading} />
-      {error && <span className="fu-error">⚠ {error}</span>}
+      {error && <span className="fu-error"><AlertTriangle size={12} style={{ verticalAlign: "-2px" }} /> {error}</span>}
       {hint && !error && <span className="fu-hint">{hint}</span>}
 
       <style jsx>{`

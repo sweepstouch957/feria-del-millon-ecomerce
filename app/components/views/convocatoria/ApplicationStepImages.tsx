@@ -1,6 +1,7 @@
 "use client";
 import { ImageUpload } from "@components/ui/FileUpload";
 import { type ArtworkImageEntry } from "@services/applications.service";
+import { Check } from "lucide-react";
 
 interface ApplicationStepImagesProps {
   artworkImages: ArtworkImageEntry[];
@@ -97,7 +98,7 @@ export function ApplicationStepImages({
                     color: ok ? "#4ade80" : "rgba(255,255,255,.4)",
                     flexShrink: 0,
                   }}>
-                    {ok ? "✓" : i + 1}
+                    {ok ? <Check size={14} /> : i + 1}
                   </span>
                   <span style={{ fontWeight: 700, fontSize: 14 }}>
                     {img.title || `Obra #${i + 1}`}
@@ -202,7 +203,7 @@ export function ApplicationStepImages({
                     priceValid(img.price)
                       ? (
                         <span style={{ fontSize: 12, color: "#4ade80", marginTop: 5, display: "block", fontWeight: 600 }}>
-                          ✓ {formatCOP(img.price)}
+                          <Check size={14} style={{ verticalAlign: "-2px" }} /> {formatCOP(img.price)}
                         </span>
                       ) : (
                         <span style={{ fontSize: 12, color: "#f87171", marginTop: 5, display: "block" }}>

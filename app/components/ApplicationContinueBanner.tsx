@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@provider/authProvider";
+import { CreditCard, AlertTriangle, Pencil } from "lucide-react";
 import {
   getMyApplications,
   type ArtistApplication,
@@ -182,7 +183,7 @@ export function ApplicationContinueBanner() {
             <div className="acb-header">
               <div className="acb-pulse-wrap">
                 <span className="acb-pulse" />
-                <span className="acb-icon">{isPaying ? "💳" : isRevision ? "⚠️" : "✏️"}</span>
+                <span className="acb-icon">{isPaying ? <CreditCard size={18} /> : isRevision ? <AlertTriangle size={18} /> : <Pencil size={18} />}</span>
               </div>
               <div className="acb-title-block">
                 <p className="acb-eyebrow">

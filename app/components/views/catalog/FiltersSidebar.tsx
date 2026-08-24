@@ -35,7 +35,7 @@ type Props = {
   onToggleTechnique: (id: string) => void;
   onClearTechniques: () => void;
 
-  // 🎨 artistas
+  // artistas
   artistId: string;
   setArtistId: (id: string) => void;
   artistOptions: AutocompleteOption[];

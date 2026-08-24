@@ -1,15 +1,16 @@
 "use client";
 import Link from "next/link";
 import { type ArtistApplication } from "@services/applications.service";
+import { CreditCard, Pencil, Mail, Search, PartyPopper, ClipboardList, HelpCircle, CheckCircle2, Hourglass, MessageCircle, FileText, Palette, Camera, type LucideIcon } from "lucide-react";
 
 /* ── Status config ─────────────────────────────────────────────── */
-const S: Record<string, { label: string; color: string; icon: string; desc: string }> = {
-  pending_payment: { label: "Pago pendiente",      color: "#fbbf24", icon: "💳", desc: "Completa el pago de inscripción para continuar."   },
-  draft:           { label: "En progreso",          color: "#60a5fa", icon: "✏️", desc: "Completa tu perfil y sube tus obras."              },
-  submitted:       { label: "Enviada",              color: "#22c55e", icon: "📨", desc: "Tu postulación fue enviada. Está en espera de revisión." },
-  under_review:    { label: "En revisión",          color: "#a78bfa", icon: "🔍", desc: "Un curador está evaluando tu postulación."         },
-  accepted:        { label: "¡Aceptada!",           color: "#22c55e", icon: "🎉", desc: "¡Felicitaciones! Tu proyecto fue seleccionado."    },
-  rejected:        { label: "No seleccionada",      color: "#ef4444", icon: "📋", desc: "Tu proyecto no fue seleccionado en esta edición."  },
+const S: Record<string, { label: string; color: string; icon: LucideIcon; desc: string }> = {
+  pending_payment: { label: "Pago pendiente",      color: "#fbbf24", icon: CreditCard, desc: "Completa el pago de inscripción para continuar."   },
+  draft:           { label: "En progreso",          color: "#60a5fa", icon: Pencil, desc: "Completa tu perfil y sube tus obras."              },
+  submitted:       { label: "Enviada",              color: "#22c55e", icon: Mail, desc: "Tu postulación fue enviada. Está en espera de revisión." },
+  under_review:    { label: "En revisión",          color: "#a78bfa", icon: Search, desc: "Un curador está evaluando tu postulación."         },
+  accepted:        { label: "¡Aceptada!",           color: "#22c55e", icon: PartyPopper, desc: "¡Felicitaciones! Tu proyecto fue seleccionado."    },
+  rejected:        { label: "No seleccionada",      color: "#ef4444", icon: ClipboardList, desc: "Tu proyecto no fue seleccionado en esta edición."  },
 };
 
 /* ── Steps ── */
@@ -43,7 +44,7 @@ function getActiveStepIndex(app: ArtistApplication): number {
 
 export function ApplicationCard({ app }: { app: ArtistApplication }) {
   const conv = typeof app.convocatoria === "object" ? app.convocatoria : null;
-  const st = S[app.status] || { label: app.status, color: "#555", icon: "❓", desc: "" };
+  const st = S[app.status] || { label: app.status, color: "#555", icon: HelpCircle, desc: "" };
   const completedIdx = getCompletedStepIndex(app);
   const activeIdx = getActiveStepIndex(app);
   const isFinished = ["accepted", "rejected"].includes(app.status);
@@ -55,7 +56,7 @@ export function ApplicationCard({ app }: { app: ArtistApplication }) {
     <div className="ac-root">
       {/* ── Status banner ── */}
       <div className="ac-banner" style={{ "--sc": st.color } as React.CSSProperties}>
-        <div className="ac-banner__ico">{st.icon}</div>
+        <div className="ac-banner__ico"><st.icon size={28} color={st.color} /></div>
         <div>
           <div className="ac-banner__label">{st.label}</div>
           <div className="ac-banner__desc">{st.desc}</div>
@@ -71,7 +72,7 @@ export function ApplicationCard({ app }: { app: ArtistApplication }) {
           <div className="ac-stat">
             <span className="ac-stat__label">Pago</span>
             <span className={`ac-stat__val ${app.isPaid ? "ac-stat__val--ok" : "ac-stat__val--warn"}`}>
-              {app.isPaid ? "✅ Confirmado" : "⏳ Pendiente"}
+              {app.isPaid ? <><CheckCircle2 size={14} style={{ verticalAlign: "-2px" }} /> Confirmado</> : <><Hourglass size={14} style={{ verticalAlign: "-2px" }} /> Pendiente</>}
             </span>
           </div>
           <div className="ac-stat">
@@ -120,13 +121,13 @@ export function ApplicationCard({ app }: { app: ArtistApplication }) {
         {/* ── Admin notes ── */}
         {app.adminNotes && (
           <div className="ac-note ac-note--info">
-            <div className="ac-note__head">💬 Nota del curador</div>
+            <div className="ac-note__head"><MessageCircle size={13} style={{ verticalAlign: "-2px" }} /> Nota del curador</div>
             <p className="ac-note__body">{app.adminNotes}</p>
           </div>
         )}
         {app.rejectionReason && (
           <div className="ac-note ac-note--error">
-            <div className="ac-note__head">📝 Observaciones</div>
+            <div className="ac-note__head"><FileText size={13} style={{ verticalAlign: "-2px" }} /> Observaciones</div>
             <p className="ac-note__body">{app.rejectionReason}</p>
           </div>
         )}
@@ -152,7 +153,7 @@ export function ApplicationCard({ app }: { app: ArtistApplication }) {
         {app.artworkImages && app.artworkImages.length > 0 && (
           <div className="ac-gallery">
             <div className="ac-gallery__head">
-              🎨 Obras cargadas
+              <Palette size={14} /> Obras cargadas
               <span className="ac-gallery__count">{app.artworkImages.length}</span>
             </div>
             <div className="ac-gallery__grid">
@@ -161,7 +162,7 @@ export function ApplicationCard({ app }: { app: ArtistApplication }) {
                   {img.url ? (
                     <img src={img.url} alt={img.title || `Obra ${i + 1}`} />
                   ) : (
-                    <div className="ac-thumb__empty">📷</div>
+                    <div className="ac-thumb__empty"><Camera size={20} /></div>
                   )}
                   <span className="ac-thumb__title">{img.title || `Obra ${i + 1}`}</span>
                 </div>
@@ -197,12 +198,12 @@ export function ApplicationCard({ app }: { app: ArtistApplication }) {
         <div className="ac-actions">
           {app.status === "pending_payment" && (
             <Link href={`/convocatoria/pagar?appId=${app._id}`} className="ac-btn ac-btn--primary">
-              💳 Completar pago
+              <CreditCard size={16} /> Completar pago
             </Link>
           )}
           {app.status === "draft" && (
             <Link href={`/convocatoria/aplicar?appId=${app._id}`} className="ac-btn ac-btn--green">
-              ✏️ Completar formulario
+              <Pencil size={16} /> Completar formulario
             </Link>
           )}
           {["submitted", "under_review"].includes(app.status) && (
@@ -212,7 +213,7 @@ export function ApplicationCard({ app }: { app: ArtistApplication }) {
             </div>
           )}
           {isFinished && app.status === "accepted" && (
-            <div className="ac-accepted">🎉 ¡Prepárate para la feria!</div>
+            <div className="ac-accepted"><PartyPopper size={16} style={{ verticalAlign: "-2px" }} /> ¡Prepárate para la feria!</div>
           )}
         </div>
       </div>

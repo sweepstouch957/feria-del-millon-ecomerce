@@ -35,7 +35,7 @@ export function ExampleTicketsSection() {
             <TicketsUI
                 eventId={DEFAULT_EVENT_ID}
                 eventName="Feria del Millón — Semana del Arte"
-                days={[data.ticketDay]} // 👈 SOLO PASAMOS EL DÍA DE HOY
+                days={[data.ticketDay]} // SOLO PASAMOS EL DÍA DE HOY
             />
         </div>
     );

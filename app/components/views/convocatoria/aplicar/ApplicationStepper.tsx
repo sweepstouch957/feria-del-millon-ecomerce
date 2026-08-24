@@ -1,4 +1,5 @@
 "use client";
+import { Check } from "lucide-react";
 import styles from "./aplicar.module.css";
 
 interface ApplicationStepperProps {
@@ -24,7 +25,7 @@ export function ApplicationStepper({ labels, current }: ApplicationStepperProps)
 
         return (
           <div key={i} className={cls}>
-            <div className={styles.stepDot}>{i < current ? "✓" : i + 1}</div>
+            <div className={styles.stepDot}>{i < current ? <Check size={16} /> : i + 1}</div>
             <span className={styles.stepLabel}>{label}</span>
             {i < labels.length - 1 && <div className={styles.stepConnector} />}
           </div>

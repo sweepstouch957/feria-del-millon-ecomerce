@@ -267,7 +267,7 @@ function ImagePreviewModal({
           wheel={{ step: 0.12 }}
           doubleClick={{ disabled: false, step: 0.6 }}
           pinch={{ step: 0.2 }}
-          // 💡 robusto entre versiones: lee el scale desde ref/state
+          // robusto entre versiones: lee el scale desde ref/state
           onTransformed={(ref: any) => {
             const s =
               ref?.state?.scale ?? // v4

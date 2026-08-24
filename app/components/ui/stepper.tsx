@@ -214,7 +214,7 @@ export function Stepper({
                     : "bg-gray-300 text-gray-700"
                 )}
               >
-                {done ? "✓" : idx}
+                {done ? <Check className="h-3.5 w-3.5" /> : idx}
               </div>
             );
           })}

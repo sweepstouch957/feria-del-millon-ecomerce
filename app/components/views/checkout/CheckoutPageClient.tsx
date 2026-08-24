@@ -44,7 +44,7 @@ const isValidColDocument = (doc: string) => {
 };
 
 export default function CheckoutPageClient() {
-    // 🛒 Zustand
+    // Zustand
     const items = useCart((s) => s.items) as CartViewItem[];
     const clear = useCart((s) => s.clear);
     const add = useCart((s) => s.add);
@@ -92,12 +92,12 @@ export default function CheckoutPageClient() {
         }));
     }, [user, reset]);
 
-    // ⭐ Mensaje cuando la obra ya está vendida / sin stock
+    // Mensaje cuando la obra ya está vendida / sin stock
     const [artworkUnavailable, setArtworkUnavailable] = useState<string | null>(
         null
     );
 
-    // ⭐ Precargar carrito cuando mandan id/slug en la URL
+    // Precargar carrito cuando mandan id/slug en la URL
     const [prefilledFromQuery, setPrefilledFromQuery] = useState(false);
 
     useEffect(() => {

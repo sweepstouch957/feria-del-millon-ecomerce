@@ -1,6 +1,6 @@
 import * as Select from "@radix-ui/react-select";
 import * as ScrollArea from "@radix-ui/react-scroll-area";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import React from "react";
 
 export const RadixSelect: React.FC<{
@@ -24,7 +24,7 @@ export const RadixSelect: React.FC<{
 
   return (
     <Select.Root
-      // 👇 si no hay selección, usa undefined (NO string vacío)
+      // si no hay selección, usa undefined (NO string vacío)
       value={value || undefined}
       onValueChange={onValueChange}
     >
@@ -48,7 +48,7 @@ export const RadixSelect: React.FC<{
         >
           {/* Puedes envolver el Viewport con ScrollArea si la lista es larga */}
           <ScrollArea.Root className="h-60 w-64">
-            {/* 👇 El viewport DEBE ser el de Radix Select */}
+            {/* El viewport DEBE ser el de Radix Select */}
             <Select.Viewport className="p-1">
               {opts.map((opt) => (
                 <Select.Item
@@ -58,7 +58,7 @@ export const RadixSelect: React.FC<{
                 >
                   <Select.ItemText>{opt.label}</Select.ItemText>
                   <Select.ItemIndicator className="absolute right-2">
-                    ✓
+                    <Check className="size-4" />
                   </Select.ItemIndicator>
                 </Select.Item>
               ))}

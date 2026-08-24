@@ -1,5 +1,6 @@
 "use client";
 import { ImageUpload } from "@components/ui/FileUpload";
+import { Palette } from "lucide-react";
 
 interface ApplicationStepProjectProps {
   projectReview: string;
@@ -26,7 +27,7 @@ export function ApplicationStepProject({
 }: ApplicationStepProjectProps) {
   return (
     <div className="app-section">
-      <h2 className="app-section__title">🎨 Información del proyecto</h2>
+      <h2 className="app-section__title"><Palette size={18} style={{ verticalAlign: "-3px" }} /> Información del proyecto</h2>
       <p className="app-section__desc">Describe el proyecto artístico que presentarás en la feria.</p>
 
       <div className="app-field">

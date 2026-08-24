@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Shield } from "lucide-react";
+import { Check, Hourglass, Shield } from "lucide-react";
 import { Button } from "@components/ui/button";
 import type { PaymentMethod } from "@services/order.service";
 import { formatMoney } from "@lib/utils";
@@ -35,7 +35,7 @@ export default function PaymentForm({
   onBack,
   orderId,
 }: PaymentFormProps) {
-  // 👉 solo usamos estos 2 métodos: mercado_pago | whatsapp
+  // solo usamos estos 2 métodos: mercado_pago | whatsapp
   const [method, setMethod] = useState<PaymentMethod>("mercadopago");
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ export default function PaymentForm({
       try {
         await bricksBuilder.create("cardPayment", "mp-card-form", {
           initialization: {
-            amount: total, // 💯 toma el 100% del total
+            amount: total, // toma el 100% del total
           },
           customization: {
             // Opcional: estilos, textos, etc.
@@ -106,10 +106,10 @@ export default function PaymentForm({
                 toast.dismiss(loadingId);
 
                 if (res.ok && res.status === "approved") {
-                  toast.success("Pago aprobado ✔️");
+                  toast.success(<span>Pago aprobado <Check size={16} style={{ verticalAlign: "-2px" }} /></span>);
                   onPay({ method: "mercadopago" as PaymentMethod });
                 } else if (res.ok && res.status === "pending") {
-                  toast("Tu pago está en revisión…", { icon: "⏳" });
+                  toast("Tu pago está en revisión…", { icon: <Hourglass size={16} /> });
                   onPay({ method: "mercadopago" as PaymentMethod });
                 } else {
                   console.error("Pago no aprobado:", res);

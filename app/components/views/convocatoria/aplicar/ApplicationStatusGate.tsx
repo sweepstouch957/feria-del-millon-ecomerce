@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { CreditCard, PartyPopper, ClipboardList, CheckCircle2 } from "lucide-react";
 import styles from "./aplicar.module.css";
 
 interface ApplicationStatusGateProps {
@@ -21,7 +22,7 @@ export function ApplicationStatusGate({ appId, status }: ApplicationStatusGatePr
       <div className={styles.wrapper}>
         <div className={styles.gateCenter}>
           <div className={styles.gateCard}>
-            <span className={styles.gateIcon}>💳</span>
+            <span className={styles.gateIcon}><CreditCard size={44} /></span>
             <h2>Pago pendiente</h2>
             <p>
               Para acceder al formulario de postulación debes completar el pago de
@@ -48,7 +49,7 @@ export function ApplicationStatusGate({ appId, status }: ApplicationStatusGatePr
     status === "rejected"
   ) {
     const icon =
-      status === "accepted" ? "🎉" : status === "rejected" ? "📋" : "✅";
+      status === "accepted" ? <PartyPopper size={44} /> : status === "rejected" ? <ClipboardList size={44} /> : <CheckCircle2 size={44} />;
 
     return (
       <div className={styles.wrapper}>

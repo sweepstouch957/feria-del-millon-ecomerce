@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { initiatePayment, getApplicationById, getMyApplications, mockPayment } from "@services/applications.service";
 import { useAuth } from "@provider/authProvider";
 import { clearAuth } from "@services/auth.service";
+import { AlertTriangle, Check, CreditCard, CheckCircle2, Wrench, Zap, ArrowRight, Lock } from "lucide-react";
 
 const STEPS = ["Crear cuenta", "Pagar inscripción", "Subir obras", "Resolución del curador"];
 
@@ -124,7 +125,7 @@ export default function PagarClient() {
       <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white flex items-center justify-center">
         <div className="pay-container">
           <div className="pay-card">
-            <div className="pay-card__icon">⚠️</div>
+            <div className="pay-card__icon"><AlertTriangle size={48} /></div>
             <h1 className="pay-card__title">Cuenta no autorizada</h1>
             <p className="pay-card__subtitle">
               El pago de inscripción y la postulación a convocatorias están reservados únicamente para cuentas de tipo <strong>Artista</strong>.
@@ -190,7 +191,7 @@ export default function PagarClient() {
           const isActive = i === 1;
           return (
             <div key={i} className={`pay-step ${isActive ? "active" : isDone ? "done" : ""}`}>
-              <div className="pay-step__dot">{isDone ? "✓" : i + 1}</div>
+              <div className="pay-step__dot">{isDone ? <Check size={16} /> : i + 1}</div>
               <span className="pay-step__label">{label}</span>
               {i < STEPS.length - 1 && <div className="pay-step__line" />}
             </div>
@@ -200,7 +201,7 @@ export default function PagarClient() {
 
       <div className="pay-container">
         <div className="pay-card">
-          <div className="pay-card__icon">💳</div>
+          <div className="pay-card__icon"><CreditCard size={48} /></div>
           <h1 className="pay-card__title">Pago de inscripción</h1>
           <p className="pay-card__subtitle">
             Tu cuenta fue creada con éxito. El siguiente paso es completar el pago de inscripción
@@ -213,10 +214,10 @@ export default function PagarClient() {
           </div>
 
           <div className="pay-info">
-            <div className="pay-info__item">✅ Pago seguro con MercadoPago</div>
-            <div className="pay-info__item">✅ Acepta tarjetas, PSE y efectivo</div>
-            <div className="pay-info__item">✅ Desbloquea el formulario de postulación</div>
-            <div className="pay-info__item">✅ Una sola inscripción por convocatoria</div>
+            <div className="pay-info__item"><CheckCircle2 size={16} /> Pago seguro con MercadoPago</div>
+            <div className="pay-info__item"><CheckCircle2 size={16} /> Acepta tarjetas, PSE y efectivo</div>
+            <div className="pay-info__item"><CheckCircle2 size={16} /> Desbloquea el formulario de postulación</div>
+            <div className="pay-info__item"><CheckCircle2 size={16} /> Una sola inscripción por convocatoria</div>
           </div>
 
           {error && <div className="pay-error">{error}</div>}
@@ -224,24 +225,24 @@ export default function PagarClient() {
           {/* DEV MODE MOCK PAYMENT BANNER */}
           {isMock && !app?.isPaid && (
             <div className="pay-mock-banner">
-              <span className="pay-mock-banner__badge">🛠 Entorno LOCAL</span>
+              <span className="pay-mock-banner__badge"><Wrench size={12} style={{ verticalAlign: "-2px" }} /> Entorno LOCAL</span>
               <p>MercadoPago no funciona en localhost. Usa el pago simulado para continuar el flujo.</p>
               <button className="pay-btn pay-btn--mock" onClick={handleMockPay} disabled={paying}>
-                {paying ? "Procesando…" : "⚡ Simular pago exitoso (solo dev)"}
+                {paying ? "Procesando…" : <><Zap size={16} style={{ verticalAlign: "-2px" }} /> Simular pago exitoso (solo dev)</>}
               </button>
             </div>
           )}
 
           {app?.isPaid ? (
             <div className="pay-success">
-              ✅ ¡Pago confirmado! Tu cuenta está activa.
+              <span><CheckCircle2 size={16} style={{ verticalAlign: "-2px" }} /> ¡Pago confirmado! Tu cuenta está activa.</span>
               <button className="pay-btn" onClick={() => router.push(`/convocatoria/aplicar?appId=${appId}`)}>
-                Ir al formulario →
+                Ir al formulario <ArrowRight size={16} style={{ verticalAlign: "-2px" }} />
               </button>
             </div>
           ) : !isMock ? (
             <button className="pay-btn" onClick={handlePay} disabled={paying}>
-              {paying ? "Redirigiendo a MercadoPago…" : "Pagar con MercadoPago →"}
+              {paying ? "Redirigiendo a MercadoPago…" : <>Pagar con MercadoPago <ArrowRight size={16} style={{ verticalAlign: "-2px" }} /></>}
             </button>
           ) : (
             <button className="pay-btn" onClick={handlePay} disabled={paying} style={{ background: "#333", color: "#aaa", cursor: "not-allowed" }}>
@@ -258,7 +259,7 @@ export default function PagarClient() {
         <div className="pay-mp-badge">
           <span>Procesado con</span>
           <strong>MercadoPago</strong>
-          <span>🔒 SSL seguro</span>
+          <span><Lock size={14} style={{ verticalAlign: "-2px" }} /> SSL seguro</span>
         </div>
       </div>
 

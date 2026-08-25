@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { ArrowRight, Target } from "lucide-react";
 import { useTechniques } from "@hooks/queries/useTechniques";
+import { useSiteContent } from "@provider/siteConfigProvider";
 
 type Brand = {
   catGradient?: string[]; // p.ej. ["from-zinc-800", "to-black"]
@@ -86,16 +87,17 @@ function TechniqueCard({
 export default function TechniquesSection({ brand }: { brand?: Brand }) {
   const { data, isLoading, isError } = useTechniques();
   const items = (data || []).filter((t: any) => t?.active !== false);
+  const { techniques: tech } = useSiteContent();
 
   return (
     <section className="py-20 bg-gradient-to-b from-neutral-50 to-neutral-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Explora por Técnicas
+            {tech.title}
           </h2>
           <p className="text-lg md:text-xl text-gray-600">
-            Descubre obras organizadas por disciplinas y medios
+            {tech.subtitle}
           </p>
         </div>
 

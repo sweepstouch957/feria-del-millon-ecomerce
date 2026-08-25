@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Landmark, Tickets as TicketsIcon, ArrowRight } from "lucide-react";
 import { usePavilions } from "@hooks/queries/usePavilions";
+import { useSiteContent } from "@provider/siteConfigProvider";
 
 function PavilionCard({
   name,
@@ -51,6 +52,7 @@ export default function PavilionsSection({
   eventId: string;
 }) {
   const { data: pavilions, isLoading } = usePavilions(eventId);
+  const { pavilions: pav } = useSiteContent();
 
   return (
     <section className="py-20 bg-white">
@@ -59,10 +61,10 @@ export default function PavilionsSection({
           <div className="text-left">
             <div className="inline-flex items-center px-4 py-2 bg-black text-white rounded-full mb-4">
               <Landmark className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">Pabellones</span>
+              <span className="text-sm font-medium">{pav.badge}</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-              Recorre nuestro pabellón
+              {pav.title}
             </h2>
 
           </div>

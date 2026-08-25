@@ -5,10 +5,12 @@ import { ChevronDown, Sparkles, Star } from "lucide-react";
 import Link from "next/link";
 import ArtworkCard from "@components/ArtworkCard";
 import { useArtworksCursor } from "@hooks/queries/useArtworksCursor";
+import { useSiteContent } from "@provider/siteConfigProvider";
 
 export default function FeaturedArtworksSection({ brand, eventId, onAddToCart }: { brand: any; eventId: string; onAddToCart: (artwork: any) => void }) {
   const { rows, totalLabel, isLoading, isFetchingNextPage, hasNextPage, loadMore } = useArtworksCursor({ event: eventId, limit: 24 });
   const featured = rows.slice(0, 6);
+  const { featured: feat } = useSiteContent();
 
   return (
     <section className="py-20 bg-white">
@@ -16,9 +18,9 @@ export default function FeaturedArtworksSection({ brand, eventId, onAddToCart }:
         <div className="text-center mb-16">
           <div className="inline-flex items-center px-4 py-2 bg-black text-white rounded-full mb-4">
             <Star className="h-4 w-4 mr-2" />
-            <span className="text-sm font-medium">Selección Curada</span>
+            <span className="text-sm font-medium">{feat.badge}</span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">Obras destacadas</h2>
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-2">{feat.title}</h2>
           <p className="text-gray-600">{isLoading ? "Cargando obras…" : `Mostrando ${Math.min(featured.length, 6)} de ${totalLabel} obras`}</p>
         </div>
 

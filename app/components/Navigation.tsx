@@ -18,6 +18,7 @@ import {
 import { Button } from "@components/ui/button";
 import useCart from "@store/useCart";
 import { useAuth } from "@provider/authProvider";
+import { useSiteContent } from "@provider/siteConfigProvider";
 
 function Skeleton({ className = "" }: { className?: string }) {
   return (
@@ -36,6 +37,7 @@ export default function Navigation() {
 
   // Auth
   const { user, isAuthLoading, isAuthenticated, logout } = useAuth();
+  const { brand } = useSiteContent();
 
   // Cart desde Zustand (sumamos cantidades por si tienes quantity > 1)
   const items = useCart((s) => s.items);
@@ -126,19 +128,27 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3 group" aria-label="Ir al inicio - Feria del Millón">
+          <Link href="/" className="flex items-center space-x-3 group" aria-label={`Ir al inicio - ${brand.name}`}>
             <div className="relative">
-              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <Palette className="h-5 w-5 text-white" />
-              </div>
+              {brand.logo ? (
+                <img
+                  src={brand.logo}
+                  alt={brand.name}
+                  className="w-10 h-10 rounded-xl object-cover group-hover:scale-110 transition-transform duration-300"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <Palette className="h-5 w-5 text-white" />
+                </div>
+              )}
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-gray-300 rounded-full animate-pulse" />
             </div>
             <div className="hidden sm:block">
               <div className="text-xl font-bold text-black">
-                Feria del Millón 2026
+                {brand.name}
               </div>
               <div className="text-xs text-gray-500 font-medium">
-                2026 • Feria del Millón 14
+                {brand.tagline}
               </div>
             </div>
           </Link>

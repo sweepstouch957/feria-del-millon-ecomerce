@@ -1,0 +1,25 @@
+"use client";
+import { createContext, useContext } from "react";
+import { SITE_DEFAULTS, type SiteContent, type SiteTheme, type SiteSections } from "@lib/siteDefaults";
+
+type Value = { content: SiteContent; theme: SiteTheme; sections: SiteSections };
+
+const SiteConfigCtx = createContext<Value>({
+  content: SITE_DEFAULTS.content,
+  theme: SITE_DEFAULTS.theme,
+  sections: SITE_DEFAULTS.sections,
+});
+
+export function SiteConfigProvider({
+  value,
+  children,
+}: {
+  value: Value;
+  children: React.ReactNode;
+}) {
+  return <SiteConfigCtx.Provider value={value}>{children}</SiteConfigCtx.Provider>;
+}
+
+export const useSiteContent = () => useContext(SiteConfigCtx).content;
+export const useSiteTheme = () => useContext(SiteConfigCtx).theme;
+export const useSiteSections = () => useContext(SiteConfigCtx).sections;

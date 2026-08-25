@@ -1,6 +1,9 @@
 "use client";
 
+import { useSiteContent } from "@provider/siteConfigProvider";
+
 export default function ContactSection({ brand }: { brand: any }) {
+  const { contact } = useSiteContent();
   return (
     <section className="py-20 bg-gradient-to-r from-black via-neutral-900 to-black text-white relative overflow-hidden">
       <div className="absolute inset-0" aria-hidden="true">
@@ -9,22 +12,22 @@ export default function ContactSection({ brand }: { brand: any }) {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className={`inline-flex items-center px-4 py-2 ${brand.badgeBg} backdrop-blur-sm rounded-full ${brand.badgeBorder} mb-6`}>
-          <span className="text-sm font-medium">Estamos aquí para ayudarte</span>
+          <span className="text-sm font-medium">{contact.badge}</span>
         </div>
 
-        <h2 className="text-4xl md:text-5xl font-bold mb-6">¿Tienes preguntas?</h2>
+        <h2 className="text-4xl md:text-5xl font-bold mb-6">{contact.title}</h2>
         <p className={`text-xl mb-12 ${brand.textMuted} max-w-2xl mx-auto`}>
-          Contáctanos para más información sobre las obras, los artistas o el proceso de compra
+          {contact.subtitle}
         </p>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
           <div className={`rounded-2xl p-6 border ${brand.cardBorder} ${brand.cardBg} backdrop-blur`}>
             <h3 className="font-semibold mb-2">Email</h3>
-            <p className="text-neutral-300">coordinaciongeneral@feriadelmillon.com</p>
+            <p className="text-neutral-300">{contact.email}</p>
           </div>
           <div className={`rounded-2xl p-6 border ${brand.cardBorder} ${brand.cardBg} backdrop-blur`}>
             <h3 className="font-semibold mb-2">Teléfono</h3>
-            <p className="text-neutral-300">+(57) 322 700 85 76</p>
+            <p className="text-neutral-300">{contact.phone}</p>
           </div>
         </div>
       </div>

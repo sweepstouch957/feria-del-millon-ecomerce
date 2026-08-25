@@ -20,82 +20,90 @@ import LocalStyles from "@components/views/home/LocalStyles";
 
 // Constantes (evento / brand)
 import { BRAND } from "@lib/brand";
-import {
-  EVENT_ID,
-  EVENT_BADGE_TEXT,
-  EVENT_CARDS,
-  EVENT_DATES_LABEL,
-  STATS,
-} from "@lib/event";
+import { EVENT_ID, EVENT_CARDS } from "@lib/event";
+import { useSiteContent, useSiteSections } from "@provider/siteConfigProvider";
+import type { SectionKey } from "@lib/siteDefaults";
 
 export default function HomePage() {
   const add = useCart((s) => s.add);
+  const content = useSiteContent();
+  const sections = useSiteSections();
+  const { hero, eventInfo, stats } = content;
 
-  return (
-    <div className="min-h-screen">
-      {/* HERO */}
-      <Hero
-        brand={BRAND}
-        badgeText={EVENT_BADGE_TEXT}
-        subtitle="Feria del Millón 2026"
-        titleMain="Feria del Millón"
-        ctas={[
-          {
-            href: "/catalogo",
-            label: "Explorar Catálogo",
-            leftIcon: <Sparkles className="mr-2 h-5 w-5" />,
-            rightIcon: <ArrowRight className="ml-2 h-5 w-5" />,
-          },
-          { href: "/artistas", label: "Conocer Artistas" },
-        ]}
-        tickets={{
-          href: `/tickets`,
-          label: `Comprar tickets · ${EVENT_DATES_LABEL}`,
-          icon: <TicketsIcon className="w-5 h-5" />,
-        }}
-      />
+  // Cards: iconos/estilos fijos, textos editables desde el config.
+  const cards = EVENT_CARDS.map((c, i) => ({
+    ...c,
+    ...(content.eventCards[i] || {}),
+  }));
 
-      {/* INFO DEL EVENTO */}
+  // Cada bloque del landing, por clave. El orden y visibilidad los define el config.
+  const blocks: Record<SectionKey, React.ReactNode> = {
+    eventInfo: (
       <section
+        key="eventInfo"
         className={`py-16 bg-gradient-to-b ${BRAND.bgSectionLightFrom} ${BRAND.bgSectionLightTo}`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <div className="inline-flex items-center px-4 py-2 bg-black text-white rounded-full mb-4">
               <Landmark className="h-4 w-4 mr-2" />
-              <span className="text-sm font-medium">Evento Destacado</span>
+              <span className="text-sm font-medium">{eventInfo.badge}</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Feria del Millón 2026 — Bogotá
+              {eventInfo.title}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              La plataforma más importante de arte emergente en Colombia,
-              reuniendo a los talentos más prometedores del panorama artístico
-              nacional.
+              {eventInfo.description}
             </p>
           </div>
-          <EventInfoGrid items={EVENT_CARDS} />
+          <EventInfoGrid items={cards} />
         </div>
       </section>
-
-      {/* PABELLONES (hook interno) */}
-      <PavilionsSection brand={BRAND} eventId={EVENT_ID} />
-
-      {/* OBRAS DESTACADAS (hook interno + add to cart) */}
+    ),
+    pavilions: <PavilionsSection key="pavilions" brand={BRAND} eventId={EVENT_ID} />,
+    featured: (
       <FeaturedArtworksSection
+        key="featured"
         brand={BRAND}
         eventId={EVENT_ID}
         onAddToCart={(artwork: any) => add(artwork, 1)}
       />
+    ),
+    techniques: <TechniquesSection key="techniques" brand={BRAND} />,
+    stats: <StatsSection key="stats" stats={stats} />,
+    contact: <ContactSection key="contact" brand={BRAND} />,
+  };
 
-      {/* TÉCNICAS (hook interno) */}
-      <TechniquesSection brand={BRAND} />
+  return (
+    <div className="min-h-screen">
+      {/* HERO (siempre visible) */}
+      <Hero
+        brand={BRAND}
+        badgeText={hero.badge}
+        subtitle={hero.subtitle}
+        titleMain={hero.title}
+        paragraph={hero.paragraph}
+        image={hero.image}
+        ctas={[
+          {
+            href: "/catalogo",
+            label: hero.ctaPrimaryLabel,
+            leftIcon: <Sparkles className="mr-2 h-5 w-5" />,
+            rightIcon: <ArrowRight className="ml-2 h-5 w-5" />,
+          },
+          { href: "/artistas", label: hero.ctaSecondaryLabel },
+        ]}
+        tickets={{
+          href: `/tickets`,
+          label: hero.ticketsLabel,
+          icon: <TicketsIcon className="w-5 h-5" />,
+        }}
+      />
 
-      {/* STATS */}
-      <StatsSection stats={STATS} />
-
-      {/* CONTACTO */}
-      <ContactSection brand={BRAND} />
+      {/* Secciones por orden + visibilidad configurables */}
+      {sections.order
+        .filter((k) => sections.visible[k])
+        .map((k) => blocks[k])}
 
       {/* Estilos locales (animaciones) */}
       <LocalStyles />

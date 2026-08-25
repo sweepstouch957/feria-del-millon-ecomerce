@@ -2,13 +2,15 @@
 "use client";
 
 import Link from "next/link";
-import { ReactNode } from "react";
+import { ReactNode, type CSSProperties } from "react";
 
 export default function Hero({
   brand,
   badgeText,
   titleMain,
   subtitle,
+  paragraph,
+  image,
   ctas,
   tickets,
 }: {
@@ -16,11 +18,25 @@ export default function Hero({
   badgeText: string;
   titleMain: string;
   subtitle: string;
+  paragraph?: string;
+  image?: string;
   ctas: { href: string; label: string; leftIcon?: ReactNode; rightIcon?: ReactNode }[];
   tickets: { href: string; label: string; icon?: ReactNode };
 }) {
+  // Con imagen: foto de fondo + overlay oscuro para legibilidad. Sin imagen:
+  // gradiente por variables CSS (editables desde el admin).
+  const bgStyle: CSSProperties = image
+    ? {
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(${image})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
+    : {
+        backgroundImage:
+          "linear-gradient(to bottom right, var(--brand-hero-from), var(--brand-hero-via), var(--brand-hero-to))",
+      };
   return (
-    <section className={`relative bg-gradient-to-br ${brand.bgGradientHero} text-white py-20 overflow-hidden`}>
+    <section className="relative text-white py-20 overflow-hidden" style={bgStyle}>
       {/* blobs */}
       <div className="absolute inset-0" aria-hidden="true">
         <div className="absolute top-20 left-10 w-72 h-72 bg-white/10 rounded-full mix-blend-overlay filter blur-xl opacity-20 hero-blob" />
@@ -57,7 +73,9 @@ export default function Hero({
           </h1>
 
           <p className={`text-xl md:text-2xl mb-8 max-w-4xl mx-auto ${brand.textMuted} leading-relaxed fade-in-up`} style={{ animationDelay: "0.4s" }}>
-            Descubre la colección más extraordinaria de arte contemporáneo colombiano — una experiencia que conecta artistas emergentes con coleccionistas apasionados, ahora en <span className="font-semibold text-white">Bogotá</span>.
+            {paragraph ?? (
+              <>Descubre la colección más extraordinaria de arte contemporáneo colombiano — una experiencia que conecta artistas emergentes con coleccionistas apasionados, ahora en <span className="font-semibold text-white">Bogotá</span>.</>
+            )}
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center fade-in-up" style={{ animationDelay: "0.6s" }}>

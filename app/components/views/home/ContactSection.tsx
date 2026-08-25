@@ -1,9 +1,16 @@
 "use client";
 
+import { Instagram, Facebook, Youtube, MessageCircle } from "lucide-react";
 import { useSiteContent } from "@provider/siteConfigProvider";
 
 export default function ContactSection({ brand }: { brand: any }) {
-  const { contact } = useSiteContent();
+  const { contact, social } = useSiteContent();
+  const socials = [
+    { url: social.instagram, Icon: Instagram, label: "Instagram" },
+    { url: social.facebook, Icon: Facebook, label: "Facebook" },
+    { url: social.whatsapp, Icon: MessageCircle, label: "WhatsApp" },
+    { url: social.youtube, Icon: Youtube, label: "YouTube" },
+  ].filter((s) => s.url);
   return (
     <section className="py-20 bg-gradient-to-r from-black via-neutral-900 to-black text-white relative overflow-hidden">
       <div className="absolute inset-0" aria-hidden="true">
@@ -30,6 +37,23 @@ export default function ContactSection({ brand }: { brand: any }) {
             <p className="text-neutral-300">{contact.phone}</p>
           </div>
         </div>
+
+        {socials.length > 0 && (
+          <div className="flex items-center justify-center gap-4 mt-10">
+            {socials.map(({ url, Icon, label }) => (
+              <a
+                key={label}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                className={`w-12 h-12 rounded-full border ${brand.cardBorder} ${brand.cardBg} backdrop-blur flex items-center justify-center hover:bg-white/20 transition-colors`}
+              >
+                <Icon className="h-5 w-5" />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

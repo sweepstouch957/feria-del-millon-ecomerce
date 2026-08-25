@@ -42,6 +42,7 @@ export interface SiteContent {
   statsTitle: string;
   stats: SiteStat[];
   contact: { badge: string; title: string; subtitle: string; email: string; phone: string };
+  social: { instagram: string; facebook: string; whatsapp: string; youtube: string };
 }
 
 export type SectionKey =
@@ -142,6 +143,7 @@ export const SITE_DEFAULTS: SiteConfig = {
       email: "coordinaciongeneral@feriadelmillon.com",
       phone: "+(57) 322 700 85 76",
     },
+    social: { instagram: "", facebook: "", whatsapp: "", youtube: "" },
   },
   sections: {
     order: [...SECTION_KEYS],
@@ -187,6 +189,7 @@ export function mergeSiteConfig(raw: any): SiteConfig {
       stats:
         Array.isArray(c.stats) && c.stats.length > 0 ? c.stats : D.content.stats,
       contact: { ...D.content.contact, ...(c.contact || {}) },
+      social: { ...D.content.social, ...(c.social || {}) },
     },
     sections: {
       order,

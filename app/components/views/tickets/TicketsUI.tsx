@@ -50,6 +50,10 @@ export default function TicketsUI({
   const [buyerPhone, setBuyerPhone] = useState(""); // nuevo estado teléfono
 
   const submittingRef = React.useRef(false);
+  // Clave de idempotencia ESTABLE por intento de compra: se genera al abrir el
+  // pago y se reusa en cada reintento → si el cobro tuvo éxito pero se perdió
+  // la respuesta, un reintento con la misma key NO vuelve a cobrar (MP dedupea).
+  const idemKeyRef = React.useRef<string>("");
   const [showPreview, setShowPreview] = useState(false);
   const [generatedTickets, setGeneratedTickets] = useState<Ticket[]>([]);
   const [readyToPay, setReadyToPay] = useState(false);
@@ -86,6 +90,7 @@ export default function TicketsUI({
     setGeneratedTickets([]);
     setShowPreview(false);
     setReadyToPay(false); // esto desmonta el Brick de MP
+    idemKeyRef.current = ""; // nuevo intento → nueva key la próxima vez
   };
   const handleBuy = () => {
     if (!selectedDay || !canBuy) return;
@@ -94,6 +99,12 @@ export default function TicketsUI({
       toast.error("No se encontró el evento para esta compra.");
       return;
     }
+
+    // Una key por intento de compra (se reusa en reintentos del mismo pago).
+    idemKeyRef.current =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     // callback opcional (por si el parent quiere loggear algo)
     onBuyClick?.({
@@ -176,13 +187,13 @@ export default function TicketsUI({
                 payer,
               } = cardFormData;
 
-              // Clave estable por intento de cobro: si el request se
-              // reintenta (timeout, red lenta) con esta misma llamada,
-              // el backend/Mercado Pago no cobran ni emiten boletos 2 veces.
+              // Key ESTABLE del intento (generada en handleBuy). Se reusa en
+              // reintentos → nunca doble cobro. Fallback por si faltara.
               const idempotencyKey =
-                typeof crypto !== "undefined" && crypto.randomUUID
+                idemKeyRef.current ||
+                (typeof crypto !== "undefined" && crypto.randomUUID
                   ? crypto.randomUUID()
-                  : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                  : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
               const loadingId = toast.loading(
                 "Procesando pago y generando tus boletos...",

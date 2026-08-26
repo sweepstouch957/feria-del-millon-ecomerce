@@ -753,3 +753,44 @@
   transform: translateY(-20px);
   transition: all 0.4s ease-in;
 }
+/* ════════════════════════════════════════════════════════════════════════
+   FDM v2 — Design system editorial (Jost, paleta crema/negro/verde).
+   Scoped a .fdm-v2 para no alterar el resto del ecommerce.
+   ════════════════════════════════════════════════════════════════════════ */
+@keyframes fdm-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes fdm-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+.fdm-v2 {
+  font-family: 'Jost', system-ui, sans-serif;
+  font-weight: 300;
+  letter-spacing: 0.005em;
+  -webkit-font-smoothing: antialiased;
+  background: var(--fdm-bg, #F7F6F2);
+  color: var(--fdm-fg, #0B0B0A);
+  transition: background-color .4s ease, color .4s ease;
+}
+.fdm-v2 a { color: inherit; text-decoration: none; transition: color .3s ease, background-color .3s ease, border-color .3s ease, opacity .3s ease, padding .3s ease; }
+.fdm-v2 *, .fdm-v2 *::before, .fdm-v2 *::after { box-sizing: border-box; }
+.fdm-mono { font-family: 'Instrument Sans', system-ui, sans-serif; }
+/* hover del navbar / links con acento verde */
+.fdm-link { border-bottom: 1px solid transparent; }
+.fdm-link:hover { color: var(--fdm-green, #3FA46E); border-color: var(--fdm-green, #3FA46E); }
+/* tarjeta técnica: grayscale → color en hover */
+.fdm-tech { filter: grayscale(1) contrast(1.05); outline: 1px solid transparent; outline-offset: -1px; transition: filter .45s ease, outline-color .3s ease; }
+.fdm-tech:hover { filter: none; outline-color: var(--fdm-green, #3FA46E); }
+/* tarjeta programa: invierte a panel oscuro en hover */
+.fdm-prog:hover { background: var(--fdm-panel, #0B0B0A); color: var(--fdm-on-dark, #F5F4EF); border-color: var(--fdm-panel, #0B0B0A) !important; }
+
+/* Navbar v2 responsive: nav desktop ≥1080px, botón menú <1080px */
+.fdm-desk-nav { display: none; }
+.fdm-desk-only { display: none !important; }
+.fdm-mobile-only { display: none !important; }
+@media (min-width: 1080px) {
+  .fdm-desk-nav { display: flex !important; }
+  .fdm-desk-only { display: inline-flex !important; }
+  .fdm-mobile-only { display: none !important; }
+}
+@media (max-width: 1079px) {
+  .fdm-desk-nav { display: none !important; }
+  .fdm-mobile-only { display: inline-flex !important; }
+}

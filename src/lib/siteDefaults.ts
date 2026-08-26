@@ -1,13 +1,24 @@
 // src/lib/siteDefaults.ts
 // Defaults = exactamente como se ve el landing hoy. Si el backend no tiene
 // config (o falla el fetch), se usan estos → el sitio NUNCA se rompe.
+//
+// v2 (rediseño editorial "Feria del Millón"): se AGREGAN campos nuevos
+// (paleta clara/oscura, navbar configurable, bloques del landing nuevo) sin
+// quitar los viejos, para no romper el admin ni configs ya guardadas.
 
 export interface SiteTheme {
   accent: string;
   accentDark: string;
+  // Legacy (hero viejo por gradiente) — se conservan por compatibilidad.
   heroFrom: string;
   heroVia: string;
   heroTo: string;
+  // Paleta v2 (editorial). Opcionales: si faltan, se usan los defaults.
+  bg?: string;
+  fg?: string;
+  panel?: string;
+  greenDeep?: string;
+  onDark?: string;
 }
 
 export interface SiteStat {
@@ -19,6 +30,40 @@ export interface SiteStat {
 export interface SiteCard {
   title: string;
   description: string;
+}
+
+// ── Navbar configurable ────────────────────────────────────────────────────
+export interface NavItem {
+  label: string;
+  href: string;
+  visible: boolean; // se muestra en el navbar
+  enabled: boolean; // clickable (false = "Próximamente", en gris)
+}
+
+// ── Bloques del landing v2 ─────────────────────────────────────────────────
+export interface LandingHeroStat { label: string; value: string }
+export interface LandingAboutStat { value: string; label: string; accent?: boolean }
+export interface LandingTechniqueItem { name: string; image: string; href: string }
+export interface LandingSede { name: string; tag: string; highlight?: boolean }
+export interface LandingProgram { title: string; description: string; href: string }
+
+export interface LandingConfig {
+  heroMeta: { edition: string; location: string; year: string; stats: LandingHeroStat[] };
+  ticker: { enabled: boolean; items: string[] };
+  about: { badge: string; title: string; paragraphs: string[]; ctaLabel: string; ctaHref: string; stats: LandingAboutStat[] };
+  techniqueItems: LandingTechniqueItem[];
+  sedes: { badge: string; title: string; subtitle: string; items: LandingSede[] };
+  programs: { badge: string; title: string; items: LandingProgram[] };
+  convocatoria: {
+    badge: string; title: string; titleAccent: string; open: boolean;
+    openDate: string; closeDate: string; paragraph: string;
+    ctaPrimaryLabel: string; ctaSecondaryLabel: string; primaryHref: string; secondaryHref: string;
+  };
+  newsletter: { badge: string; title: string; paragraph: string; note: string; enabled: boolean };
+  footer: { description: string };
+  showTicker: boolean;
+  showPrices: boolean;
+  priceLabel: string;
 }
 
 export interface SiteContent {
@@ -42,33 +87,36 @@ export interface SiteContent {
   statsTitle: string;
   stats: SiteStat[];
   contact: { badge: string; title: string; subtitle: string; email: string; phone: string };
-  social: { instagram: string; facebook: string; whatsapp: string; youtube: string };
+  social: { instagram: string; facebook: string; whatsapp: string; youtube: string; tiktok: string };
 }
 
 export type SectionKey =
-  | "eventInfo"
-  | "pavilions"
+  | "about"
   | "featured"
   | "techniques"
-  | "stats"
-  | "contact";
+  | "sedes"
+  | "programs"
+  | "convocatoria"
+  | "newsletter";
 
 export const SECTION_KEYS: SectionKey[] = [
-  "eventInfo",
-  "pavilions",
+  "about",
   "featured",
   "techniques",
-  "stats",
-  "contact",
+  "sedes",
+  "programs",
+  "convocatoria",
+  "newsletter",
 ];
 
 export const SECTION_LABELS: Record<SectionKey, string> = {
-  eventInfo: "Info del evento",
-  pavilions: "Pabellones",
+  about: "La feria (intro + stats)",
   featured: "Obras destacadas",
   techniques: "Técnicas",
-  stats: "Estadísticas",
-  contact: "Contacto",
+  sedes: "Sedes",
+  programs: "Programas",
+  convocatoria: "Convocatoria",
+  newsletter: "Boletín",
 };
 
 export interface SiteSections {
@@ -79,36 +127,54 @@ export interface SiteSections {
 export interface SiteConfig {
   theme: SiteTheme;
   content: SiteContent;
+  landing: LandingConfig;
+  nav: { items: NavItem[] };
   sections: SiteSections;
 }
 
+// Rutas reales del ecommerce para el navbar por defecto.
+export const DEFAULT_NAV: NavItem[] = [
+  { label: "Inicio", href: "/", visible: true, enabled: true },
+  { label: "Catálogo", href: "/catalogo", visible: true, enabled: true },
+  { label: "Tickets", href: "/tickets", visible: true, enabled: true },
+  { label: "Artistas", href: "/artistas", visible: true, enabled: true },
+  { label: "Convocatoria", href: "/convocatoria", visible: true, enabled: true },
+  { label: "Sobre Nosotros", href: "/sobre-nosotros", visible: true, enabled: true },
+];
+
 export const SITE_DEFAULTS: SiteConfig = {
   theme: {
-    accent: "#22c55e",
-    accentDark: "#16a34a",
-    heroFrom: "#000000",
-    heroVia: "#0a0a0a",
-    heroTo: "#000000",
+    accent: "#3FA46E",
+    accentDark: "#14513C",
+    heroFrom: "#0B0B0A",
+    heroVia: "#0B0B0A",
+    heroTo: "#0B0B0A",
+    bg: "#F7F6F2",
+    fg: "#0B0B0A",
+    panel: "#0B0B0A",
+    greenDeep: "#14513C",
+    onDark: "#F5F4EF",
   },
   content: {
     brand: {
-      name: "Feria del Millón 2026",
-      tagline: "2026 • Feria del Millón 14",
+      name: "Feria del Millón",
+      tagline: "Arte emergente · Bogotá 2026",
       logo: "",
     },
     seo: {
-      title: "Semana del Arte",
-      description: "Feria del Millón - Tienda y Panel de Artistas",
+      title: "Feria del Millón 2026 — Arte emergente en Bogotá, Colombia",
+      description:
+        "Feria del Millón 2026: la feria de arte emergente más importante de Latinoamérica. Obras de artistas colombianos alrededor de un millón de pesos.",
     },
     hero: {
-      badge: "14ª Edición • 2026",
+      badge: "Edición 14 · 2026",
       title: "Feria del Millón",
-      subtitle: "Feria del Millón 2026",
+      subtitle: "Arte emergente · Bogotá 2026",
       paragraph:
-        "Descubre la colección más extraordinaria de arte contemporáneo colombiano — una experiencia que conecta artistas emergentes con coleccionistas apasionados, ahora en Bogotá.",
-      ctaPrimaryLabel: "Explorar Catálogo",
-      ctaSecondaryLabel: "Conocer Artistas",
-      ticketsLabel: "Comprar tickets · 2026",
+        "La feria de arte emergente más importante de Latinoamérica. Obras de artistas jóvenes alrededor de un millón de pesos, al alcance de quien empieza a coleccionar.",
+      ctaPrimaryLabel: "Comprar tickets",
+      ctaSecondaryLabel: "Ver catálogo",
+      ticketsLabel: "Tickets",
       image: "",
     },
     eventInfo: {
@@ -123,10 +189,10 @@ export const SITE_DEFAULTS: SiteConfig = {
       { title: "22+ Artistas", description: "Talentos emergentes y establecidos en diversas disciplinas" },
     ],
     pavilions: { badge: "Pabellones", title: "Recorre nuestro pabellón" },
-    featured: { badge: "Selección Curada", title: "Obras destacadas" },
+    featured: { badge: "Selección curada", title: "Obras destacadas" },
     techniques: {
-      title: "Explora por Técnicas",
-      subtitle: "Descubre obras organizadas por disciplinas y medios",
+      title: "Explora por disciplina",
+      subtitle: "Descubre obras organizadas por técnica y medio",
     },
     statsTitle: "Impacto y Reconocimiento",
     stats: [
@@ -141,35 +207,145 @@ export const SITE_DEFAULTS: SiteConfig = {
       subtitle:
         "Contáctanos para más información sobre las obras, los artistas o el proceso de compra",
       email: "coordinaciongeneral@feriadelmillon.com",
-      phone: "+(57) 322 700 85 76",
+      phone: "+57 322 700 8576",
     },
-    social: { instagram: "", facebook: "", whatsapp: "", youtube: "" },
+    social: {
+      instagram: "https://www.instagram.com/feriadelmillon/",
+      facebook: "https://www.facebook.com/Feriadelmillon/",
+      whatsapp: "",
+      youtube: "https://www.youtube.com/channel/UCjMwOQqDda0bIUyZkeXf7FQ",
+      tiktok: "https://www.tiktok.com/@feriadelmillon",
+    },
   },
+  landing: {
+    heroMeta: {
+      edition: "Edición 14",
+      location: "Bogotá — Colombia",
+      year: "2026",
+      stats: [
+        { label: "Convocatoria", value: "29 abril — 20 julio 2026" },
+        { label: "Sede", value: "Bogotá, por anunciar" },
+        { label: "Obras desde", value: "$1.000.000 COP" },
+        { label: "Desde", value: "2012 · 13 ediciones" },
+      ],
+    },
+    ticker: {
+      enabled: true,
+      items: [
+        "Convocatoria 2026 abierta", "Pintura", "Fotografía", "Obra gráfica",
+        "Escultura", "Dibujo", "Arte digital",
+      ],
+    },
+    about: {
+      badge: "La feria",
+      title: "Un millón de pesos alcanza para empezar una colección.",
+      paragraphs: [
+        "Desde 2012 la Feria del Millón abre el mercado del arte a una generación nueva: artistas que exponen por primera vez y compradores que adquieren su primera obra. Pintura, fotografía, obra gráfica, escultura y práctica digital, con precios claros y sin intermediarios.",
+        "La edición 2026 llega a Bogotá con un pabellón curado, programa de mentores, galería virtual y convocatoria abierta a todo el país.",
+      ],
+      ctaLabel: "Recorrer el pabellón →",
+      ctaHref: "/catalogo",
+      stats: [
+        { value: "14", label: "Ediciones" },
+        { value: "500", label: "Artistas" },
+        { value: "2000", label: "Obras exhibidas" },
+        { value: "6", label: "Sedes", accent: true },
+      ],
+    },
+    techniqueItems: [
+      { name: "Pintura", image: "/assets/fdm/tec-pintura.png", href: "/catalogo?tecnica=pintura" },
+      { name: "Fotografía", image: "/assets/fdm/tec-fotografia.png", href: "/catalogo?tecnica=fotografia" },
+      { name: "Dibujo", image: "/assets/fdm/tec-dibujo.png", href: "/catalogo?tecnica=dibujo" },
+      { name: "Grabado", image: "/assets/fdm/tec-grabado.png", href: "/catalogo?tecnica=grabado" },
+      { name: "Mixta", image: "/assets/fdm/tec-mixta.png", href: "/catalogo?tecnica=mixta" },
+      { name: "Otras técnicas", image: "/assets/fdm/tec-otras.png", href: "/catalogo?tecnica=otras" },
+    ],
+    sedes: {
+      badge: "Sedes",
+      title: "La feria recorre el país",
+      subtitle: "Cada sede tiene su propia convocatoria, su curaduría y su público.",
+      items: [
+        { name: "Bogotá", tag: "Edición principal", highlight: true },
+        { name: "Medellín", tag: "Sede" },
+        { name: "Cali", tag: "Sede" },
+        { name: "Caribe", tag: "Sede" },
+        { name: "México", tag: "Internacional" },
+        { name: "Silla Vacía", tag: "Programa" },
+      ],
+    },
+    programs: {
+      badge: "Programas",
+      title: "Más allá de la feria",
+      items: [
+        { title: "1K Art Show", description: "Muestra internacional de obra con precio único, pensada para nuevos coleccionistas.", href: "#" },
+        { title: "Taller Mentores", description: "Acompañamiento de artistas y curadores a la obra de quienes se están formando.", href: "#" },
+        { title: "Galería virtual", description: "El catálogo completo disponible todo el año, con compra en línea y envío.", href: "/catalogo" },
+        { title: "Archivo", description: "Trece ediciones documentadas: artistas, obras y curadurías de cada año.", href: "#" },
+      ],
+    },
+    convocatoria: {
+      badge: "Convocatoria abierta",
+      title: "Postula",
+      titleAccent: "tu obra",
+      open: true,
+      openDate: "29 abril 2026",
+      closeDate: "20 julio 2026",
+      paragraph:
+        "Artistas de cualquier ciudad de Colombia pueden aplicar a la edición 2026 de Bogotá. Selección por comité curatorial.",
+      ctaPrimaryLabel: "Aplicar ahora",
+      ctaSecondaryLabel: "Ver bases",
+      primaryHref: "/convocatoria/aplicar",
+      secondaryHref: "/convocatoria",
+    },
+    newsletter: {
+      badge: "Boletín",
+      title: "Entérate primero de la convocatoria y las fechas",
+      paragraph:
+        "Un correo por mes: apertura de convocatoria, preventa de boletas y nuevas obras del catálogo.",
+      note: "Sin spam. Puedes darte de baja en cualquier momento.",
+      enabled: true,
+    },
+    footer: {
+      description: "La feria de arte emergente más importante de Latinoamérica.",
+    },
+    showTicker: true,
+    showPrices: true,
+    priceLabel: "$1.000.000",
+  },
+  nav: { items: [...DEFAULT_NAV] },
   sections: {
     order: [...SECTION_KEYS],
     visible: {
-      eventInfo: true,
-      pavilions: true,
+      about: true,
       featured: true,
       techniques: true,
-      stats: true,
-      contact: true,
+      sedes: true,
+      programs: true,
+      convocatoria: true,
+      newsletter: true,
     },
   },
 };
+
+function arr<T>(v: any, fallback: T[]): T[] {
+  return Array.isArray(v) && v.length > 0 ? v : fallback;
+}
 
 /** Config del backend encima de los defaults (merge por campo, robusto). */
 export function mergeSiteConfig(raw: any): SiteConfig {
   const t = raw?.theme || {};
   const c = raw?.content || {};
+  const l = raw?.landing || {};
   const s = raw?.sections || {};
+  const n = raw?.nav || {};
   const D = SITE_DEFAULTS;
 
   const order: SectionKey[] = Array.isArray(s.order)
-    ? // conserva solo claves válidas y agrega las que falten al final
-      ([...s.order.filter((k: any) => SECTION_KEYS.includes(k)),
+    ? ([...s.order.filter((k: any) => SECTION_KEYS.includes(k)),
         ...SECTION_KEYS.filter((k) => !s.order.includes(k))] as SectionKey[])
     : [...SECTION_KEYS];
+
+  const DL = D.landing;
 
   return {
     theme: { ...D.theme, ...t },
@@ -178,18 +354,58 @@ export function mergeSiteConfig(raw: any): SiteConfig {
       seo: { ...D.content.seo, ...(c.seo || {}) },
       hero: { ...D.content.hero, ...(c.hero || {}) },
       eventInfo: { ...D.content.eventInfo, ...(c.eventInfo || {}) },
-      eventCards:
-        Array.isArray(c.eventCards) && c.eventCards.length > 0
-          ? c.eventCards
-          : D.content.eventCards,
+      eventCards: arr(c.eventCards, D.content.eventCards),
       pavilions: { ...D.content.pavilions, ...(c.pavilions || {}) },
       featured: { ...D.content.featured, ...(c.featured || {}) },
       techniques: { ...D.content.techniques, ...(c.techniques || {}) },
       statsTitle: c.statsTitle || D.content.statsTitle,
-      stats:
-        Array.isArray(c.stats) && c.stats.length > 0 ? c.stats : D.content.stats,
+      stats: arr(c.stats, D.content.stats),
       contact: { ...D.content.contact, ...(c.contact || {}) },
       social: { ...D.content.social, ...(c.social || {}) },
+    },
+    landing: {
+      heroMeta: {
+        ...DL.heroMeta, ...(l.heroMeta || {}),
+        stats: arr(l.heroMeta?.stats, DL.heroMeta.stats),
+      },
+      ticker: {
+        enabled: l.ticker?.enabled ?? DL.ticker.enabled,
+        items: arr(l.ticker?.items, DL.ticker.items),
+      },
+      about: {
+        ...DL.about, ...(l.about || {}),
+        paragraphs: arr(l.about?.paragraphs, DL.about.paragraphs),
+        stats: arr(l.about?.stats, DL.about.stats),
+      },
+      techniqueItems: arr(l.techniqueItems, DL.techniqueItems),
+      sedes: {
+        ...DL.sedes, ...(l.sedes || {}),
+        items: arr(l.sedes?.items, DL.sedes.items),
+      },
+      programs: {
+        ...DL.programs, ...(l.programs || {}),
+        items: arr(l.programs?.items, DL.programs.items),
+      },
+      convocatoria: { ...DL.convocatoria, ...(l.convocatoria || {}) },
+      newsletter: { ...DL.newsletter, ...(l.newsletter || {}) },
+      footer: { ...DL.footer, ...(l.footer || {}) },
+      showTicker: l.showTicker ?? DL.showTicker,
+      showPrices: l.showPrices ?? DL.showPrices,
+      priceLabel: l.priceLabel || DL.priceLabel,
+    },
+    nav: {
+      items: arr<NavItem>(
+        Array.isArray(n.items)
+          ? n.items.filter((i: any) => i && typeof i.href === "string" && typeof i.label === "string")
+              .map((i: any) => ({
+                label: String(i.label),
+                href: String(i.href),
+                visible: i.visible ?? true,
+                enabled: i.enabled ?? true,
+              }))
+          : [],
+        D.nav.items
+      ),
     },
     sections: {
       order,

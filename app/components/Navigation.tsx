@@ -3,57 +3,39 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ShoppingCart,
-  Menu,
-  X,
-  Palette,
-  Sparkles,
-  User as UserIcon,
-  LogOut,
-  ChevronDown,
-  LayoutDashboard,
-  BadgeCheck,
-} from "lucide-react";
-import { Button } from "@components/ui/button";
+import { ShoppingCart, User as UserIcon, LogOut, ChevronDown, LayoutDashboard, BadgeCheck } from "lucide-react";
 import useCart from "@store/useCart";
 import { useAuth } from "@provider/authProvider";
-import { useSiteContent } from "@provider/siteConfigProvider";
+import { useSiteContent, useSiteNav } from "@provider/siteConfigProvider";
+import ThemeToggle from "@components/views/home/v2/ThemeToggle";
 
-function Skeleton({ className = "" }: { className?: string }) {
-  return (
-    <div
-      className={`animate-pulse rounded-md bg-gray-200/80 ${className}`}
-      aria-hidden="true"
-    />
-  );
-}
+const GREEN = "var(--fdm-green,#3FA46E)";
+const FG = "var(--fdm-fg,#0B0B0A)";
+const BG = "var(--fdm-bg,#F7F6F2)";
+const LOGO = "/assets/fdm/logo-fdm.jpg";
+
+const JOST = "Jost, system-ui, sans-serif";
 
 export default function Navigation() {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [compact, setCompact] = useState(false);
+  const [progress, setProgress] = useState(0);
 
-  // Auth
   const { user, isAuthLoading, isAuthenticated, logout } = useAuth();
   const { brand } = useSiteContent();
+  const nav = useSiteNav();
+  const items = nav.items.filter((i) => i.visible);
 
-  // Cart desde Zustand (sumamos cantidades por si tienes quantity > 1)
-  const items = useCart((s) => s.items);
-  const cartCount = useMemo(
-    () => items.reduce((acc, i) => acc + (i.quantity ?? 1), 0),
-    [items]
-  );
+  const cart = useCart((s) => s.items);
+  const cartCount = useMemo(() => cart.reduce((a, i) => a + (i.quantity ?? 1), 0), [cart]);
 
-  // Scroll states (progress bar + navbar blur)
   useEffect(() => {
     const handler = () => {
       const top = window.scrollY || 0;
-      const doc = document.documentElement;
-      const max = Math.max(doc.scrollHeight - window.innerHeight, 1);
-      setIsScrolled(top > 20);
-      setScrollProgress(Math.min(100, Math.max(0, (top / max) * 100)));
+      const max = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      setCompact(top > 40);
+      setProgress(Math.min(100, Math.max(0, (top / max) * 100)));
     };
     handler();
     window.addEventListener("scroll", handler, { passive: true });
@@ -64,47 +46,25 @@ export default function Navigation() {
     };
   }, []);
 
-  const navItems = [
-    { path: "/", label: "Inicio", disabled: true },
-    { path: "/catalogo", label: "Catálogo", disabled: true },
-    { path: "/tickets", label: "Tickets", disabled: true },
-    { path: "/artistas", label: "Artistas", disabled: true },
-    { path: "/convocatoria", label: "Convocatorias", disabled: false },
-    { path: "/sobre-nosotros", label: "Sobre Nosotros", disabled: true },
-  ];
+  const isActive = (p: string) => pathname === p;
 
-  const isActive = (path: string) => pathname === path;
-
-  // ── User helpers
   const fullName =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
     user?.firstName ||
     user?.email?.split("@")[0] ||
     "Usuario";
   const initials =
-    fullName
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((p) => p[0]?.toUpperCase())
-      .join("") || "U";
+    fullName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "U";
   const isArtist = Boolean((user as any)?.roles?.artista);
 
-  // ── Dropdown (desktop)
   const [userOpen, setUserOpen] = useState(false);
   const userBtnRef = useRef<HTMLButtonElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        userOpen &&
-        userMenuRef.current &&
-        !userMenuRef.current.contains(target) &&
-        userBtnRef.current &&
-        !userBtnRef.current.contains(target)
-      ) {
+      const t = e.target as Node;
+      if (userOpen && userMenuRef.current && !userMenuRef.current.contains(t) && userBtnRef.current && !userBtnRef.current.contains(t)) {
         setUserOpen(false);
       }
     };
@@ -112,391 +72,214 @@ export default function Navigation() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [userOpen]);
 
-  // Tamaños fijos para evitar salto: ancho reservado del bloque de auth en desktop
-  const AUTH_DESKTOP_WIDTH = "w-[268px]"; // cabe avatar+nombre+chevron ó 2 botones
+  const linkStyle: React.CSSProperties = {
+    padding: "6px 0",
+    fontFamily: JOST,
+    fontWeight: 300,
+    fontSize: 11,
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+    whiteSpace: "nowrap",
+  };
+
+  const ticketPill: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    height: 42,
+    padding: "0 24px",
+    background: FG,
+    color: BG,
+    fontFamily: JOST,
+    fontWeight: 300,
+    fontSize: 11,
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+    borderRadius: 999,
+  };
 
   return (
-    <nav
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-white/95 backdrop-blur-md shadow-lg border-b border-gray-200/60"
-          : "bg-white shadow-md"
-      }`}
-      role="navigation"
-      aria-label="Principal"
+    <header
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 60,
+        background: "color-mix(in srgb, var(--fdm-bg,#F7F6F2) 90%, transparent)",
+        backdropFilter: "blur(14px)",
+        borderBottom: "1px solid color-mix(in srgb, var(--fdm-fg,#0B0B0A) 14%, transparent)",
+        color: FG,
+        fontFamily: JOST,
+      }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3 group" aria-label={`Ir al inicio - ${brand.name}`}>
-            <div className="relative">
-              {brand.logo ? (
-                <img
-                  src={brand.logo}
-                  alt={brand.name}
-                  className="w-10 h-10 rounded-xl object-cover group-hover:scale-110 transition-transform duration-300"
-                />
-              ) : (
-                <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <Palette className="h-5 w-5 text-white" />
-                </div>
-              )}
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-gray-300 rounded-full animate-pulse" />
-            </div>
-            <div className="hidden sm:block">
-              <div className="text-xl font-bold text-black">
-                {brand.name}
-              </div>
-              <div className="text-xs text-gray-500 font-medium">
-                {brand.tagline}
-              </div>
-            </div>
-          </Link>
+      <div
+        style={{
+          maxWidth: 1600,
+          margin: "0 auto",
+          padding: `${compact ? 8 : 14}px clamp(16px,4vw,56px)`,
+          minHeight: compact ? 62 : 80,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "clamp(14px,1.8vw,32px)",
+          transition: "padding .35s ease, min-height .35s ease",
+        }}
+      >
+        {/* Marca */}
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 14, flex: "0 0 auto", whiteSpace: "nowrap" }} aria-label={`Ir al inicio - ${brand.name}`}>
+          <span
+            style={{
+              display: "block",
+              width: 58,
+              aspectRatio: "2.46",
+              backgroundImage: `url('${brand.logo || LOGO}')`,
+              backgroundSize: "cover",
+              backgroundPosition: "49% center",
+              filter: "var(--logoF,none) contrast(1.25)",
+              mixBlendMode: "multiply" as any,
+            }}
+          />
+          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}>
+            <span style={{ fontWeight: 500, fontSize: 16, letterSpacing: "0.08em", textTransform: "uppercase" }}>{brand.name}</span>
+            <span style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.32em", textTransform: "uppercase", color: `color-mix(in srgb, ${FG} 50%, transparent)`, marginTop: 4 }}>
+              {brand.tagline}
+            </span>
+          </span>
+        </Link>
 
-          {/* Desktop nav */}
-          <div className="hidden md:flex items-center space-x-1">
-            {navItems.map((item) => (
-              item.disabled ? (
-                <span
-                  key={item.path}
-                  className="relative px-4 py-2 rounded-xl text-sm font-medium text-gray-300 cursor-not-allowed select-none"
-                  title="Próximamente"
-                >
-                  {item.label}
-                </span>
-              ) : (
-                <Link
-                  key={item.path}
-                  href={item.path}
-                  className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 group ${
-                    isActive(item.path)
-                      ? "text-black bg-gray-100"
-                      : "text-gray-800 hover:text-black hover:bg-gray-50"
-                  }`}
-                >
-                  {item.label}
-                  {isActive(item.path) && (
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-black rounded-full" />
-                  )}
-                  <div className="absolute inset-0 rounded-xl bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </Link>
-              )
-            ))}
-          </div>
-
-          {/* Right side: Auth / Cart / Mobile toggle */}
-          <div className="flex items-center space-x-3">
-            {/* ===== Desktop Auth area con ancho fijo para cero layout shift ===== */}
-            <div className={`hidden md:flex justify-end ${AUTH_DESKTOP_WIDTH}`}>
-              {/* Loading: skeleton con medidas idénticas a los estados finales */}
-              {isAuthLoading && (
-                <div className="flex items-center gap-2">
-                  {/* Si no autenticado, habría dos botones sm → reservamos 2 skeletons */}
-                  <Skeleton className="h-9 w-28 rounded-xl" />
-                  <Skeleton className="h-9 w-24 rounded-xl" />
-                </div>
-              )}
-
-              {/* NO autenticado */}
-              {!isAuthLoading && !isAuthenticated && (
-                <div className="flex items-center gap-2">
-                  <Link
-                    href="/login?role=buyer"
-                    aria-label="Iniciar sesión como comprador"
-                    className="block"
-                  >
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-gray-300 text-gray-900 hover:border-black hover:bg-gray-50 transition-all duration-300"
-                    >
-                      <UserIcon className="h-4 w-4 mr-2" />
-                      <span>Comprador</span>
-                    </Button>
-                  </Link>
-                  <Link
-                    href="/login?role=artist"
-                    aria-label="Iniciar sesión como artista"
-                    className="block"
-                  >
-                    <Button
-                      size="sm"
-                      className="bg-black text-white shadow-sm hover:bg-gray-900 transition-all duration-300"
-                    >
-                      <Palette className="h-4 w-4 mr-2" />
-                      <span>Artista</span>
-                    </Button>
-                  </Link>
-                </div>
-              )}
-
-              {/* Autenticado */}
-              {!isAuthLoading && isAuthenticated && (
-                <div className="relative">
-                  <button
-                    ref={userBtnRef}
-                    onClick={() => setUserOpen((v) => !v)}
-                    className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-2.5 py-1.5 text-sm hover:border-black"
-                    aria-haspopup="menu"
-                    aria-expanded={userOpen}
-                    aria-label="Menú de usuario"
-                  >
-                    <div className="h-7 w-7 rounded-full bg-black text-white flex items-center justify-center font-semibold">
-                      {initials}
-                    </div>
-                    <span className="max-w-[8.5rem] truncate text-gray-900">
-                      {fullName}
-                    </span>
-                    <ChevronDown className="h-4 w-4 text-gray-600" />
-                  </button>
-
-                  {userOpen && (
-                    <div
-                      ref={userMenuRef}
-                      role="menu"
-                      className="absolute right-0 mt-2 w-64 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden"
-                    >
-                      <div className="px-4 py-3 border-b border-gray-200">
-                        <p className="text-sm font-semibold text-gray-900 truncate">
-                          {fullName}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate">
-                          {user?.email}
-                        </p>
-                      </div>
-
-                      <div className="py-1">
-                        <Link
-                          href="/admin/account"
-                          role="menuitem"
-                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-100"
-                          onClick={() => setUserOpen(false)}
-                        >
-                          <BadgeCheck className="h-4 w-4" />
-                          Mi cuenta
-                        </Link>
-
-                      </div>
-
-                      <button
-                        role="menuitem"
-                        onClick={async () => {
-                          setUserOpen(false);
-                          await logout();
-                        }}
-                        className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-100 border-t border-gray-200"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Cerrar sesión
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Cart */}
-            <Link
-              href="/carrito"
-              className="relative group"
-              aria-label="Ir al carrito"
-            >
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label="Ir al carrito"
-                className="relative border-gray-300 hover:border-black hover:bg-gray-50 transition-all duration-300 group-hover:scale-105"
-              >
-                <ShoppingCart className="h-4 w-4 group-hover:text-black transition-colors" aria-hidden="true" />
-                {cartCount > 0 && (
-                  <>
-                    <span className="absolute -top-2 -right-2 bg-black text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                      {cartCount}
-                    </span>
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-gray-700 rounded-full animate-ping" />
-                  </>
-                )}
-              </Button>
-            </Link>
-
-            {/* Mobile toggle */}
-            <div className="md:hidden">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsMenuOpen((v) => !v)}
-                className="hover:bg-gray-100 transition-colors duration-300"
-                aria-label="Abrir menú"
-                aria-expanded={isMenuOpen}
-              >
-                <div className="relative w-5 h-5">
-                  <Menu
-                    className={`h-5 w-5 absolute transition-all duration-300 ${
-                      isMenuOpen
-                        ? "rotate-90 opacity-0"
-                        : "rotate-0 opacity-100"
-                    }`}
-                  />
-                  <X
-                    className={`h-5 w-5 absolute transition-all duration-300 ${
-                      isMenuOpen
-                        ? "rotate-0 opacity-100"
-                        : "-rotate-90 opacity-0"
-                    }`}
-                  />
-                </div>
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile nav */}
-        <div
-          className={`md:hidden transition-all duration-300 overflow-hidden ${
-            isMenuOpen ? "max-h-[32rem] opacity-100" : "max-h-0 opacity-0"
-          }`}
+        {/* Nav desktop (desde config) */}
+        <nav
+          className="fdm-desk-nav"
+          style={{
+            alignItems: "center",
+            justifyContent: "center",
+            flex: "1 1 auto",
+            gap: "clamp(14px,1.7vw,30px)",
+          }}
         >
-          <div className="px-2 pt-2 pb-3 space-y-1 bg-gradient-to-b from-gray-50 to-white rounded-b-2xl border-t border-gray-100">
-            {navItems.map((item, index) => (
-              item.disabled ? (
-                <span
-                  key={item.path}
-                  className="block px-4 py-3 rounded-xl text-base font-medium text-gray-300 cursor-not-allowed select-none"
-                  style={{
-                    animationDelay: `${
-                      index * 0.1
-                    }s` as React.CSSProperties["animationDelay"],
-                  }}
+          {items.map((it) =>
+            it.enabled ? (
+              <Link
+                key={it.href}
+                href={it.href}
+                className="fdm-link"
+                style={{ ...linkStyle, color: isActive(it.href) ? GREEN : "inherit", borderBottom: `1px solid ${isActive(it.href) ? GREEN : "transparent"}` }}
+              >
+                {it.label}
+              </Link>
+            ) : (
+              <span key={it.href} title="Próximamente" style={{ ...linkStyle, color: `color-mix(in srgb, ${FG} 32%, transparent)`, cursor: "not-allowed" }}>
+                {it.label}
+              </span>
+            )
+          )}
+        </nav>
+
+        {/* Acciones derecha */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: "0 0 auto", whiteSpace: "nowrap" }}>
+          <ThemeToggle className="fdm-desk-only" />
+
+          {/* Auth (desktop) */}
+          <div className="fdm-desk-only" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {!isAuthLoading && !isAuthenticated && (
+              <>
+                <Link href="/login?role=buyer" className="fdm-link" style={{ ...linkStyle, color: `color-mix(in srgb, ${FG} 58%, transparent)` }}>Acceder</Link>
+                <Link href="/login?role=artist" className="fdm-link" style={{ ...linkStyle, color: `color-mix(in srgb, ${FG} 58%, transparent)` }}>Artistas</Link>
+              </>
+            )}
+            {!isAuthLoading && isAuthenticated && (
+              <div style={{ position: "relative" }}>
+                <button
+                  ref={userBtnRef}
+                  onClick={() => setUserOpen((v) => !v)}
+                  style={{ display: "flex", alignItems: "center", gap: 8, borderRadius: 999, border: `1px solid color-mix(in srgb, ${FG} 26%, transparent)`, background: "transparent", color: "inherit", padding: "5px 10px", cursor: "pointer", fontFamily: JOST, fontSize: 13 }}
+                  aria-haspopup="menu"
+                  aria-expanded={userOpen}
                 >
-                  <div className="flex items-center space-x-3">
-                    <span>{item.label}</span>
-                    <span className="text-xs text-gray-400 ml-auto">Próximamente</span>
-                  </div>
-                </span>
-              ) : (
-                <Link
-                  key={item.path}
-                  href={item.path}
-                  className={`block px-4 py-3 rounded-xl text-base font-medium transition-all duration-300 ${
-                    isActive(item.path)
-                      ? "text-black bg-gray-100 border-l-4 border-black"
-                      : "text-gray-800 hover:text-black hover:bg-gray-100"
-                  }`}
-                  onClick={() => setIsMenuOpen(false)}
-                  style={{
-                    animationDelay: `${
-                      index * 0.1
-                    }s` as React.CSSProperties["animationDelay"],
-                  }}
-                >
-                  <div className="flex items-center space-x-3">
-                    {isActive(item.path) && (
-                      <Sparkles className="h-4 w-4 text-black" />
-                    )}
-                    <span>{item.label}</span>
-                  </div>
-                </Link>
-              )
-            ))}
-
-            {/* Auth area (mobile) */}
-            <div className="pt-3 border-t border-gray-100">
-              {/* Loading → skeletons del mismo tamaño que los botones/cards */}
-              {isAuthLoading && (
-                <div className="grid grid-cols-2 gap-2">
-                  <Skeleton className="h-10 rounded-xl" />
-                  <Skeleton className="h-10 rounded-xl" />
-                </div>
-              )}
-
-              {!isAuthLoading && !isAuthenticated ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    href="/login?role=buyer"
-                    aria-label="Iniciar sesión como comprador"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <Button
-                      variant="outline"
-                      className="w-full h-10 border-gray-300 text-gray-900 hover:border-black hover:bg-gray-50"
-                    >
-                      <UserIcon className="h-4 w-4 mr-2" />
-                      <span className="truncate">Comprador</span>
-                    </Button>
-                  </Link>
-                  <Link
-                    href="/login?role=artist"
-                    aria-label="Iniciar sesión como artista"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <Button className="w-full h-10 bg-black text-white hover:bg-gray-900">
-                      <Palette className="h-4 w-4 mr-2" />
-                      <span className="truncate">Artista</span>
-                    </Button>
-                  </Link>
-                </div>
-              ) : null}
-
-              {/* Usuario logueado (mobile): tarjetica + acciones */}
-              {!isAuthLoading && isAuthenticated && (
-                <div className="rounded-xl border border-gray-200 p-3 bg-white">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-black text-white flex items-center justify-center font-semibold">
-                      {initials}
+                  <span style={{ height: 26, width: 26, borderRadius: 999, background: FG, color: BG, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 600, fontSize: 11 }}>{initials}</span>
+                  <span style={{ maxWidth: "8.5rem", overflow: "hidden", textOverflow: "ellipsis" }}>{fullName}</span>
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+                {userOpen && (
+                  <div ref={userMenuRef} role="menu" style={{ position: "absolute", right: 0, marginTop: 8, width: 256, borderRadius: 12, border: `1px solid color-mix(in srgb, ${FG} 14%, transparent)`, background: BG, boxShadow: "0 10px 40px rgba(0,0,0,0.18)", overflow: "hidden", zIndex: 70 }}>
+                    <div style={{ padding: "12px 16px", borderBottom: `1px solid color-mix(in srgb, ${FG} 12%, transparent)` }}>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{fullName}</p>
+                      <p style={{ margin: 0, fontSize: 12, opacity: 0.6 }}>{user?.email}</p>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
-                        {fullName}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {user?.email}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 space-y-1">
-                    <Link
-                      href="/admin/account"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center gap-2 px-2 py-2 rounded-lg text-sm text-gray-800 hover:bg-gray-100"
-                    >
-                      <BadgeCheck className="h-4 w-4" />
-                      Mi cuenta
+                    <Link href="/admin/account" role="menuitem" onClick={() => setUserOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", fontSize: 13 }}>
+                      <BadgeCheck className="h-4 w-4" /> Mi cuenta
                     </Link>
                     {isArtist && (
-                      <Link
-                        href="/admin/artist"
-                        onClick={() => setIsMenuOpen(false)}
-                        className="flex items-center gap-2 px-2 py-2 rounded-lg text-sm text-gray-800 hover:bg-gray-100"
-                      >
-                        <LayoutDashboard className="h-4 w-4" />
-                        Panel de artista
+                      <Link href="/admin/artist" role="menuitem" onClick={() => setUserOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", fontSize: 13 }}>
+                        <LayoutDashboard className="h-4 w-4" /> Panel de artista
                       </Link>
                     )}
-                    <button
-                      onClick={async () => {
-                        setIsMenuOpen(false);
-                        await logout();
-                      }}
-                      className="w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm text-gray-800 hover:bg-gray-100"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Cerrar sesión
+                    <button onClick={async () => { setUserOpen(false); await logout(); }} style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "10px 16px", fontSize: 13, borderTop: `1px solid color-mix(in srgb, ${FG} 12%, transparent)`, background: "transparent", cursor: "pointer", color: "inherit" }}>
+                      <LogOut className="h-4 w-4" /> Cerrar sesión
                     </button>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Carrito */}
+          <Link href="/carrito" aria-label="Ir al carrito" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", height: 42, width: 42, borderRadius: 999, border: `1px solid color-mix(in srgb, ${FG} 26%, transparent)` }}>
+            <ShoppingCart className="h-4 w-4" />
+            {cartCount > 0 && (
+              <span style={{ position: "absolute", top: -6, right: -6, background: GREEN, color: "#0B0B0A", fontSize: 11, borderRadius: 999, height: 20, minWidth: 20, padding: "0 5px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{cartCount}</span>
+            )}
+          </Link>
+
+          {/* Tickets */}
+          <Link href="/tickets" className="fdm-desk-only" style={ticketPill}>Tickets</Link>
+
+          {/* Menú mobile */}
+          <button onClick={() => setIsMenuOpen((v) => !v)} className="fdm-mobile-only" aria-label="Abrir menú" aria-expanded={isMenuOpen} style={{ display: "none", alignItems: "center", height: 42, padding: "0 20px", cursor: "pointer", background: "transparent", color: "inherit", border: `1px solid color-mix(in srgb, ${FG} 26%, transparent)`, borderRadius: 999, fontFamily: JOST, fontWeight: 300, fontSize: 11, letterSpacing: "0.2em", textTransform: "uppercase" }}>
+            {isMenuOpen ? "Cerrar" : "Menú"}
+          </button>
         </div>
       </div>
 
-      {/* Scroll progress bar */}
-      <div
-        className="absolute bottom-0 left-0 h-0.5 bg-black transition-all duration-150"
-        style={{ width: `${scrollProgress}%` }}
-        aria-hidden="true"
-      />
-    </nav>
+      {/* Progreso de scroll */}
+      <div style={{ position: "absolute", left: 0, bottom: -1, height: 2, width: `${progress}%`, background: GREEN, pointerEvents: "none", transition: "width .15s linear" }} aria-hidden="true" />
+
+      {/* Panel mobile */}
+      {isMenuOpen && (
+        <div style={{ borderTop: `1px solid color-mix(in srgb, ${FG} 12%, transparent)`, padding: "12px clamp(16px,4vw,56px) 22px", background: "color-mix(in srgb, var(--fdm-bg,#F7F6F2) 96%, transparent)", backdropFilter: "blur(14px)" }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {items.map((it, idx) =>
+              it.enabled ? (
+                <Link key={it.href} href={it.href} onClick={() => setIsMenuOpen(false)} style={{ display: "flex", alignItems: "baseline", gap: 16, padding: "12px 0", borderBottom: `1px solid color-mix(in srgb, ${FG} 10%, transparent)`, fontFamily: JOST, fontWeight: 300, fontSize: 20, textTransform: "uppercase", color: isActive(it.href) ? GREEN : "inherit" }}>
+                  <span className="fdm-mono" style={{ fontSize: 11, letterSpacing: "0.24em", opacity: 0.5 }}>{String(idx + 1).padStart(2, "0")}</span>
+                  {it.label}
+                </Link>
+              ) : (
+                <span key={it.href} style={{ display: "flex", alignItems: "baseline", gap: 16, padding: "12px 0", borderBottom: `1px solid color-mix(in srgb, ${FG} 10%, transparent)`, fontFamily: JOST, fontWeight: 300, fontSize: 20, textTransform: "uppercase", color: `color-mix(in srgb, ${FG} 32%, transparent)` }}>
+                  <span className="fdm-mono" style={{ fontSize: 11, letterSpacing: "0.24em", opacity: 0.5 }}>{String(idx + 1).padStart(2, "0")}</span>
+                  {it.label}
+                  <span className="fdm-mono" style={{ marginLeft: "auto", fontSize: 10, opacity: 0.5 }}>Próximamente</span>
+                </span>
+              )
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 18 }}>
+            <Link href="/tickets" onClick={() => setIsMenuOpen(false)} style={{ ...ticketPill, background: GREEN, color: "#0B0B0A", height: 48 }}>Comprar tickets</Link>
+            <ThemeToggle />
+          </div>
+          {!isAuthLoading && !isAuthenticated && (
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <Link href="/login?role=buyer" onClick={() => setIsMenuOpen(false)} className="fdm-link" style={{ fontFamily: JOST, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>Acceder</Link>
+              <Link href="/login?role=artist" onClick={() => setIsMenuOpen(false)} className="fdm-link" style={{ fontFamily: JOST, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>Artistas</Link>
+            </div>
+          )}
+          {!isAuthLoading && isAuthenticated && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 14 }}>
+              <Link href="/admin/account" onClick={() => setIsMenuOpen(false)} className="fdm-link" style={{ fontFamily: JOST, fontSize: 13 }}>Mi cuenta</Link>
+              {isArtist && <Link href="/admin/artist" onClick={() => setIsMenuOpen(false)} className="fdm-link" style={{ fontFamily: JOST, fontSize: 13 }}>Panel de artista</Link>}
+              <button onClick={async () => { setIsMenuOpen(false); await logout(); }} style={{ textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "inherit", fontFamily: JOST, fontSize: 13, padding: 0 }}>Cerrar sesión</button>
+            </div>
+          )}
+        </div>
+      )}
+    </header>
   );
 }

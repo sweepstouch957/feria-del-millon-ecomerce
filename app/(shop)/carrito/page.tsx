@@ -6,6 +6,7 @@ import { Button } from "@components/ui/button";
 import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag } from "lucide-react";
 import useCart from "@store/useCart";
 import { useMemo } from "react";
+import { formatCOP } from "@lib/money";
 
 type ImgLike = string | string[] | undefined | null;
 
@@ -27,12 +28,7 @@ const getFirstImage = (img: ImgLike): string => {
   return "/placeholder.png";
 };
 
-const formatPrice = (price: number) =>
-  new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    minimumFractionDigits: 0,
-  }).format(price);
+const formatPrice = (price: number) => formatCOP(price);
 
 export default function CartPage() {
   // Zustand selectors

@@ -8,7 +8,7 @@ import { Button } from "@components/ui/button";
 import type { PaymentMethod } from "@services/order.service";
 import { formatMoney } from "@lib/utils";
 
-import { MercadoPagoInfo, TrustBadges } from "./PaymentInfoBlocks";
+import { TrustBadges } from "./PaymentInfoBlocks";
 import {
   PaymentMethodSelector,
 } from "./PaymentMethodSelector";

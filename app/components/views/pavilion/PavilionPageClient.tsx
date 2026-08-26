@@ -30,6 +30,7 @@ import {
 
 import { useEventArtists } from "@hooks/queries/useEventArtists";
 import type { AutocompleteOption } from "@components/ui/autocomplete";
+import { formatCOP } from "@lib/money";
 
 type Props = { eventId: string; slug: string };
 
@@ -272,17 +273,9 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
               {(pavilion.minArtworkPrice || pavilion.maxArtworkPrice) && (
                 <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-gray-700">
                   Precio:{" "}
-                  {Intl.NumberFormat("es-CO", {
-                    style: "currency",
-                    currency: "COP",
-                    minimumFractionDigits: 0,
-                  }).format(pavilion.minArtworkPrice ?? 0)}{" "}
+                  {formatCOP(pavilion.minArtworkPrice ?? 0)}{" "}
                   —{" "}
-                  {Intl.NumberFormat("es-CO", {
-                    style: "currency",
-                    currency: "COP",
-                    minimumFractionDigits: 0,
-                  }).format(pavilion.maxArtworkPrice ?? 0)}
+                  {formatCOP(pavilion.maxArtworkPrice ?? 0)}
                 </span>
               )}
             </div>

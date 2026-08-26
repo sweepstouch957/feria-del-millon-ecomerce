@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, CreditCard, Mail, Phone, QrCode, Sparkles, Ticket as TicketIcon, User } from "lucide-react";
+import { BadgeCheck, CreditCard, Mail, QrCode, Sparkles, Ticket as TicketIcon, User } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { TicketDay, TicketsUIProps, classNames } from "./ticketTypes";
@@ -12,10 +12,7 @@ import { TicketsPreviewModal } from "./TicketsPreviewModal";
 
 import { formatMoney } from "@lib/utils";
 import type { Ticket } from "@services/ticket.service";
-import {
-  payTicketsWithMercadoPago,
-  type PayWithMercadoPagoPayload,
-} from "@services/ticket.service";
+import { payTicketsWithMercadoPago } from "@services/ticket.service";
 import { useEdition } from "@provider/editionProvider";
 import { ColombianPhoneInput } from "@components/ColombianInput";
 

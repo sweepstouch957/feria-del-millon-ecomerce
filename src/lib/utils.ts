@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { formatCOP } from "./money";
 
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -10,7 +11,7 @@ export const toSelectItems = <T>(
   label: (x: T) => string,
   value: (x: T) => string
 ) => (data ?? []).map((x) => ({ label: label(x), value: value(x) }));
-export const formatMoney = (value?: number, currency = "COP") => `${currency} ${new Intl.NumberFormat("es-CO").format(value ?? 0)}`;
+export const formatMoney = (value?: number, currency = "COP") => formatCOP(value, { code: true, currency });
 
 export function mergeImages(primary?: string, list?: string[]) {
   const fromArray = Array.isArray(list) ? list : [];

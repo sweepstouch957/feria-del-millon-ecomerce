@@ -2,20 +2,13 @@
 
 import Link from "next/link";
 import { useArtworksCursor } from "@hooks/queries/useArtworksCursor";
+import { formatCOP } from "@lib/money";
 
 const ON_DARK = "var(--fdm-on-dark,#F5F4EF)";
 const GREEN = "var(--fdm-green,#3FA46E)";
 
 function money(value: any, currency = "COP") {
-  try {
-    return new Intl.NumberFormat("es-CO", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-    }).format(Number(value || 0));
-  } catch {
-    return `$${Number(value || 0).toLocaleString("es-CO")}`;
-  }
+  return formatCOP(value, { currency });
 }
 
 function artistOf(a: any) {

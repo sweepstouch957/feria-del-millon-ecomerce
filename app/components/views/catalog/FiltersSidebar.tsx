@@ -6,7 +6,6 @@ import {
   ArrowDownUp,
   Search as SearchIcon,
 } from "lucide-react";
-import { useMemo } from "react";
 import { Input } from "@components/ui/input";
 import { Button } from "@components/ui/button";
 import { Autocomplete, AutocompleteOption } from "@components/ui/autocomplete";
@@ -85,7 +84,6 @@ export default function FiltersSidebar(props: Props) {
     setArtistId,
     artistOptions,
     loadingArtists,
-    errorArtists,
     minPrice,
     maxPrice,
     setMinPrice,
@@ -96,7 +94,6 @@ export default function FiltersSidebar(props: Props) {
     setHasImage,
     sortBy,
     setSortBy,
-    sortDir,
     toggleSortDir,
     onApply,
     onClear,

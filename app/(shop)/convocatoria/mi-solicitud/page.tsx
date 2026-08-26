@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { getMyApplications, type ArtistApplication } from "@services/applications.service";
 import { ApplicationCard } from "@components/views/convocatoria/ApplicationCard";
-import { Plus, Palette, Loader2, AlertCircle, CreditCard, Hourglass } from "lucide-react";
+import { Plus, Loader2, AlertCircle, CreditCard, Hourglass } from "lucide-react";
 
 export default function MiSolicitudPage() {
   const { data: apps = [], isLoading, error } = useQuery({

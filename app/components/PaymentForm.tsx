@@ -5,6 +5,7 @@ import type { ComponentProps } from 'react';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
 import { Shield, CreditCard, Lock, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { formatCOP } from '@lib/money';
 
 /* ================================
    Utils de formato/validación
@@ -41,8 +42,7 @@ const isValidLuhn = (num: string) => {
   return sum % 10 === 0;
 };
 
-const formatPriceCO = (price: number) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(price);
+const formatPriceCO = (price: number) => formatCOP(price);
 
 /* ================================
    Logos inline VISA / Mastercard

@@ -2,12 +2,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { checkPaymentStatusPublic, checkPaymentStatus, getApplicationById } from "@services/applications.service";
+import { checkPaymentStatusPublic, checkPaymentStatus } from "@services/applications.service";
 
 export default function PagoExitosoClient() {
   const searchParams = useSearchParams();
   const appId = searchParams.get("appId") || searchParams.get("external_reference");
-  const collectionStatus = searchParams.get("collection_status");
   const paymentId = searchParams.get("payment_id");
   const [checking, setChecking] = useState(true);
   const [confirmed, setConfirmed] = useState(false);

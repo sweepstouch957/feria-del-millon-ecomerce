@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@provider/authProvider";
 import { getMyApplications, type ArtistApplication } from "@services/applications.service";
 import { CheckCircle2, Hourglass } from "lucide-react";
@@ -58,7 +57,6 @@ const FLOW_STEPS = [
  */
 export function LoggedInArtistGate({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, isAuthLoading } = useAuth();
-  const router = useRouter();
   const [app, setApp] = useState<ArtistApplication | null>(null);
   const [loading, setLoading] = useState(true);
   const [checked, setChecked] = useState(false);

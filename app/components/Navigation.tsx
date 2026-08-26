@@ -23,7 +23,7 @@ export default function Navigation() {
   const [progress, setProgress] = useState(0);
 
   const { user, isAuthLoading, isAuthenticated, logout } = useAuth();
-  const { brand } = useSiteContent();
+  const { brand, social } = useSiteContent();
   const nav = useSiteNav();
   const items = nav.items.filter((i) => i.visible);
 
@@ -180,10 +180,7 @@ export default function Navigation() {
           {/* Auth (desktop) */}
           <div className="fdm-desk-only" style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {!isAuthLoading && !isAuthenticated && (
-              <>
-                <Link href="/login?role=buyer" className="fdm-link" style={{ ...linkStyle, color: `color-mix(in srgb, ${FG} 58%, transparent)` }}>Acceder</Link>
-                <Link href="/login?role=artist" className="fdm-link" style={{ ...linkStyle, color: `color-mix(in srgb, ${FG} 58%, transparent)` }}>Artistas</Link>
-              </>
+              <Link href="/login" className="fdm-link" style={{ ...linkStyle, color: `color-mix(in srgb, ${FG} 58%, transparent)` }}>Acceder</Link>
             )}
             {!isAuthLoading && isAuthenticated && (
               <div style={{ position: "relative" }}>
@@ -266,9 +263,9 @@ export default function Navigation() {
             <ThemeToggle />
           </div>
           {!isAuthLoading && !isAuthenticated && (
-            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-              <Link href="/login?role=buyer" onClick={() => setIsMenuOpen(false)} className="fdm-link" style={{ fontFamily: JOST, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>Acceder</Link>
-              <Link href="/login?role=artist" onClick={() => setIsMenuOpen(false)} className="fdm-link" style={{ fontFamily: JOST, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>Artistas</Link>
+            <div style={{ display: "flex", gap: 18, marginTop: 14 }}>
+              <Link href="/login" onClick={() => setIsMenuOpen(false)} className="fdm-link" style={{ fontFamily: JOST, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>Acceder</Link>
+              <a href={social?.instagram || "https://www.instagram.com/feriadelmillon/"} className="fdm-link" style={{ fontFamily: JOST, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>Instagram</a>
             </div>
           )}
           {!isAuthLoading && isAuthenticated && (

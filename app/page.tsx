@@ -67,6 +67,37 @@ function BigTitle({ text, color = FG }: { text: string; color?: string }) {
   );
 }
 
+// Título del hero: 1ª palabra en su línea (thin), el resto en la 2ª línea
+// con artículos en verde y la última palabra en bold — igual al diseño.
+function HeroTitle({ text, color = "#F5F4EF" }: { text: string; color?: string }) {
+  const words = text.split(" ");
+  const first = words[0];
+  const rest = words.slice(1);
+  const isArticle = (w: string) =>
+    ["del", "de", "la", "el", "tu"].includes(w.toLowerCase().replace(/[^a-záéíóú]/gi, ""));
+  return (
+    <>
+      <span style={{ display: "block", fontWeight: 200, color }}>{first}</span>
+      {rest.length > 0 && (
+        <span style={{ display: "block" }}>
+          {rest.map((w, i) => (
+            <span
+              key={i}
+              style={{
+                color: isArticle(w) ? GREEN : color,
+                fontWeight: i === rest.length - 1 ? 400 : 200,
+              }}
+            >
+              {w}
+              {i < rest.length - 1 ? " " : ""}
+            </span>
+          ))}
+        </span>
+      )}
+    </>
+  );
+}
+
 const pill = (bg: string, fg: string): React.CSSProperties => ({
   display: "inline-flex",
   alignItems: "center",
@@ -547,7 +578,7 @@ export default function HomePage() {
               }}
             />
             <h1 style={{ margin: 0, fontWeight: 200, fontSize: "clamp(50px,11.2vw,190px)", lineHeight: 1.02, letterSpacing: "0.015em", textTransform: "uppercase" }}>
-              <BigTitle text={hero.title} color={ON_DARK} />
+              <HeroTitle text={hero.title} color={ON_DARK} />
             </h1>
             <p style={{ margin: 0, maxWidth: "52ch", fontSize: "clamp(15px,1.25vw,19px)", lineHeight: 1.65, color: "rgba(245,244,239,0.74)" }}>
               {hero.paragraph}
@@ -617,7 +648,8 @@ export default function HomePage() {
             <Link href="/catalogo" className="fdm-link">Catálogo</Link>
             <Link href="/tickets" className="fdm-link">Tickets</Link>
             <Link href="/convocatoria" className="fdm-link">Convocatoria</Link>
-            <Link href="/artistas" className="fdm-link">Artistas</Link>
+            <Link href="/#programas" className="fdm-link">Programas</Link>
+            <Link href="/#ciudades" className="fdm-link">Sedes</Link>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14.5 }}>
             <span style={{ fontWeight: 300, fontSize: 10.5, letterSpacing: "0.24em", textTransform: "uppercase", color: `color-mix(in srgb, ${FG} 48%, transparent)`, marginBottom: 8 }}>Contacto</span>
@@ -636,8 +668,9 @@ export default function HomePage() {
         <div className="fdm-mono" style={{ maxWidth: 1600, margin: "clamp(40px,5vw,76px) auto 0", paddingTop: 22, borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)`, display: "flex", flexWrap: "wrap", gap: 16, justifyContent: "space-between", fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: `color-mix(in srgb, ${FG} 48%, transparent)` }}>
           <span>© Feria del Millón · Oficina para la Cultura SAS</span>
           <span style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-            <Link href="/sobre-nosotros" className="fdm-link">Sobre nosotros</Link>
-            <Link href="/convocatoria" className="fdm-link">Convocatoria</Link>
+            <Link href="/sobre-nosotros" className="fdm-link">Privacidad</Link>
+            <Link href="/sobre-nosotros" className="fdm-link">Términos</Link>
+            <Link href="/sobre-nosotros" className="fdm-link">FAQ</Link>
           </span>
         </div>
       </footer>

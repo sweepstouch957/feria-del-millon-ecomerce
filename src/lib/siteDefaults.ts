@@ -132,14 +132,14 @@ export interface SiteConfig {
   sections: SiteSections;
 }
 
-// Rutas reales del ecommerce para el navbar por defecto.
+// Navbar por defecto — igual al diseño (secciones de la landing + catálogo).
 export const DEFAULT_NAV: NavItem[] = [
-  { label: "Inicio", href: "/", visible: true, enabled: true },
   { label: "Catálogo", href: "/catalogo", visible: true, enabled: true },
-  { label: "Tickets", href: "/tickets", visible: true, enabled: true },
-  { label: "Artistas", href: "/artistas", visible: true, enabled: true },
+  { label: "Técnicas", href: "/#tecnicas", visible: true, enabled: true },
+  { label: "Sedes", href: "/#ciudades", visible: true, enabled: true },
+  { label: "Programas", href: "/#programas", visible: true, enabled: true },
   { label: "Convocatoria", href: "/convocatoria", visible: true, enabled: true },
-  { label: "Sobre Nosotros", href: "/sobre-nosotros", visible: true, enabled: true },
+  { label: "La feria", href: "/#feria", visible: true, enabled: true },
 ];
 
 export const SITE_DEFAULTS: SiteConfig = {

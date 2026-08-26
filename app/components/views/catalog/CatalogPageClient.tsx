@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useEffect, useRef } from "react";
+import { useMemo, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { usePavilions } from "@hooks/queries/usePavilions";
 import { Button } from "@components/ui/button";
 import CatalogCard from "@components/views/catalog/CatalogCard";
 import FiltersSidebar from "@components/views/catalog/FiltersSidebar";
@@ -101,8 +102,14 @@ export default function CatalogPageClient() {
     [artistsResp]
   );
 
+  // Modo de catálogo: "general" (todas las obras) o "pavilion" (por pabellón).
+  const [catalogMode, setCatalogMode] = useState<"general" | "pavilion">("general");
+  const { data: pavilionsData = [] } = usePavilions(DEFAULT_EVENT_ID);
+
   const techniqueCsv = techniqueIds.length ? techniqueIds.join(",") : undefined;
-  const effectivePavilion = pavilion || FIXED_PAVILION_ID;
+  // General → sin filtro de pabellón (todas). Por pabellón → el seleccionado.
+  const effectivePavilion =
+    catalogMode === "pavilion" ? pavilion || undefined : undefined;
 
   const {
     rows: rawRows,
@@ -156,10 +163,11 @@ export default function CatalogPageClient() {
     return arr;
   }, [rawRows, hasImage, inStock, minPrice, maxPrice, sortBy, sortDir]);
 
-  // Pabellón fijo
-  const pavilionOptions = [
-    { id: FIXED_PAVILION_ID, name: FIXED_PAVILION_NAME },
-  ];
+  // Pabellones reales del evento (fallback al fijo si aún no cargan).
+  const pavilionOptions =
+    pavilionsData.length > 0
+      ? pavilionsData.map((p: any) => ({ id: String(p.id ?? p._id), name: p.name }))
+      : [{ id: FIXED_PAVILION_ID, name: FIXED_PAVILION_NAME }];
 
   const addToCart = useCart((s) => s.add);
   const totalItems = useCart((s) => s.totalItems)();
@@ -224,6 +232,28 @@ export default function CatalogPageClient() {
           }
         />
 
+        {/* Toggle: catálogo general (todas) vs por pabellón */}
+        <div className="mb-6 inline-flex rounded-full border border-gray-300 bg-white p-1">
+          <button
+            type="button"
+            onClick={() => setCatalogMode("general")}
+            className={`px-4 py-1.5 text-sm rounded-full transition ${
+              catalogMode === "general" ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            General
+          </button>
+          <button
+            type="button"
+            onClick={() => setCatalogMode("pavilion")}
+            className={`px-4 py-1.5 text-sm rounded-full transition ${
+              catalogMode === "pavilion" ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            Por pabellón
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <aside className="lg:col-span-3">
             <FiltersSidebar
@@ -232,6 +262,7 @@ export default function CatalogPageClient() {
               pavilion={pavilion}
               setPavilion={setPavilion}
               pavilionOptions={pavilionOptions}
+              showPavilionFilter={catalogMode === "pavilion"}
               loadingPavilions={false}
               errorPavilions={false}
               techniquesData={techniquesData}

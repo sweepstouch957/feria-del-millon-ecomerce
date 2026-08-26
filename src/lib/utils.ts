@@ -6,11 +6,6 @@ export function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-export const toSelectItems = <T>(
-  data: T[] | undefined,
-  label: (x: T) => string,
-  value: (x: T) => string
-) => (data ?? []).map((x) => ({ label: label(x), value: value(x) }));
 export const formatMoney = (value?: number, currency = "COP") => formatCOP(value, { code: true, currency });
 
 export function mergeImages(primary?: string, list?: string[]) {

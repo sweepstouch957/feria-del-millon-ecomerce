@@ -24,21 +24,6 @@ export interface PavilionDoc {
   updatedAt?: string;
 }
 
-export interface CreatePavilionDto {
-  name: string;
-  slug: string;
-  description?: string;
-  validFrom?: string;            // ISO
-  validTo?: string;              // ISO
-  minArtworkPrice?: number;
-  maxArtworkPrice?: number;
-  mainImage?: string;
-  order?: number;
-  active?: boolean;
-  meta?: Record<string, any>;
-  artists?: string[];
-}
-
 /* ========= Helpers ========= */
 const normalizeId = <T extends { id?: string; _id?: string }>(obj: T) => ({
   ...obj,
@@ -46,16 +31,6 @@ const normalizeId = <T extends { id?: string; _id?: string }>(obj: T) => ({
 });
 
 /* ========= Endpoints ========= */
-
-// POST /events/:eventId/pavilions
-export const createPavilion = async (eventId: string, payload: CreatePavilionDto) => {
-  const { data } = await apiClient.post<PavilionDoc>(
-    `/event/events/${encodeURIComponent(eventId)}/pavilions`,
-    payload,
-    { withCredentials: true }
-  );
-  return normalizeId(data);
-};
 
 // GET /events/:eventId/pavilions
 export const listPavilions = async (eventId: string) => {

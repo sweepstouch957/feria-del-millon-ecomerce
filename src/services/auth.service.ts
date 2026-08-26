@@ -48,20 +48,6 @@ export interface LoginResponse {
 
 // ------ Password flows ------
 
-export interface ChangePasswordPayload {
-  currentPassword: string;
-  newPassword: string;
-}
-
-export interface ChangePasswordResponse {
-  ok: boolean;
-  message: string;
-}
-
-export interface ForgotPasswordPayload {
-  email: string;
-}
-
 export interface ForgotPasswordResponse {
   ok: boolean;
   message: string;
@@ -155,19 +141,7 @@ export const logout = async (): Promise<void> => {
   clearAuth();
 };
 
-// ------- Password: change, forgot, reset -------
-
-// Cambiar contraseña estando logueado
-export const changePassword = async (
-  payload: ChangePasswordPayload
-): Promise<ChangePasswordResponse> => {
-  const { data } = await apiClient.post<ChangePasswordResponse>(
-    "/auth/password/change",
-    payload,
-    { withCredentials: true }
-  );
-  return data;
-};
+// ------- Password: forgot, reset -------
 
 // Solicitar reset (forgot password)
 export const requestPasswordReset = async (

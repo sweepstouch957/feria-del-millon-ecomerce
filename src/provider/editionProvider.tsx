@@ -13,4 +13,3 @@ export const useEdition = () => useContext(EditionCtx);
 
 /** Helpers cómodos. */
 export const useEventId = () => useContext(EditionCtx).eventId;
-export const useEditionPavilions = () => useContext(EditionCtx).pavilions;

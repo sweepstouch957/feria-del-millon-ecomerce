@@ -137,16 +137,6 @@ export const SECTION_KEYS: SectionKey[] = [
   "newsletter",
 ];
 
-export const SECTION_LABELS: Record<SectionKey, string> = {
-  about: "La feria (intro + stats)",
-  featured: "Obras destacadas",
-  techniques: "Técnicas",
-  sedes: "Sedes",
-  programs: "Programas",
-  convocatoria: "Convocatoria",
-  newsletter: "Boletín",
-};
-
 export interface SiteSections {
   order: SectionKey[];
   visible: Record<SectionKey, boolean>;

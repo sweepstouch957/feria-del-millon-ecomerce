@@ -142,6 +142,7 @@ export default function HomePage() {
 
   const { hero, featured, techniques, contact, social } = content;
   const meta = landing.heroMeta;
+  const logoSrc = content.brand.logo || LOGO; // logo del CMS (o el wordmark FDM)
 
   // ── Bloques por clave (orden + visibilidad configurables) ──────────────
   const blocks: Record<SectionKey, React.ReactNode> = {
@@ -549,7 +550,7 @@ export default function HomePage() {
               inset: "auto -8% -30% auto",
               width: "min(62vw,760px)",
               aspectRatio: "2.46",
-              backgroundImage: `url('${LOGO}')`,
+              backgroundImage: `url('${logoSrc}')`,
               backgroundSize: "cover",
               backgroundPosition: "49% center",
               filter: "invert(1) contrast(1.5) brightness(1.05)",
@@ -570,7 +571,7 @@ export default function HomePage() {
                 display: "block",
                 width: "clamp(100px,13vw,172px)",
                 aspectRatio: "2.46",
-                backgroundImage: `url('${LOGO}')`,
+                backgroundImage: `url('${logoSrc}')`,
                 backgroundSize: "cover",
                 backgroundPosition: "49% center",
                 filter: "invert(1) contrast(1.5) brightness(1.05)",
@@ -639,7 +640,7 @@ export default function HomePage() {
       <footer id="acceso" style={{ borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)`, padding: "clamp(48px,6vw,96px) clamp(20px,4vw,56px) 40px" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,230px),1fr))", gap: "clamp(32px,4vw,64px)" }}>
           <div>
-            <span style={{ display: "block", width: "clamp(120px,14vw,180px)", aspectRatio: "2.46", backgroundImage: `url('${LOGO}')`, backgroundSize: "cover", backgroundPosition: "49% center", filter: "var(--logoF,none) contrast(1.25)", mixBlendMode: "multiply" as any }} />
+            <span style={{ display: "block", width: "clamp(120px,14vw,180px)", aspectRatio: "2.46", backgroundImage: `url('${logoSrc}')`, backgroundSize: "cover", backgroundPosition: "49% center", filter: "var(--logoF,none) contrast(1.25)", mixBlendMode: "multiply" as any }} />
             <div style={{ fontWeight: 300, fontSize: "clamp(22px,2.4vw,30px)", letterSpacing: "0.02em", textTransform: "uppercase", marginTop: 18 }}>{content.brand.name}</div>
             <p style={{ margin: "14px 0 0", fontSize: 14, lineHeight: 1.7, color: `color-mix(in srgb, ${FG} 60%, transparent)`, maxWidth: "32ch" }}>{landing.footer.description}</p>
           </div>

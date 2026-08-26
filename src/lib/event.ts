@@ -1,7 +1,7 @@
 // ========================= lib/event.ts =========================
 import { Calendar, MapPin, Users } from "lucide-react";
 
-export const EVENT_ID = "6909aef219f26eec22af4220";
+export const EVENT_ID = "6a8f047389557092824e5797"; // FDM 2026 (seed 2026-08-26)
 export const EVENT_BADGE_TEXT = "14ª Edición • 2026";
 export const EVENT_DATES_LABEL = "2026";
 

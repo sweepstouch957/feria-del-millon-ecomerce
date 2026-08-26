@@ -70,7 +70,7 @@ export default function ConvocatoriaPage() {
           </div>
 
           {/* hero body */}
-          <div style={{ position: "relative", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,340px),1fr))", gap: "clamp(32px,4vw,72px)", padding: "clamp(40px,6vw,96px) clamp(20px,4vw,56px) clamp(32px,4vw,56px)", alignItems: "end" }}>
+          <div style={{ position: "relative", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,340px),1fr))", gap: "clamp(22px,3vw,48px)", padding: "clamp(26px,4.5vw,58px) clamp(20px,4vw,56px) clamp(32px,4vw,56px)", alignItems: "start" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "clamp(20px,2.4vw,32px)" }}>
               <h1 style={{ margin: 0, fontWeight: 200, fontSize: "clamp(44px,8.4vw,132px)", lineHeight: 1.02, letterSpacing: "0.015em", textTransform: "uppercase" }}>
                 {cp.hero.title} <strong style={{ fontWeight: 400 }}>{cp.hero.titleStrong}</strong>
@@ -135,8 +135,8 @@ export default function ConvocatoriaPage() {
       </div>
 
       {/* 01 quienes */}
-      <section id="quienes" style={{ padding: "clamp(64px,9vw,140px) clamp(20px,4vw,56px)" }}>
-        <div style={{ maxWidth: 1600, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,340px),1fr))", gap: "clamp(36px,5vw,90px)" }}>
+      <section id="quienes" style={{ padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)" }}>
+        <div style={{ maxWidth: 1600, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,340px),1fr))", gap: "clamp(28px,4.5vw,60px)" }}>
           <div>
             <Kicker n="01" label={cp.intro.badge} />
             <h2 style={{ ...h2, maxWidth: "22ch" }}>{cp.intro.title} <strong style={{ fontWeight: 500 }}>{cp.intro.titleStrong}</strong></h2>
@@ -150,11 +150,11 @@ export default function ConvocatoriaPage() {
       </section>
 
       {/* 02 impacto */}
-      <section id="impacto" style={{ background: DEEP, color: ON_DARK, padding: "clamp(64px,9vw,140px) clamp(20px,4vw,56px)" }}>
+      <section id="impacto" style={{ background: DEEP, color: ON_DARK, padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto" }}>
           <Kicker n="02" label={cp.impacto.badge} onDark />
           <Title t={cp.impacto.title} s={cp.impacto.titleStrong} color={ON_DARK} />
-          <div style={{ marginTop: "clamp(34px,4vw,60px)", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,380px),1fr))", gap: "0 clamp(32px,4vw,80px)", borderTop: "1px solid rgba(245,244,239,0.28)" }}>
+          <div style={{ marginTop: "clamp(22px,3vw,40px)", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,380px),1fr))", gap: "0 clamp(32px,4vw,80px)", borderTop: "1px solid rgba(245,244,239,0.28)" }}>
             {cp.impacto.items.map((it, i) => (
               <span key={i} style={{ display: "flex", alignItems: "baseline", gap: "clamp(16px,2vw,28px)", padding: "clamp(16px,1.8vw,24px) 0", borderBottom: "1px solid rgba(245,244,239,0.18)" }}>
                 <span style={{ fontWeight: 300, fontSize: 10.5, letterSpacing: "0.22em", color: "#8FE3B4" }}>{String(i + 1).padStart(2, "0")}</span>
@@ -167,10 +167,10 @@ export default function ConvocatoriaPage() {
       </section>
 
       {/* 03 cronograma */}
-      <section id="cronograma" style={{ padding: "clamp(64px,9vw,140px) clamp(20px,4vw,56px)" }}>
+      <section id="cronograma" style={{ padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto" }}>
           <Kicker n="03" label={cp.cronograma.badge} />
-          <div style={{ marginBottom: "clamp(34px,4vw,60px)" }}><Title t={cp.cronograma.title} s={cp.cronograma.titleStrong} /></div>
+          <div style={{ marginBottom: "clamp(22px,3vw,40px)" }}><Title t={cp.cronograma.title} s={cp.cronograma.titleStrong} /></div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))", gap: 1, background: `color-mix(in srgb, ${FG} 14%, transparent)`, borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)` }}>
             <div style={{ background: BG, padding: "clamp(26px,3vw,42px) clamp(18px,2vw,30px)", display: "flex", flexDirection: "column", gap: 18 }}>
               <span style={{ fontWeight: 400, fontSize: "clamp(19px,1.9vw,25px)", letterSpacing: "0.06em", textTransform: "uppercase" }}>¿Cuándo?</span>
@@ -206,9 +206,9 @@ export default function ConvocatoriaPage() {
         noTitle={cp.requisitos.noTitle} no={cp.requisitos.no} siTitle={cp.requisitos.siTitle} si={cp.requisitos.si} />
 
       {/* 06 documentos */}
-      <section id="documentos" style={{ background: PANEL, color: ON_DARK, padding: "clamp(64px,9vw,140px) clamp(20px,4vw,56px)" }}>
+      <section id="documentos" style={{ background: PANEL, color: ON_DARK, padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto" }}>
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 24, marginBottom: "clamp(40px,5vw,72px)" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 24, marginBottom: "clamp(26px,3.6vw,46px)" }}>
             <div><Kicker n="06" label={cp.documentos.badge} onDark /><Title t={cp.documentos.title} s={cp.documentos.titleStrong} color={ON_DARK} /></div>
             <p style={{ margin: 0, maxWidth: "34ch", fontSize: 15, lineHeight: 1.7, color: "rgba(245,244,239,0.7)" }}>{cp.documentos.note}</p>
           </div>
@@ -225,10 +225,10 @@ export default function ConvocatoriaPage() {
       </section>
 
       {/* 07 pasos */}
-      <section id="pasos" style={{ padding: "clamp(64px,9vw,140px) clamp(20px,4vw,56px)" }}>
+      <section id="pasos" style={{ padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto" }}>
           <Kicker n="07" label={cp.pasos.badge} />
-          <div style={{ marginBottom: "clamp(34px,4vw,60px)" }}><Title t={cp.pasos.title} s={cp.pasos.titleStrong} /></div>
+          <div style={{ marginBottom: "clamp(22px,3vw,40px)" }}><Title t={cp.pasos.title} s={cp.pasos.titleStrong} /></div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,280px),1fr))", gap: 1, background: `color-mix(in srgb, ${FG} 14%, transparent)`, borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)` }}>
             {cp.pasos.items.map((p, i) => (
               <div key={i} style={{ background: BG, padding: "clamp(26px,3vw,42px) clamp(18px,2vw,30px)", display: "flex", flexDirection: "column", gap: "clamp(28px,3vw,52px)", minHeight: 290 }}>
@@ -244,7 +244,7 @@ export default function ConvocatoriaPage() {
       </section>
 
       {/* 08 rechazo */}
-      <section id="rechazo" style={{ padding: "0 clamp(20px,4vw,56px) clamp(64px,9vw,140px)" }}>
+      <section id="rechazo" style={{ padding: "0 clamp(20px,4vw,56px) clamp(40px,6vw,88px)" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,320px),1fr))", gap: "clamp(32px,4vw,80px)" }}>
           <div><Kicker n="08" label={cp.rechazo.badge} /><h2 style={{ ...h2, maxWidth: "18ch" }}>{cp.rechazo.title} <strong style={{ fontWeight: 500 }}>{cp.rechazo.titleStrong}</strong></h2></div>
           <div style={{ display: "flex", flexDirection: "column", borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)` }}>
@@ -258,7 +258,7 @@ export default function ConvocatoriaPage() {
       </section>
 
       {/* 09 comisiones */}
-      <section id="comisiones" style={{ background: PANEL, color: ON_DARK, padding: "clamp(64px,9vw,140px) clamp(20px,4vw,56px)" }}>
+      <section id="comisiones" style={{ background: PANEL, color: ON_DARK, padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto" }}>
           <Kicker n="09" label={cp.comisiones.badge} onDark />
           <h2 style={{ ...h2, color: ON_DARK, marginBottom: "clamp(20px,2.4vw,32px)" }}>{cp.comisiones.title}</h2>
@@ -275,11 +275,11 @@ export default function ConvocatoriaPage() {
       </section>
 
       {/* 10 compromisos */}
-      <section id="compromisos" style={{ padding: "clamp(64px,9vw,140px) clamp(20px,4vw,56px)" }}>
+      <section id="compromisos" style={{ padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto" }}>
           <Kicker n="10" label={cp.compromisos.badge} />
-          <div style={{ marginBottom: "clamp(34px,4vw,60px)" }}><Title t={cp.compromisos.title} s={cp.compromisos.titleStrong} /></div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,340px),1fr))", gap: "clamp(32px,4vw,72px)" }}>
+          <div style={{ marginBottom: "clamp(22px,3vw,40px)" }}><Title t={cp.compromisos.title} s={cp.compromisos.titleStrong} /></div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,340px),1fr))", gap: "clamp(22px,3vw,48px)" }}>
             {[[cp.compromisos.artistaTitle, cp.compromisos.artista], [cp.compromisos.feriaTitle, cp.compromisos.feria]].map(([title, list], k) => (
               <div key={k}>
                 <div style={{ fontWeight: 400, fontSize: "clamp(19px,1.9vw,25px)", letterSpacing: "0.05em", textTransform: "uppercase", paddingBottom: 20, borderBottom: `1px solid color-mix(in srgb, ${FG} 30%, transparent)` }}>{title as string}</div>
@@ -295,9 +295,9 @@ export default function ConvocatoriaPage() {
       </section>
 
       {/* CTA postular */}
-      <section id="postular" style={{ padding: "0 clamp(20px,4vw,56px) clamp(64px,8vw,130px)" }}>
+      <section id="postular" style={{ padding: "0 clamp(20px,4vw,56px) clamp(38px,5.5vw,80px)" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto", position: "relative", background: PANEL, color: ON_DARK, padding: "clamp(14px,2vw,22px)", overflow: "hidden" }}>
-          <div style={{ border: "1px solid rgba(245,244,239,0.24)", padding: "clamp(36px,6vw,90px) clamp(24px,4vw,72px)", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))", gap: "clamp(32px,4vw,72px)", alignItems: "center" }}>
+          <div style={{ border: "1px solid rgba(245,244,239,0.24)", padding: "clamp(26px,4.5vw,58px) clamp(24px,4vw,72px)", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))", gap: "clamp(22px,3vw,48px)", alignItems: "center" }}>
             <div>
               <Kicker n="11" label={cp.cta.badge} onDark />
               <h2 style={{ margin: 0, fontWeight: 200, fontSize: "clamp(32px,5vw,86px)", lineHeight: 1.04, letterSpacing: "0.004em", maxWidth: "18ch", color: ON_DARK }}>
@@ -325,7 +325,7 @@ export default function ConvocatoriaPage() {
       </section>
 
       {/* footer */}
-      <footer style={{ borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)`, padding: "clamp(48px,6vw,96px) clamp(20px,4vw,56px) 40px" }}>
+      <footer style={{ borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)`, padding: "clamp(30px,4vw,56px) clamp(20px,4vw,56px) 40px" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,230px),1fr))", gap: "clamp(32px,4vw,64px)" }}>
           <div>
             <div style={{ fontWeight: 300, fontSize: "clamp(22px,2.4vw,30px)", letterSpacing: "0.02em", textTransform: "uppercase" }}>Feria del Millón</div>
@@ -363,10 +363,10 @@ function TwoCol({ id, n, badge, title, strong, onDark = false, noTitle, no, siTi
   const muted = onDark ? "rgba(245,244,239,0.55)" : `color-mix(in srgb, ${FG} 50%, transparent)`;
   const xMuted = onDark ? "rgba(245,244,239,0.4)" : `color-mix(in srgb, ${FG} 40%, transparent)`;
   return (
-    <section id={id} style={{ background: onDark ? PANEL : "transparent", color: text, padding: "clamp(64px,9vw,140px) clamp(20px,4vw,56px)" }}>
+    <section id={id} style={{ background: onDark ? PANEL : "transparent", color: text, padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)" }}>
       <div style={{ maxWidth: 1600, margin: "0 auto" }}>
         <Kicker n={n} label={badge} onDark={onDark} />
-        <div style={{ marginBottom: "clamp(34px,4vw,60px)" }}><Title t={title} s={strong} color={text} /></div>
+        <div style={{ marginBottom: "clamp(22px,3vw,40px)" }}><Title t={title} s={strong} color={text} /></div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))", gap: 1, background: line, borderTop: `1px solid ${line}` }}>
           <div style={{ background: bg, padding: "clamp(26px,3vw,42px) clamp(18px,2vw,30px)" }}>
             <div style={{ fontWeight: 300, fontSize: 10.5, letterSpacing: "0.22em", textTransform: "uppercase", color: muted, marginBottom: 24 }}>{noTitle}</div>

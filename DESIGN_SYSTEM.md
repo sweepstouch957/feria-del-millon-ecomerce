@@ -45,7 +45,7 @@ Escala de títulos (responsiva con `clamp`):
 ## 3. Layout
 
 - Contenedor: `max-width: 1600px; margin: 0 auto`.
-- Padding de sección: `clamp(64px, 9vw, 140px) clamp(20px, 4vw, 56px)`.
+- Padding de sección (escala compacta v2.1): `clamp(40px, 6vw, 88px) clamp(20px, 4vw, 56px)`.
 - Grids fluidos: `repeat(auto-fit, minmax(min(100%, Npx), 1fr))`.
 - Separadores tipo "hairline": grid `gap: 1px` sobre fondo `color-mix(... 14–24%)`.
 

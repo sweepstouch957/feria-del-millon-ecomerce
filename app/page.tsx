@@ -148,13 +148,13 @@ export default function HomePage() {
   const blocks: Record<SectionKey, React.ReactNode> = {
     // 01 — La feria (intro + stats)
     about: (
-      <section key="about" id="feria" style={{ padding: "clamp(64px,9vw,150px) clamp(20px,4vw,56px)" }}>
+      <section key="about" id="feria" style={{ padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto" }}>
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,340px),1fr))",
-              gap: "clamp(36px,5vw,90px)",
+              gap: "clamp(28px,4.5vw,60px)",
             }}
           >
             <div>
@@ -197,7 +197,7 @@ export default function HomePage() {
           {/* stats */}
           <div
             style={{
-              marginTop: "clamp(48px,6vw,96px)",
+              marginTop: "clamp(30px,4vw,56px)",
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,340px),1fr))",
               gap: 1,
@@ -241,7 +241,7 @@ export default function HomePage() {
       <section
         key="featured"
         id="obras"
-        style={{ background: PANEL, color: ON_DARK, padding: "clamp(64px,9vw,140px) clamp(20px,4vw,56px)" }}
+        style={{ background: PANEL, color: ON_DARK, padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)" }}
       >
         <div style={{ maxWidth: 1600, margin: "0 auto" }}>
           <div
@@ -251,7 +251,7 @@ export default function HomePage() {
               alignItems: "flex-end",
               justifyContent: "space-between",
               gap: 24,
-              marginBottom: "clamp(40px,5vw,72px)",
+              marginBottom: "clamp(26px,3.6vw,46px)",
             }}
           >
             <div>
@@ -282,10 +282,10 @@ export default function HomePage() {
 
     // 03 — Técnicas
     techniques: (
-      <section key="techniques" id="tecnicas" style={{ padding: "clamp(64px,9vw,140px) clamp(20px,4vw,56px)" }}>
+      <section key="techniques" id="tecnicas" style={{ padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto" }}>
           <Kicker n="03" label="Técnicas" />
-          <h2 style={{ ...h2Style, marginBottom: "clamp(34px,4vw,60px)" }}>
+          <h2 style={{ ...h2Style, marginBottom: "clamp(22px,3vw,40px)" }}>
             <BigTitle text={techniques.title} />
           </h2>
           <div
@@ -336,7 +336,7 @@ export default function HomePage() {
       <section
         key="sedes"
         id="ciudades"
-        style={{ position: "relative", background: "var(--fdm-green-deep,#14513C)", color: ON_DARK, padding: "clamp(64px,9vw,140px) clamp(20px,4vw,56px)", overflow: "hidden" }}
+        style={{ position: "relative", background: "var(--fdm-green-deep,#14513C)", color: ON_DARK, padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)", overflow: "hidden" }}
       >
         <div style={{ position: "relative", maxWidth: 1600, margin: "0 auto" }}>
           <div
@@ -346,7 +346,7 @@ export default function HomePage() {
               alignItems: "flex-end",
               justifyContent: "space-between",
               gap: 24,
-              marginBottom: "clamp(40px,5vw,72px)",
+              marginBottom: "clamp(26px,3.6vw,46px)",
             }}
           >
             <div>
@@ -382,10 +382,10 @@ export default function HomePage() {
 
     // 05 — Programas
     programs: (
-      <section key="programs" id="programas" style={{ padding: "clamp(64px,9vw,140px) clamp(20px,4vw,56px)" }}>
+      <section key="programs" id="programas" style={{ padding: "clamp(40px,6vw,88px) clamp(20px,4vw,56px)" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto" }}>
           <Kicker n="05" label={landing.programs.badge} />
-          <h2 style={{ ...h2Style, marginBottom: "clamp(34px,4vw,60px)" }}>
+          <h2 style={{ ...h2Style, marginBottom: "clamp(22px,3vw,40px)" }}>
             <BigTitle text={landing.programs.title} />
           </h2>
           <div
@@ -427,15 +427,15 @@ export default function HomePage() {
 
     // 06 — Convocatoria
     convocatoria: landing.convocatoria.open ? (
-      <section key="convocatoria" id="convocatoria" style={{ padding: "0 clamp(20px,4vw,56px) clamp(64px,8vw,130px)" }}>
+      <section key="convocatoria" id="convocatoria" style={{ padding: "0 clamp(20px,4vw,56px) clamp(38px,5.5vw,80px)" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto", position: "relative", background: PANEL, color: ON_DARK, padding: "clamp(14px,2vw,22px)", overflow: "hidden" }}>
           <div
             style={{
               border: "1px solid rgba(245,244,239,0.24)",
-              padding: "clamp(36px,6vw,90px) clamp(24px,4vw,72px)",
+              padding: "clamp(26px,4.5vw,58px) clamp(24px,4vw,72px)",
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))",
-              gap: "clamp(32px,4vw,72px)",
+              gap: "clamp(22px,3vw,48px)",
               alignItems: "center",
             }}
           >
@@ -466,7 +466,7 @@ export default function HomePage() {
 
     // 07 — Boletín
     newsletter: landing.newsletter.enabled ? (
-      <section key="newsletter" id="boletin" style={{ padding: "clamp(56px,7vw,120px) clamp(20px,4vw,56px)", borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)` }}>
+      <section key="newsletter" id="boletin" style={{ padding: "clamp(36px,5vw,76px) clamp(20px,4vw,56px)", borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)` }}>
         <div
           style={{
             maxWidth: 1600,
@@ -535,12 +535,12 @@ export default function HomePage() {
           style={{
             position: "relative",
             border: "1px solid rgba(245,244,239,0.24)",
-            padding: "clamp(32px,5vw,84px) clamp(20px,4vw,64px) clamp(28px,3.4vw,52px)",
-            minHeight: "min(88vh,900px)",
+            padding: "clamp(22px,4vw,52px) clamp(20px,4vw,64px) clamp(28px,3.4vw,52px)",
+            minHeight: "min(62vh,560px)",
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
-            gap: "clamp(40px,6vw,80px)",
+            gap: "clamp(24px,4vw,44px)",
             overflow: "hidden",
           }}
         >
@@ -637,7 +637,7 @@ export default function HomePage() {
       {sections.order.filter((k) => sections.visible[k]).map((k) => blocks[k])}
 
       {/* ══ FOOTER ══ */}
-      <footer id="acceso" style={{ borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)`, padding: "clamp(48px,6vw,96px) clamp(20px,4vw,56px) 40px" }}>
+      <footer id="acceso" style={{ borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)`, padding: "clamp(30px,4vw,56px) clamp(20px,4vw,56px) 40px" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,230px),1fr))", gap: "clamp(32px,4vw,64px)" }}>
           <div>
             <span style={{ display: "block", width: "clamp(120px,14vw,180px)", aspectRatio: "2.46", backgroundImage: `url('${logoSrc}')`, backgroundSize: "cover", backgroundPosition: "49% center", filter: "var(--logoF,none) contrast(1.25)", mixBlendMode: "multiply" as any }} />

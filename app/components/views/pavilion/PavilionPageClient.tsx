@@ -240,6 +240,18 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
                 {pavilion.description.length > 220 ? "…" : ""}
               </p>
             )}
+            {pavilion.sponsor?.name && (
+              <p className="mt-2 text-xs md:text-sm text-gray-500">
+                Patrocinado por{" "}
+                {pavilion.sponsor.url ? (
+                  <a href={pavilion.sponsor.url} target="_blank" rel="noreferrer" className="font-semibold text-gray-800 hover:underline">
+                    {pavilion.sponsor.name}
+                  </a>
+                ) : (
+                  <span className="font-semibold text-gray-800">{pavilion.sponsor.name}</span>
+                )}
+              </p>
+            )}
 
             <div className="mt-3 md:mt-4 flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm">
               {pavilion.validFrom && (

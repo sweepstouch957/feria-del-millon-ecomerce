@@ -15,6 +15,7 @@ export interface PavilionDoc {
   minArtworkPrice?: number;
   maxArtworkPrice?: number;
   mainImage?: string;
+  sponsor?: { name?: string; logo?: string; url?: string };
   order?: number;
   active?: boolean;
   meta?: Record<string, any>;

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import FeaturedGrid from "@components/views/home/v2/FeaturedGrid";
-import { EVENT_ID } from "@lib/event";
+import { useEventId } from "@provider/editionProvider";
 import {
   useSiteContent,
   useSiteLanding,
@@ -140,6 +140,7 @@ export default function HomePage() {
   const sections = useSiteSections();
   const [subscribed, setSubscribed] = useState(false);
 
+  const eventId = useEventId();
   const { hero, featured, techniques, contact, social } = content;
   const meta = landing.heroMeta;
   const logoSrc = content.brand.logo || LOGO; // logo del CMS (o el wordmark FDM)
@@ -275,7 +276,7 @@ export default function HomePage() {
               Catálogo completo →
             </Link>
           </div>
-          <FeaturedGrid eventId={EVENT_ID} showPrices={landing.showPrices} count={4} />
+          <FeaturedGrid eventId={eventId} showPrices={landing.showPrices} count={4} />
         </div>
       </section>
     ),

@@ -1,11 +1,12 @@
 "use client";
 
-import { DEFAULT_EVENT_ID } from "@core/constants";
 import TicketsUI from "./TicketsUI";
 import { useTodayTicketDay } from "@hooks/queries/useTodayTicketDay";
+import { useEdition } from "@provider/editionProvider";
 
 export function ExampleTicketsSection() {
-    const { data, isLoading, isError } = useTodayTicketDay(DEFAULT_EVENT_ID);
+    const { eventId, eventName } = useEdition();
+    const { data, isLoading, isError } = useTodayTicketDay(eventId);
     
     if (isLoading) {
         return (
@@ -33,8 +34,8 @@ export function ExampleTicketsSection() {
     return (
         <div className="p-4 md:p-6">
             <TicketsUI
-                eventId={DEFAULT_EVENT_ID}
-                eventName="Feria del Millón — Semana del Arte"
+                eventId={eventId}
+                eventName={eventName}
                 days={[data.ticketDay]} // SOLO PASAMOS EL DÍA DE HOY
             />
         </div>

@@ -16,7 +16,7 @@ import {
   payTicketsWithMercadoPago,
   type PayWithMercadoPagoPayload,
 } from "@services/ticket.service";
-import { DEFAULT_EVENT_ID, DEFAULT_EVENT_NAME } from "@core/constants";
+import { useEdition } from "@provider/editionProvider";
 import { ColombianPhoneInput } from "@components/ColombianInput";
 
 type MercadoPagoCardFormData = {
@@ -34,13 +34,16 @@ type MercadoPagoCardFormData = {
   transaction_amount: number; // no lo vamos a confiar, solo lo recibimos
 };
 export default function TicketsUI({
-  eventId = DEFAULT_EVENT_ID,
-  eventName = DEFAULT_EVENT_NAME,
+  eventId: eventIdProp,
+  eventName: eventNameProp,
   currency = "COP",
   days,
   initialQty = 1,
   onBuyClick,
 }: TicketsUIProps & { eventId?: string }) {
+  const edition = useEdition();
+  const eventId = eventIdProp ?? edition.eventId;
+  const eventName = eventNameProp ?? edition.eventName;
   const [selectedDay, setSelectedDay] = useState<TicketDay | null>(
     days[0] ?? null,
   );

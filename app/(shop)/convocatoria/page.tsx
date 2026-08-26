@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@provider/authProvider";
 import { useSiteLanding } from "@provider/siteConfigProvider";
+import { useEdition } from "@provider/editionProvider";
 
 const GREEN = "var(--fdm-green,#3FA46E)";
 const PANEL = "var(--fdm-panel,#0B0B0A)";
@@ -42,8 +43,10 @@ function Title({ t, s, color = FG }: { t: string; s?: string; color?: string }) 
 export default function ConvocatoriaPage() {
   const { isAuthenticated } = useAuth();
   const landing = useSiteLanding();
+  const { convocatoria } = useEdition();
   const cp = landing.convocatoriaPage;
-  const open = landing.convocatoria.open;
+  // Estado real de la convocatoria vigente (Fase 1); si no hay dato, cae al flag del CMS.
+  const open = convocatoria ? convocatoria.status === "open" : landing.convocatoria.open;
   const postularHref = isAuthenticated ? "/convocatoria/aplicar" : "/convocatoria/register";
   const mailto = `mailto:${cp.contactEmails[0] || "convocatorias@feriadelmillon.com"}`;
 

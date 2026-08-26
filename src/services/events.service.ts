@@ -189,3 +189,20 @@ export const getConvocatorias = async () => {
   // Dependiendo de cómo lo retorne el controller, puede ser data o data.docs
   return (data as any).docs || data;
 };
+
+/**
+ * Convocatoria VIGENTE — resuelta dinámicamente, SIN ids hardcodeados (cada año
+ * cambia). Regla: la que esté "open"; si ninguna, la más reciente por fecha.
+ * Fuente de verdad del estado abierto/cerrado (open/closed/selection/finalized).
+ * TODO(edición-activa): mover también EVENT_ID/pabellón a un resolver dinámico.
+ */
+export const getCurrentConvocatoria = async (): Promise<any | null> => {
+  const list = await getConvocatorias().catch(() => []);
+  const arr: any[] = Array.isArray(list) ? list : [];
+  if (!arr.length) return null;
+  const open = arr.find((c) => c?.status === "open");
+  if (open) return open;
+  return [...arr].sort(
+    (a, b) => new Date(b?.startDate || 0).getTime() - new Date(a?.startDate || 0).getTime()
+  )[0] || null;
+};

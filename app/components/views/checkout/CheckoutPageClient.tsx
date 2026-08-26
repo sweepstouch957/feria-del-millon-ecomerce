@@ -31,7 +31,7 @@ import {
     CartViewItem,
 } from "@components/views/checkout/CheckoutOrderSummary";
 import { CheckoutConfirmation } from "@components/views/checkout/CheckoutConfirmation";
-import { DEFAULT_EVENT_ID } from "@core/constants";
+import { useEdition } from "@provider/editionProvider";
 import PaymentForm, { PaymentFormPayload } from "../payment/PaymentForm";
 import { useAuth } from "@provider/authProvider";
 import { getArtworkByIdOrSlug } from "@services/artworks.service";
@@ -44,6 +44,7 @@ const isValidColDocument = (doc: string) => {
 };
 
 export default function CheckoutPageClient() {
+    const { eventId } = useEdition();
     // Zustand
     const items = useCart((s) => s.items) as CartViewItem[];
     const clear = useCart((s) => s.clear);
@@ -197,7 +198,7 @@ export default function CheckoutPageClient() {
             }));
 
             const payload = {
-                event: DEFAULT_EVENT_ID,
+                event: eventId,
                 items: orderItems,
                 buyer: {
                     name: `${values.firstName} ${values.lastName}`,

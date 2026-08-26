@@ -1,6 +1,5 @@
 import PavilionPageClient from "@components/views/pavilion/PavilionPageClient";
-
-const DEFAULT_EVENT_ID = "6909aef219f26eec22af4220";
+import { getActiveEdition } from "@lib/getActiveEdition";
 
 // Next.js 15: params es Promise<{ slug: string }>
 export default async function PavilionPage({
@@ -9,6 +8,7 @@ export default async function PavilionPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const { eventId } = await getActiveEdition(); // edición vigente (dinámica)
 
-  return <PavilionPageClient eventId={DEFAULT_EVENT_ID} slug={slug} />;
+  return <PavilionPageClient eventId={eventId} slug={slug} />;
 }

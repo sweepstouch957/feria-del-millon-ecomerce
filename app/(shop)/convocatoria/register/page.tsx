@@ -7,6 +7,8 @@ import { useAuth } from "@provider/authProvider";
 import { useCities } from "@hooks/queries/useCities";
 import type { CityDoc } from "@services/city.service";
 import { LoggedInArtistGate } from "@components/views/convocatoria/LoggedInArtistGate";
+import { useEdition } from "@provider/editionProvider";
+import ConvocatoriaClosed from "@components/views/convocatoria/ConvocatoriaClosed";
 
 function formatColPhone(raw: string): string {
   const digits = raw.replace(/\D/g, "").slice(0, 10);
@@ -20,6 +22,7 @@ export default function ConvocatoriaRegisterPage() {
   const router = useRouter();
   const { login } = useAuth();
   const { data: allCities = [] } = useCities();
+  const { convocatoria } = useEdition();
 
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "",
@@ -87,6 +90,11 @@ export default function ConvocatoriaRegisterPage() {
       }
     } finally { setLoading(false); }
   };
+
+  // Fase 1: si la convocatoria vigente NO está "open", se bloquea el registro nuevo.
+  if (convocatoria && convocatoria.status !== "open") {
+    return <ConvocatoriaClosed />;
+  }
 
   return (
     <LoggedInArtistGate>

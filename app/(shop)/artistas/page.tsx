@@ -16,7 +16,7 @@ import { Button } from "@components/ui/button";
 import { Input } from "@components/ui/input";
 
 import { useEventArtists } from "@hooks/queries/useEventArtists";
-import { DEFAULT_EVENT_ID, DEFAULT_EVENT_NAME, FIXED_PAVILION_ID, FIXED_PAVILION_NAME } from "@core/constants";
+import { useEdition } from "@provider/editionProvider";
 
 
 const PAGE_SIZE = 24;
@@ -65,9 +65,10 @@ function ArtistSkeleton() {
 }
 
 export default function ArtistsPage() {
+  const { eventId, eventName, pavilions } = useEdition();
   // filtros UI
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPavilion, setSelectedPavilion] = useState<string>(FIXED_PAVILION_ID);
+  const [selectedPavilion, setSelectedPavilion] = useState<string>("all");
   const [sort, setSort] = useState<"artworks" | "name">("artworks");
   const [page, setPage] = useState(1);
 
@@ -76,7 +77,7 @@ export default function ArtistsPage() {
 
   // Artistas con stats
   const { data, isFetching, error } = useEventArtists(
-    DEFAULT_EVENT_ID,
+    eventId,
     {
       q: searchTerm,
       pavilionId,
@@ -103,12 +104,12 @@ export default function ArtistsPage() {
 
   const headerSubtitle = useMemo(() => {
     if (searchTerm && pavilionId)
-      return `Artistas en ${DEFAULT_EVENT_NAME} • Filtro: “${searchTerm}”, Pabellón seleccionado`;
+      return `Artistas en ${eventName} • Filtro: “${searchTerm}”, Pabellón seleccionado`;
     if (searchTerm)
-      return `Artistas en ${DEFAULT_EVENT_NAME} • Resultados para “${searchTerm}”`;
+      return `Artistas en ${eventName} • Resultados para “${searchTerm}”`;
     if (pavilionId)
-      return `Artistas en ${DEFAULT_EVENT_NAME} • Filtrado por pabellón`;
-    return `Explora el talento de ${DEFAULT_EVENT_NAME}`;
+      return `Artistas en ${eventName} • Filtrado por pabellón`;
+    return `Explora el talento de ${eventName}`;
   }, [searchTerm, pavilionId]);
 
   const onPrev = () => setPage((p) => Math.max(1, p - 1));
@@ -124,7 +125,7 @@ export default function ArtistsPage() {
             Curaduría {new Date().getFullYear()}
           </div>
           <h1 className="mt-3 text-4xl md:text-5xl font-black text-gray-900 leading-tight">
-            Artistas de la {DEFAULT_EVENT_NAME}
+            Artistas de la {eventName}
           </h1>
           <p className="mt-3 text-lg text-gray-600">{headerSubtitle}</p>
         </div>
@@ -156,7 +157,10 @@ export default function ArtistsPage() {
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black bg-white"
               >
-                <option value={FIXED_PAVILION_ID}>{FIXED_PAVILION_NAME}</option>
+                <option value="all">Todos los pabellones</option>
+                {pavilions.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
               </select>
             </div>
 

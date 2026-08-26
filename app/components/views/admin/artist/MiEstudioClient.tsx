@@ -22,15 +22,15 @@ import ArtworksTable from "./ArtworksTable";
 import ArtworkDetailModal from "./ArtworkDetailModal";
 import OrdersPlaceholder from "./OrdersPlaceholder";
 import { useAuth } from "@provider/authProvider";
+import { useEventId } from "@provider/editionProvider";
 
 // Modales extra
 import CreateEditArtworkModal from "./CreateEditArtworkModal";
 import QRModal from "./QrModal";
 
-const DEFAULT_EVENT_ID = "6909aef219f26eec22af4220";
-
 export default function MiEstudioClient() {
   const router = useRouter();
+  const DEFAULT_EVENT_ID = useEventId(); // edición vigente (dinámica)
   const { user, isAuthLoading, isAuthenticated } = useAuth();
   const artistId = user?.id || user?._id;
 

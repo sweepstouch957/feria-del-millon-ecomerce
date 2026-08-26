@@ -18,16 +18,12 @@ import { useTechniques } from "@hooks/queries/useTechniques";
 import { useCatalogState } from "@hooks/ui/catalog/useCatalogState";
 import { useFacetCounts } from "@hooks/ui/catalog/useFacetCounts";
 import { useEventArtists } from "@hooks/queries/useEventArtists";
-import {
-  DEFAULT_EVENT_ID,
-  DEFAULT_EVENT_NAME,
-  FIXED_PAVILION_ID,
-  FIXED_PAVILION_NAME,
-} from "@core/constants";
+import { useEdition } from "@provider/editionProvider";
 import { AutocompleteOption } from "@components/ui/autocomplete";
 
 export default function CatalogPageClient() {
   const sp = useSearchParams();
+  const { eventId, eventName, pavilions } = useEdition();
 
   const {
     q,
@@ -57,7 +53,7 @@ export default function CatalogPageClient() {
     clearAllAndRefetch,
   } = useCatalogState({
     initialQ: sp.get("q") ?? "",
-    initialPavilion: sp.get("pavilion") ?? FIXED_PAVILION_ID,
+    initialPavilion: sp.get("pavilion") ?? "",
     initialArtistId: sp.get("artistId") ?? "",
     defaultMaxPrice: 10_000_000,
   });
@@ -75,9 +71,9 @@ export default function CatalogPageClient() {
     isFetching: loadingArtists,
     error: errArtists,
   } = useEventArtists(
-    DEFAULT_EVENT_ID,
+    eventId,
     {
-      pavilionId: FIXED_PAVILION_ID,
+      pavilionId: pavilions[0]?.id,
       sort: "name",
       page: 1,
       limit: 500,
@@ -104,7 +100,7 @@ export default function CatalogPageClient() {
 
   // Modo de catálogo: "general" (todas las obras) o "pavilion" (por pabellón).
   const [catalogMode, setCatalogMode] = useState<"general" | "pavilion">("general");
-  const { data: pavilionsData = [] } = usePavilions(DEFAULT_EVENT_ID);
+  const { data: pavilionsData = [] } = usePavilions(eventId);
 
   const techniqueCsv = techniqueIds.length ? techniqueIds.join(",") : undefined;
   // General → sin filtro de pabellón (todas). Por pabellón → el seleccionado.
@@ -121,7 +117,7 @@ export default function CatalogPageClient() {
     refetch,
   } = useArtworksCursor({
     q,
-    event: DEFAULT_EVENT_ID,
+    event: eventId,
     pavilion: effectivePavilion,
     technique: techniqueCsv,
     limit: 12,
@@ -167,7 +163,7 @@ export default function CatalogPageClient() {
   const pavilionOptions =
     pavilionsData.length > 0
       ? pavilionsData.map((p: any) => ({ id: String(p.id ?? p._id), name: p.name }))
-      : [{ id: FIXED_PAVILION_ID, name: FIXED_PAVILION_NAME }];
+      : pavilions.map((p) => ({ id: p.id, name: p.name }));
 
   const addToCart = useCart((s) => s.add);
   const totalItems = useCart((s) => s.totalItems)();
@@ -219,7 +215,7 @@ export default function CatalogPageClient() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <ResultsToolbar
           title="Catálogo"
-          subtitle={`Evento: ${DEFAULT_EVENT_NAME} — Total: ${totalLabel}`}
+          subtitle={`Evento: ${eventName} — Total: ${totalLabel}`}
           viewMode={viewMode}
           onViewMode={setViewMode}
           rightSlot={

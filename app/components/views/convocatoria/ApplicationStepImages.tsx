@@ -2,6 +2,7 @@
 import { ImageUpload } from "@components/ui/FileUpload";
 import { type ArtworkImageEntry } from "@services/applications.service";
 import { Check } from "lucide-react";
+import { useEdition } from "@provider/editionProvider";
 
 interface ApplicationStepImagesProps {
   artworkImages: ArtworkImageEntry[];
@@ -15,14 +16,6 @@ interface ApplicationStepImagesProps {
 }
 
 const CURRENT_YEAR = new Date().getFullYear();
-
-function priceValid(p?: number) {
-  return p !== undefined && p >= 800_000 && p <= 2_350_000;
-}
-
-function artworkComplete(img: ArtworkImageEntry) {
-  return !!img.url && !!img.title && priceValid(img.price);
-}
 
 function formatCOP(n: number) {
   return `$${n.toLocaleString("es-CO")} COP`;
@@ -38,6 +31,20 @@ export function ApplicationStepImages({
   onNext,
   isSaving,
 }: ApplicationStepImagesProps) {
+  // Requisitos configurables por convocatoria (Fase 2), con defaults sensatos.
+  const { convocatoria } = useEdition();
+  const req = convocatoria?.requirements || {};
+  const PRICE_MIN = req.priceMin ?? 800_000;
+  const PRICE_MAX = req.priceMax ?? 2_350_000;
+  const MAX_IMAGES = req.maxImages ?? 15;
+  const allowedIds = convocatoria?.allowedTechniqueIds || [];
+  const allowedTechniques = allowedIds.length
+    ? techniques.filter((t: any) => allowedIds.includes(String(t.id || t._id)))
+    : techniques;
+  const priceLabel = `$${PRICE_MIN.toLocaleString("es-CO")} – $${PRICE_MAX.toLocaleString("es-CO")} COP`;
+  const priceValid = (p?: number) => p !== undefined && p >= PRICE_MIN && p <= PRICE_MAX;
+  const artworkComplete = (img: ArtworkImageEntry) => !!img.url && !!img.title && priceValid(img.price);
+
   const validCount = artworkImages.filter(artworkComplete).length;
   const canAdvance =
     !isSaving &&
@@ -52,7 +59,7 @@ export function ApplicationStepImages({
           Obras del proyecto
         </h2>
         <p className="app-section__desc" style={{ marginBottom: 12 }}>
-          Agrega hasta <strong>15 obras</strong>. Cada una requiere imagen, título y precio.
+          Agrega hasta <strong>{MAX_IMAGES} obras</strong>. Cada una requiere imagen, título y precio.
           Los campos de técnica, dimensiones y año son opcionales pero recomendados.
         </p>
 
@@ -141,7 +148,7 @@ export function ApplicationStepImages({
                     onChange={(e) => onUpdateImage(i, "technique", e.target.value)}
                   >
                     <option value="">Selecciona una técnica…</option>
-                    {techniques.map((t) => (
+                    {allowedTechniques.map((t: any) => (
                       <option key={t.id || t._id} value={t.name}>{t.name}</option>
                     ))}
                     <option value="Otra">Otra</option>
@@ -185,13 +192,13 @@ export function ApplicationStepImages({
                       marginLeft: 8, fontSize: 11, fontWeight: 600,
                       color: "rgba(255,255,255,.35)", fontFamily: "monospace",
                     }}>
-                      $800.000 – $2.350.000 COP
+                      {priceLabel}
                     </span>
                   </label>
                   <input
                     type="number"
-                    min={800_000}
-                    max={2_350_000}
+                    min={PRICE_MIN}
+                    max={PRICE_MAX}
                     step={10_000}
                     value={img.price || ""}
                     onChange={(e) => onUpdateImage(i, "price", Number(e.target.value))}
@@ -207,7 +214,7 @@ export function ApplicationStepImages({
                         </span>
                       ) : (
                         <span style={{ fontSize: 12, color: "#f87171", marginTop: 5, display: "block" }}>
-                          Precio fuera del rango permitido ($800.000 – $2.350.000 COP)
+                          Precio fuera del rango permitido ({priceLabel})
                         </span>
                       )
                   ) : null}
@@ -220,15 +227,15 @@ export function ApplicationStepImages({
       </div>
 
       {/* ── Add artwork button ── */}
-      {artworkImages.length < 15 && (
+      {artworkImages.length < MAX_IMAGES && (
         <button className="app-btn-add" onClick={onAddImage}>
           {artworkImages.length === 0 ? "+ Agregar primera obra" : "+ Agregar otra obra"}
         </button>
       )}
 
-      {artworkImages.length === 15 && (
+      {artworkImages.length >= MAX_IMAGES && (
         <p style={{ textAlign: "center", fontSize: 13, color: "rgba(255,255,255,.3)", marginTop: 8 }}>
-          Límite alcanzado · 15 obras máximo
+          Límite alcanzado · {MAX_IMAGES} obras máximo
         </p>
       )}
 

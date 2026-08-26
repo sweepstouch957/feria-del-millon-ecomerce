@@ -4,7 +4,9 @@ import "./globals.css";
 import { AuthProvider } from "@provider/authProvider";
 import ReactQueryProvider from "@provider/reactQueryProvider";
 import { SiteConfigProvider } from "@provider/siteConfigProvider";
+import { EditionProvider } from "@provider/editionProvider";
 import { getSiteConfig } from "@lib/getSiteConfig";
+import { getActiveEdition } from "@lib/getActiveEdition";
 import Script from "next/script";
 import { Toaster } from "react-hot-toast";
 
@@ -25,6 +27,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const { theme, content, sections, landing, nav } = await getSiteConfig();
+  const edition = await getActiveEdition(); // edición vigente (dinámica, sin ids fijos)
 
   // Variables CSS del tema (paleta editorial v2 + legacy). Inyectadas server-side.
   const themeVars = `:root{
@@ -66,14 +69,16 @@ export default async function RootLayout({
       </head>
       <body>
         <SiteConfigProvider value={{ theme, content, sections, landing, nav }}>
-          <ReactQueryProvider>
-            <AuthProvider>
-              <Navigation />
-              {children}
-              <ApplicationContinueBanner />
-              <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
-            </AuthProvider>
-          </ReactQueryProvider>
+          <EditionProvider value={edition}>
+            <ReactQueryProvider>
+              <AuthProvider>
+                <Navigation />
+                {children}
+                <ApplicationContinueBanner />
+                <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
+              </AuthProvider>
+            </ReactQueryProvider>
+          </EditionProvider>
         </SiteConfigProvider>
       </body>
     </html>

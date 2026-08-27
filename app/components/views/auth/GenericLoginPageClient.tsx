@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@provider/authProvider";
-import ThemeToggle from "@components/views/home/v2/ThemeToggle";
 
 /* ──────────────────────────────────────────────────────────────
    Acceso — port de Login.dc.html al sistema editorial v2.
@@ -37,10 +36,6 @@ const ROOT_VARS = {
   fontFamily: "Jost, system-ui, sans-serif",
   fontWeight: 400,
   letterSpacing: "0.005em",
-  // El navbar mide 80px + 1px de borde. Descontarlo exacto deja la pantalla
-  // justa, sin scroll. `dvh` en vez de `vh` porque en móvil la barra del
-  // navegador se recoge y `vh` deja un salto.
-  minHeight: "calc(100dvh - 81px)",
   display: "flex",
   flexWrap: "wrap",
   alignItems: "stretch",
@@ -52,6 +47,7 @@ const PAGE_CSS = `
   .fdm-log a { transition: color .3s ease, border-color .3s ease, opacity .3s ease; }
   .fdm-log-link:hover { color: var(--acc); }
   .fdm-log-dark a:hover { color: var(--acc); }
+  .fdm-log-dark { padding: clamp(24px,2.8vw,44px); }
   .fdm-log-field {
     margin-top: 8px; width: 100%; padding: 11px 0;
     background: transparent; color: inherit;
@@ -62,6 +58,30 @@ const PAGE_CSS = `
   .fdm-log-field:focus { border-color: var(--acc); }
   .fdm-log-field::placeholder { color: color-mix(in srgb, var(--fg) 38%, transparent); }
   .fdm-log-submit:hover:not(:disabled) { background: var(--acc); border-color: var(--acc); color: #0B0B0A; }
+
+  /* El navbar mide 80px + 1px de borde. En escritorio la pantalla calza justa
+     y no hay scroll; dvh sigue la altura real en movil, donde la barra del
+     navegador se recoge. */
+  .fdm-log { min-height: calc(100dvh - 81px); }
+
+  /* El navbar es sticky y se superpone a lo que scrollea debajo. Sin esto, al
+     enfocar un campo el navegador lo sube justo detrás de la barra. */
+  .fdm-log-field { scroll-margin-top: 104px; }
+
+  @media (max-width: 860px) {
+    /* Apilado: forzar la altura de pantalla solo sumaba scroll vacío. */
+    .fdm-log { min-height: 0; }
+    /* En móvil primero el formulario: es a lo que se viene, y así no hay que
+       scrollear el manifiesto entero para llegar. */
+    .fdm-log-form { order: -1; }
+    .fdm-log-dark { min-height: 0; padding-block: clamp(22px,6vw,34px); }
+    .fdm-log-dark h1 { font-size: clamp(26px,7.5vw,40px); }
+  }
+
+  @media (max-height: 700px) and (min-width: 861px) {
+    /* Portátiles bajos: que scrollee antes de comprimir el formulario. */
+    .fdm-log { min-height: 0; }
+  }
 `;
 
 const ARTIST_POINTS = [
@@ -215,16 +235,21 @@ export default function GenericLoginPageClient() {
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          // Sin el logo arriba, el manifiesto queda centrado y los enlaces
-          // anclados abajo.
-          justifyContent: "center",
           gap: "clamp(20px,2.4vw,32px)",
-          padding: "clamp(24px,2.8vw,44px)",
         }}
       >
 
 
-        <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div
+          style={{
+            position: "relative",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: 16,
+          }}
+        >
           <h1
             style={{
               margin: 0,
@@ -270,7 +295,6 @@ export default function GenericLoginPageClient() {
         <div
           style={{
             position: "relative",
-            marginTop: "auto",
             display: "flex",
             flexWrap: "wrap",
             gap: "10px 20px",
@@ -286,6 +310,7 @@ export default function GenericLoginPageClient() {
 
       {/* ══ Formulario ═════════════════════════════════════ */}
       <div
+        className="fdm-log-form"
         style={{
           flex: "1 1 520px",
           minWidth: "min(100%,320px)",
@@ -298,14 +323,11 @@ export default function GenericLoginPageClient() {
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            gap: 14,
             paddingBottom: "clamp(16px,1.8vw,24px)",
             borderBottom: `1px solid ${mix(14)}`,
           }}
         >
           <span style={{ ...EYEBROW, color: mix(62) }}>Acceso a tu cuenta</span>
-          <ThemeToggle />
         </div>
 
         <div

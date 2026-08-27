@@ -11,7 +11,12 @@
 
 /* Reserva el canal de la barra de scroll: sin esto, al pasar de una pagina
    corta a una larga cambia el ancho del viewport y el navbar centrado salta. */
-html { scrollbar-gutter: stable; }
+html {
+  scrollbar-gutter: stable;
+  /* El navbar sticky tapa el destino de cualquier salto de ancla o de foco.
+     Reservar su alto evita que el contenido quede debajo de la barra. */
+  scroll-padding-top: 96px;
+}
 
 .fdm-foot-link { transition: color .3s ease; }
 .fdm-foot-link:hover { color: var(--fdm-green,#3FA46E); }

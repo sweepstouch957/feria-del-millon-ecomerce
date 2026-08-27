@@ -1,13 +1,9 @@
 "use client";
 
 import { useMemo, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { usePavilions } from "@hooks/queries/usePavilions";
-import { Button } from "@components/ui/button";
-import CatalogCard from "@components/views/catalog/CatalogCard";
-import FiltersSidebar from "@components/views/catalog/FiltersSidebar";
-import ResultsToolbar from "@components/views/catalog/ResultsToolbar";
-import EmptyState from "@components/views/catalog/EmptyState";
 import useCart from "@store/useCart";
 import {
   useArtworksCursor,
@@ -19,8 +15,60 @@ import { useCatalogState } from "@hooks/ui/catalog/useCatalogState";
 import { useFacetCounts } from "@hooks/ui/catalog/useFacetCounts";
 import { useEventArtists } from "@hooks/queries/useEventArtists";
 import { useEdition } from "@provider/editionProvider";
-import { AutocompleteOption } from "@components/ui/autocomplete";
+import { formatCOP } from "@lib/money";
 import { pickSrc } from "@lib/utils";
+
+/* ──────────────────────────────────────────────────────────────
+   Catálogo — diseño editorial v2 (port de Catalogo.dc.html).
+   El header/footer los aporta el layout; aquí va solo el cuerpo.
+   Tokens: --bg/--fg/--acc/--panel se mapean a los --fdm-* globales,
+   así el tema claro/oscuro del sitio funciona sin lógica extra.
+   ────────────────────────────────────────────────────────────── */
+
+const MAX_PRICE = 1_000_000;
+const MIN_PRICE = 100_000;
+
+const mix = (pct: number) =>
+  `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
+
+const LABEL: React.CSSProperties = {
+  fontWeight: 300,
+  fontSize: 9.5,
+  letterSpacing: "0.26em",
+  textTransform: "uppercase",
+  color: mix(50),
+};
+
+const FIELD: React.CSSProperties = {
+  width: "100%",
+  padding: "8px 0",
+  background: "transparent",
+  color: "inherit",
+  border: 0,
+  borderBottom: `1px solid ${mix(26)}`,
+  fontSize: 15,
+  outline: "none",
+  cursor: "pointer",
+};
+
+const SECTION: React.CSSProperties = {
+  padding: "clamp(22px,2.4vw,30px) 0",
+  borderBottom: `1px solid ${mix(12)}`,
+  display: "flex",
+  flexDirection: "column",
+  gap: 12,
+};
+
+function artistOf(a: any) {
+  const f = a?.artistInfo?.firstName || "";
+  const l = a?.artistInfo?.lastName || "";
+  return `${f} ${l}`.trim() || a?.artist || "Artista";
+}
+
+/** El backend guarda las medidas como texto libre en `dimensionsText`. */
+function dimsOf(a: any) {
+  return String(a?.dimensionsText ?? "").trim();
+}
 
 export default function CatalogPageClient() {
   const sp = useSearchParams();
@@ -35,78 +83,53 @@ export default function CatalogPageClient() {
     setArtistId,
     techniqueIds,
     toggleTechnique,
-    clearTechniques,
-    minPrice,
-    setMinPrice,
     maxPrice,
     setMaxPrice,
-    inStock,
-    setInStock,
-    hasImage,
-    setHasImage,
-    sortBy,
-    setSortBy,
-    sortDir,
-    toggleSortDir,
     viewMode,
     setViewMode,
-    applyFilters,
-    clearAllAndRefetch,
+    mode,
+    setMode,
+    clearAll: clearFilters,
   } = useCatalogState({
     initialQ: sp.get("q") ?? "",
     initialPavilion: sp.get("pavilion") ?? "",
     initialArtistId: sp.get("artistId") ?? "",
-    defaultMaxPrice: 10_000_000,
+    initialMode: sp.get("modo") === "pabellon" ? "pabellon" : "general",
+    defaultMaxPrice: MAX_PRICE,
   });
 
-  // ===== Técnicas
-  const {
-    data: techniquesData = [],
-    isLoading: loadingTechs,
-    isError: errTechs,
-  } = useTechniques();
+  // Orden: claves propias del catálogo editorial (el hook compartido usa otras).
+  type SortKey = "recientes" | "precio-asc" | "precio-desc" | "titulo";
+  const [sortBy, setSortBy] = useState<SortKey>("recientes");
 
-  // ===== Artistas (para el autocomplete)
-  const {
-    data: artistsResp,
-    isFetching: loadingArtists,
-    error: errArtists,
-  } = useEventArtists(
+  const clearAll = () => {
+    setPriceTouched(false);
+    clearFilters();
+  };
+
+  const { data: techniquesData = [] } = useTechniques();
+  const { data: pavilionsData = [] } = usePavilions(eventId);
+
+  const { data: artistsResp } = useEventArtists(
     eventId,
-    {
-      pavilionId: pavilions[0]?.id,
-      sort: "name",
-      page: 1,
-      limit: 500,
-    },
-    {
-      staleTime: 60_000,
-      gcTime: 5 * 60_000,
-      refetchOnWindowFocus: false,
-    }
+    { sort: "name", page: 1, limit: 500 },
+    { staleTime: 60_000, gcTime: 5 * 60_000, refetchOnWindowFocus: false }
   );
 
-  const artistOptions: AutocompleteOption[] = useMemo(
+  const artistOptions = useMemo(
     () =>
       (artistsResp?.rows ?? []).map((row: any) => {
         const a = row.artist ?? row;
-        const fullName = `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim();
+        const full = `${a.firstName ?? ""} ${a.lastName ?? ""}`.trim();
         return {
           value: String(a.id ?? a._id),
-          label: fullName || a.name || a.displayName || "Artista sin nombre",
+          label: full || a.name || a.displayName || "Artista sin nombre",
         };
       }),
     [artistsResp]
   );
 
-  // Modo de catálogo: "general" (todas las obras) o "pavilion" (por pabellón).
-  const [catalogMode, setCatalogMode] = useState<"general" | "pavilion">("general");
-  const { data: pavilionsData = [] } = usePavilions(eventId);
-
   const techniqueCsv = techniqueIds.length ? techniqueIds.join(",") : undefined;
-  // General → sin filtro de pabellón (todas). Por pabellón → el seleccionado.
-  const effectivePavilion =
-    catalogMode === "pavilion" ? pavilion || undefined : undefined;
 
   const {
     rows: rawRows,
@@ -115,234 +138,953 @@ export default function CatalogPageClient() {
     isLoading,
     hasNextPage,
     loadMore,
-    refetch,
   } = useArtworksCursor({
     q,
     event: eventId,
-    pavilion: effectivePavilion,
+    // El pabellón filtra en el backend en ambos modos: así el link es compartible
+    // y "por pabellón" solo cambia cómo se agrupa lo que ya vino filtrado.
+    pavilion: pavilion || undefined,
     technique: techniqueCsv,
-    limit: 12,
+    limit: 24,
     artist: artistId || undefined,
   } as ArtworksCursorFilters);
 
-  const { techniques } = useFacetCounts(rawRows);
+  const { techniques: techFacets } = useFacetCounts(rawRows);
 
-  const filteredRows = useMemo(() => {
-    let arr = rawRows.slice();
+  // El diseño fija el tope en $1.000.000, pero el catálogo real tiene obras por
+  // encima. El techo del slider sale de la data (nunca por debajo de 1M) y,
+  // mientras nadie lo toque, no filtra nada.
+  const priceCeiling = useMemo(() => {
+    const top = rawRows.reduce((m, r) => Math.max(m, Number(r.price ?? 0)), 0);
+    return Math.max(MAX_PRICE, Math.ceil(top / 50_000) * 50_000);
+  }, [rawRows]);
 
-    if (hasImage) {
-      arr = arr.filter(
-        (r) =>
-          (r.image && r.image !== "") || (r.images?.length ?? 0) > 0
-      );
-    }
+  const [priceTouched, setPriceTouched] = useState(false);
+  const effectiveMax = priceTouched ? maxPrice : priceCeiling;
 
-    if (inStock) {
-      arr = arr.filter((r) => Number(r.stock ?? 0) > 0);
-    }
-
-    arr = arr.filter((r) => {
-      const p = Number(r.price ?? 0);
-      return p >= minPrice && p <= maxPrice;
-    });
-
+  const rows = useMemo(() => {
+    const arr = rawRows.filter((r) => Number(r.price ?? 0) <= effectiveMax);
     arr.sort((a, b) => {
-      const dir = sortDir === "asc" ? 1 : -1;
-      if (sortBy === "price")
-        return (Number(a.price ?? 0) - Number(b.price ?? 0)) * dir;
-      if (sortBy === "_id")
-        return (String(a._id) > String(b._id) ? 1 : -1) * dir;
+      if (sortBy === "precio-asc") return Number(a.price ?? 0) - Number(b.price ?? 0);
+      if (sortBy === "precio-desc") return Number(b.price ?? 0) - Number(a.price ?? 0);
+      if (sortBy === "titulo")
+        return String(a.title ?? "").localeCompare(String(b.title ?? ""), "es");
       const ad = new Date(a.createdAt as unknown as string).getTime();
       const bd = new Date(b.createdAt as unknown as string).getTime();
-      return (ad - bd) * dir;
+      return bd - ad;
     });
-
     return arr;
-  }, [rawRows, hasImage, inStock, minPrice, maxPrice, sortBy, sortDir]);
+  }, [rawRows, effectiveMax, sortBy]);
 
-  // Pabellones reales del evento (fallback al fijo si aún no cargan).
-  const pavilionOptions =
-    pavilionsData.length > 0
-      ? pavilionsData.map((p: any) => ({ id: String(p.id ?? p._id), name: p.name }))
-      : pavilions.map((p) => ({ id: p.id, name: p.name }));
+  // Pabellones reales del evento; fallback a los de la edición.
+  const pavilionOptions = useMemo(() => {
+    const src =
+      pavilionsData.length > 0
+        ? pavilionsData.map((p: any) => ({ id: String(p.id ?? p._id), name: p.name }))
+        : pavilions.map((p) => ({ id: p.id, name: p.name }));
+    const counts = new Map<string, number>();
+    for (const r of rawRows) {
+      const pid = String((r as any)?.pavilionInfo?._id ?? "");
+      if (pid) counts.set(pid, (counts.get(pid) ?? 0) + 1);
+    }
+    return src.map((p) => ({ ...p, count: counts.get(p.id) ?? 0 }));
+  }, [pavilionsData, pavilions, rawRows]);
+
+  const groups = useMemo(() => {
+    if (mode !== "pabellon") {
+      return rows.length ? [{ label: "", count: rows.length, items: rows, showLabel: false }] : [];
+    }
+    const order: string[] = [];
+    const byLabel = new Map<string, ArtworkRow[]>();
+    for (const r of rows) {
+      const label = (r as any)?.pavilionInfo?.name || "Sin pabellón";
+      if (!byLabel.has(label)) {
+        byLabel.set(label, []);
+        order.push(label);
+      }
+      byLabel.get(label)!.push(r);
+    }
+    return order.map((label) => ({
+      label,
+      count: byLabel.get(label)!.length,
+      items: byLabel.get(label)!,
+      showLabel: true,
+    }));
+  }, [rows, mode]);
 
   const addToCart = useCart((s) => s.add);
+  const cartItems = useCart((s) => s.items);
   const totalItems = useCart((s) => s.totalItems)();
+  const inCart = (id: string) => cartItems.some((i: any) => String(i.id) === id);
 
-  const handleAddToCart = (art: ArtworkRow, qty = 1) => {
+  const handleAdd = (art: ArtworkRow) =>
     addToCart(
       {
         id: String(art._id),
         title: art.title,
-        artist: art?.artist ?? "Desconocido",
+        artist: artistOf(art),
         price: Number(art.price ?? 0),
         image: pickSrc(art.image) || pickSrc(art.images?.[0]) || "/placeholder.png",
       },
-      qty
+      1
     );
-  };
 
-  // ===== Infinite scroll (IntersectionObserver)
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
+  // Infinite scroll
+  const sentinel = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!hasNextPage) return;
-    const node = loadMoreRef.current;
+    const node = sentinel.current;
     if (!node) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry.isIntersecting && hasNextPage && !isFetching) {
-          loadMore();
-        }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasNextPage && !isFetching) loadMore();
       },
-      {
-        root: null,
-        rootMargin: "300px", // empieza a cargar antes de llegar al final
-        threshold: 0.1,
-      }
+      { rootMargin: "300px", threshold: 0.1 }
     );
-
-    observer.observe(node);
-
-    return () => {
-      observer.disconnect();
-    };
+    io.observe(node);
+    return () => io.disconnect();
   }, [hasNextPage, isFetching, loadMore]);
 
+  const activeFilters =
+    !!q || !!pavilion || !!artistId || techniqueIds.length > 0 || effectiveMax < priceCeiling;
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <ResultsToolbar
-          title="Catálogo"
-          subtitle={`Evento: ${eventName} — Total: ${totalLabel}`}
-          viewMode={viewMode}
-          onViewMode={setViewMode}
-          rightSlot={
-            <Button variant="outline" className="relative" title="Carrito">
-              Carrito
-              <span className="ml-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-black/90 px-2 text-white text-xs">
-                {totalItems}
+    <div
+      style={
+        {
+          "--bg": "var(--fdm-bg,#F7F6F2)",
+          "--fg": "var(--fdm-fg,#0B0B0A)",
+          "--acc": "var(--fdm-green,#3FA46E)",
+          "--panel": "var(--fdm-panel,#0B0B0A)",
+          background: "var(--bg)",
+          color: "var(--fg)",
+          fontFamily: "Jost, system-ui, sans-serif",
+          fontWeight: 300,
+          letterSpacing: "0.005em",
+          minHeight: "100vh",
+          width: "100%",
+          overflowX: "hidden",
+        } as React.CSSProperties
+      }
+    >
+      <style>{`
+        .fdm-cat select { appearance: none; }
+        .fdm-cat input[type="range"] { accent-color: var(--acc); }
+        .fdm-cat input::placeholder { color: color-mix(in srgb, var(--fg) 34%, transparent); }
+        .fdm-cat-shell { display:flex; flex-wrap:wrap; align-items:flex-start; gap:clamp(28px,3.4vw,58px); }
+        .fdm-cat-aside { flex:1 1 230px; max-width:290px; min-width:min(100%,230px); position:sticky; top:104px; display:flex; flex-direction:column; }
+        .fdm-cat-main { flex:999 1 62%; min-width:min(100%,280px); display:flex; flex-direction:column; gap:clamp(30px,3.4vw,54px); }
+        .fdm-cat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%,262px), 1fr)); gap:clamp(30px,3.2vw,52px) clamp(24px,2.6vw,44px); }
+        .fdm-cat-art:hover .fdm-cat-frame { border-color: var(--acc); }
+        .fdm-cat-row:hover { background: color-mix(in srgb, var(--acc) 6%, transparent); }
+        .fdm-cat-link:hover { color: var(--acc); }
+        @media (max-width: 1079px) {
+          .fdm-cat-aside { position:static; max-width:none; }
+          .fdm-cat-meta { display:none; }
+        }
+      `}</style>
+
+      <div className="fdm-cat">
+        {/* ── Encabezado editorial ─────────────────────────────── */}
+        <section id="top" style={{ padding: "clamp(30px,4.4vw,62px) clamp(20px,4vw,56px) 0" }}>
+          <div style={{ maxWidth: 1600, margin: "0 auto" }}>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "12px clamp(24px,3vw,48px)",
+                paddingBottom: "clamp(18px,2.2vw,26px)",
+                fontWeight: 300,
+                fontSize: 10.5,
+                letterSpacing: "0.28em",
+                textTransform: "uppercase",
+                color: mix(52),
+              }}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--acc)" }}>
+                <span style={{ display: "block", width: 6, height: 6, borderRadius: 999, background: "var(--acc)" }} />
+                Obras en venta
               </span>
-            </Button>
-          }
-        />
+              <span>{eventName}</span>
+              <span>Todas las obras hasta {formatCOP(MAX_PRICE)}</span>
+            </div>
 
-        {/* Toggle: catálogo general (todas) vs por pabellón */}
-        <div className="mb-6 inline-flex rounded-full border border-gray-300 bg-white p-1">
-          <button
-            type="button"
-            onClick={() => setCatalogMode("general")}
-            className={`px-4 py-1.5 text-sm rounded-full transition ${
-              catalogMode === "general" ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"
-            }`}
-          >
-            General
-          </button>
-          <button
-            type="button"
-            onClick={() => setCatalogMode("pavilion")}
-            className={`px-4 py-1.5 text-sm rounded-full transition ${
-              catalogMode === "pavilion" ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100"
-            }`}
-          >
-            Por pabellón
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <aside className="lg:col-span-3">
-            <FiltersSidebar
-              q={q}
-              setQ={setQ}
-              pavilion={pavilion}
-              setPavilion={setPavilion}
-              pavilionOptions={pavilionOptions}
-              showPavilionFilter={catalogMode === "pavilion"}
-              loadingPavilions={false}
-              errorPavilions={false}
-              techniquesData={techniquesData}
-              loadingTechniques={loadingTechs}
-              errorTechniques={!!errTechs}
-              techniqueIds={techniqueIds}
-              onToggleTechnique={toggleTechnique}
-              onClearTechniques={clearTechniques}
-              // artista
-              artistId={artistId}
-              setArtistId={setArtistId}
-              artistOptions={artistOptions}
-              loadingArtists={loadingArtists}
-              errorArtists={!!errArtists}
-              // filtros locales
-              minPrice={minPrice}
-              maxPrice={maxPrice}
-              setMinPrice={setMinPrice}
-              setMaxPrice={setMaxPrice}
-              inStock={inStock}
-              setInStock={setInStock}
-              hasImage={hasImage}
-              setHasImage={setHasImage}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              sortDir={sortDir}
-              toggleSortDir={toggleSortDir}
-              onApply={() => {
-                refetch();
-                applyFilters();
+            <div
+              style={{
+                borderTop: `1px solid ${mix(22)}`,
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "flex-end",
+                justifyContent: "space-between",
+                gap: "clamp(24px,3.4vw,64px)",
+                padding: "clamp(34px,4.6vw,70px) 0 clamp(28px,3.2vw,44px)",
               }}
-              onClear={() => {
-                clearAllAndRefetch(refetch);
-              }}
-              facetTechniques={techniques}
-            />
-          </aside>
-
-          <section className="lg:col-span-9">
-            {viewMode === "grid" ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-                {filteredRows.map((art) => (
-                  <CatalogCard
-                    key={String(art._id)}
-                    artwork={art}
-                    onAddToCart={() => handleAddToCart(art)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredRows.map((art) => (
-                  <CatalogCard
-                    key={String(art._id)}
-                    artwork={art}
-                    onAddToCart={() => handleAddToCart(art)}
-                    variant="list"
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Sentinel para infinite scroll */}
-            <div ref={loadMoreRef} className="flex justify-center mt-8 mb-4">
-              {isFetching && (
-                <p className="text-sm text-gray-500">Cargando más obras…</p>
-              )}
-              {!hasNextPage && !isLoading && !isFetching && filteredRows.length > 0 && (
-                <p className="text-sm text-gray-500">
-                  No hay más resultados
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "clamp(18px,2vw,28px)",
+                  minWidth: "min(100%,300px)",
+                  maxWidth: "56ch",
+                }}
+              >
+                <h1
+                  style={{
+                    margin: 0,
+                    fontWeight: 200,
+                    fontSize: "clamp(50px,9vw,138px)",
+                    lineHeight: 0.92,
+                    letterSpacing: "0.045em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Catálogo
+                </h1>
+                <p
+                  style={{
+                    margin: 0,
+                    maxWidth: "48ch",
+                    fontSize: "clamp(15.5px,1.25vw,19px)",
+                    lineHeight: 1.75,
+                    color: mix(68),
+                    textWrap: "pretty",
+                  }}
+                >
+                  Obra original de artistas emergentes colombianos. Cada pieza se vende{" "}
+                  <span style={{ color: "var(--acc)" }}>directamente por el artista</span> durante la
+                  edición.
                 </p>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  gap: 12,
+                  paddingLeft: "clamp(14px,1.6vw,22px)",
+                  borderLeft: "1px solid var(--acc)",
+                }}
+              >
+                <div style={{ fontWeight: 200, fontSize: "clamp(38px,4.2vw,66px)", lineHeight: 1 }}>
+                  {rows.length}
+                  <span style={{ fontSize: "0.3em", letterSpacing: "0.2em", color: mix(42), marginLeft: 12 }}>
+                    de {totalLabel}
+                  </span>
+                </div>
+                <div style={{ ...LABEL, fontSize: 10, letterSpacing: "0.26em" }}>Obras visibles</div>
+              </div>
+            </div>
+
+            {/* Tabs + vista */}
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+                padding: "clamp(14px,1.6vw,20px) 0",
+                borderTop: `1px solid ${mix(14)}`,
+              }}
+            >
+              <div style={{ display: "flex", gap: "clamp(18px,2.4vw,34px)" }}>
+                <Tab active={mode === "general"} onClick={() => setMode("general")}>
+                  General
+                </Tab>
+                <Tab active={mode === "pabellon"} onClick={() => setMode("pabellon")}>
+                  Por pabellón
+                </Tab>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "clamp(10px,1.4vw,20px)" }}>
+                <Link
+                  href="/carrito"
+                  className="fdm-cat-link"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "baseline",
+                    gap: 10,
+                    fontWeight: 300,
+                    fontSize: 10,
+                    letterSpacing: "0.2em",
+                    textTransform: "uppercase",
+                    color: mix(58),
+                  }}
+                >
+                  Carrito
+                  <span style={{ fontSize: 15, letterSpacing: 0, color: "var(--acc)" }}>{totalItems}</span>
+                </Link>
+                <span style={{ display: "block", width: 1, height: 20, background: mix(20) }} />
+                <Pill active={viewMode === "grid"} onClick={() => setViewMode("grid")}>
+                  Grilla
+                </Pill>
+                <Pill active={viewMode === "list"} onClick={() => setViewMode("list")}>
+                  Lista
+                </Pill>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Filtros + resultados ─────────────────────────────── */}
+        <section
+          className="fdm-cat-shell"
+          style={{
+            maxWidth: 1600,
+            margin: "0 auto",
+            padding: "clamp(26px,3vw,44px) clamp(20px,4vw,56px) clamp(60px,7vw,120px)",
+          }}
+        >
+          <aside className="fdm-cat-aside">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: 12,
+                paddingBottom: 16,
+                borderBottom: `1px solid ${mix(22)}`,
+              }}
+            >
+              <span style={{ fontWeight: 300, fontSize: 10.5, letterSpacing: "0.26em", textTransform: "uppercase" }}>
+                Filtros
+              </span>
+              {activeFilters && (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="fdm-cat-link"
+                  style={{
+                    background: "transparent",
+                    border: 0,
+                    padding: 0,
+                    cursor: "pointer",
+                    color: "var(--acc)",
+                    fontWeight: 300,
+                    fontSize: 10,
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Limpiar
+                </button>
               )}
             </div>
 
-            {!isLoading && filteredRows.length === 0 && (
-              <EmptyState
-                title="Sin resultados"
-                description="No se encontraron obras que coincidan con los filtros seleccionados."
+            {/* Buscar */}
+            <div style={SECTION}>
+              <label htmlFor="fdm-q" style={LABEL}>
+                Buscar obra
+              </label>
+              <input
+                id="fdm-q"
+                type="text"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Título o artista"
+                style={{ ...FIELD, padding: "6px 0", fontSize: 16, cursor: "text" }}
               />
+            </div>
+
+            {/* Pabellón — filtrable y compartible por URL (?pavilion=<id>) */}
+            <div style={{ ...SECTION, gap: 2 }}>
+              <span style={{ ...LABEL, marginBottom: 10 }}>Pabellón</span>
+              <FilterRow
+                active={!pavilion}
+                label="Todos los pabellones"
+                onClick={() => setPavilion("")}
+              />
+              {pavilionOptions.map((p) => (
+                <FilterRow
+                  key={p.id}
+                  active={pavilion === p.id}
+                  label={p.name}
+                  count={p.count || undefined}
+                  onClick={() => setPavilion(pavilion === p.id ? "" : p.id)}
+                />
+              ))}
+            </div>
+
+            {/* Artista */}
+            <div style={SECTION}>
+              <label htmlFor="fdm-artist" style={LABEL}>
+                Artista
+              </label>
+              <select
+                id="fdm-artist"
+                value={artistId}
+                onChange={(e) => setArtistId(e.target.value)}
+                style={FIELD}
+              >
+                <option value="">Todos los artistas</option>
+                {artistOptions.map((a) => (
+                  <option key={a.value} value={a.value}>
+                    {a.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Técnica */}
+            <div style={{ ...SECTION, gap: 2 }}>
+              <span style={{ ...LABEL, marginBottom: 10 }}>Técnica</span>
+              {techniquesData.map((t: any) => {
+                const id = String(t.id ?? t._id);
+                const facet = techFacets.find((f) => f.name === t.name);
+                return (
+                  <FilterRow
+                    key={id}
+                    active={techniqueIds.includes(id)}
+                    label={t.name}
+                    count={facet?.count}
+                    onClick={() => toggleTechnique(id)}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Precio máximo */}
+            <div style={{ ...SECTION, gap: 14 }}>
+              <span style={LABEL}>Precio máximo</span>
+              <span style={{ fontWeight: 300, fontSize: 19 }}>Hasta {formatCOP(effectiveMax)}</span>
+              <input
+                type="range"
+                min={MIN_PRICE}
+                max={priceCeiling}
+                step={50_000}
+                value={effectiveMax}
+                onChange={(e) => {
+                  setPriceTouched(true);
+                  setMaxPrice(Number(e.target.value));
+                }}
+                style={{ width: "100%", margin: 0 }}
+              />
+              <span
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 10,
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  color: mix(45),
+                }}
+              >
+                <span>{formatCOP(MIN_PRICE)}</span>
+                <span>{formatCOP(priceCeiling)}</span>
+              </span>
+            </div>
+
+            {/* Orden */}
+            <div style={{ ...SECTION, borderBottom: 0, paddingBottom: 0 }}>
+              <label htmlFor="fdm-sort" style={LABEL}>
+                Ordenar por
+              </label>
+              <select
+                id="fdm-sort"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                style={FIELD}
+              >
+                <option value="recientes">Más recientes</option>
+                <option value="precio-asc">Precio: menor a mayor</option>
+                <option value="precio-desc">Precio: mayor a menor</option>
+                <option value="titulo">Título A–Z</option>
+              </select>
+            </div>
+          </aside>
+
+          <div className="fdm-cat-main">
+            {!isLoading && rows.length === 0 && (
+              <div
+                style={{
+                  borderTop: `1px solid ${mix(22)}`,
+                  borderBottom: `1px solid ${mix(22)}`,
+                  padding: "clamp(46px,6vw,96px) clamp(20px,3vw,40px)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 20,
+                  textAlign: "center",
+                }}
+              >
+                <span
+                  style={{
+                    fontWeight: 200,
+                    fontSize: "clamp(24px,3vw,38px)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  Sin resultados
+                </span>
+                <p style={{ margin: 0, maxWidth: "40ch", fontSize: 15, lineHeight: 1.7, color: mix(62) }}>
+                  Ninguna obra coincide con estos filtros. Amplía el rango de precio o quita una técnica.
+                </p>
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  style={{
+                    height: 48,
+                    padding: "0 30px",
+                    background: "var(--fg)",
+                    color: "var(--bg)",
+                    border: 0,
+                    borderRadius: 999,
+                    cursor: "pointer",
+                    fontSize: 11,
+                    letterSpacing: "0.2em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Limpiar filtros
+                </button>
+              </div>
             )}
-          </section>
-        </div>
+
+            {groups.map((g) => (
+              <div
+                key={g.label || "all"}
+                style={{ display: "flex", flexDirection: "column", gap: "clamp(16px,2vw,26px)" }}
+              >
+                {g.showLabel && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "baseline",
+                      gap: 18,
+                      paddingBottom: 12,
+                      borderBottom: `1px solid ${mix(20)}`,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontWeight: 200,
+                        fontSize: "clamp(22px,2.6vw,34px)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      {g.label}
+                    </span>
+                    <span
+                      style={{
+                        fontWeight: 300,
+                        fontSize: 10,
+                        letterSpacing: "0.24em",
+                        textTransform: "uppercase",
+                        color: mix(48),
+                      }}
+                    >
+                      {g.count} obras
+                    </span>
+                  </div>
+                )}
+
+                {viewMode === "grid" ? (
+                  <div className="fdm-cat-grid">
+                    {g.items.map((art) => (
+                      <ArtCard
+                        key={String(art._id)}
+                        art={art}
+                        inCart={inCart(String(art._id))}
+                        onAdd={() => handleAdd(art)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ borderTop: `1px solid ${mix(22)}` }}>
+                    {g.items.map((art) => (
+                      <ArtRow
+                        key={String(art._id)}
+                        art={art}
+                        inCart={inCart(String(art._id))}
+                        onAdd={() => handleAdd(art)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <div ref={sentinel} style={{ display: "flex", justifyContent: "center", padding: "8px 0" }}>
+              {isFetching && (
+                <span style={{ ...LABEL, letterSpacing: "0.2em" }}>Cargando más obras…</span>
+              )}
+              {!hasNextPage && !isLoading && !isFetching && rows.length > 0 && (
+                <span style={{ ...LABEL, letterSpacing: "0.2em" }}>No hay más resultados</span>
+              )}
+            </div>
+
+            {/* CTA convocatoria */}
+            <div
+              style={{
+                background: "var(--panel)",
+                color: "#F5F4EF",
+                padding: "clamp(30px,3.6vw,52px) clamp(24px,3vw,44px)",
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 24,
+              }}
+            >
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: "46ch" }}>
+                <span
+                  style={{
+                    fontWeight: 300,
+                    fontSize: 9.5,
+                    letterSpacing: "0.28em",
+                    textTransform: "uppercase",
+                    color: "var(--acc)",
+                  }}
+                >
+                  Convocatoria
+                </span>
+                <span
+                  style={{
+                    fontWeight: 200,
+                    fontSize: "clamp(24px,2.6vw,38px)",
+                    lineHeight: 1.15,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.03em",
+                  }}
+                >
+                  ¿Eres artista?
+                </span>
+                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.75, color: "rgba(245,244,239,0.72)" }}>
+                  Postula tu obra al catálogo de la próxima edición.
+                </p>
+              </div>
+              <Link
+                href="/convocatoria"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  height: 54,
+                  padding: "0 34px",
+                  background: "var(--acc)",
+                  color: "#0B0B0A",
+                  borderRadius: 999,
+                  fontWeight: 300,
+                  fontSize: 11,
+                  letterSpacing: "0.2em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Postular →
+              </Link>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
+  );
+}
+
+/* ── Piezas ─────────────────────────────────────────────────── */
+
+function Tab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: "transparent",
+        border: 0,
+        padding: "4px 0",
+        cursor: "pointer",
+        fontWeight: 300,
+        fontSize: 11.5,
+        letterSpacing: "0.22em",
+        textTransform: "uppercase",
+        transition: "all .3s ease",
+        color: active ? "var(--acc)" : "inherit",
+        borderBottom: `1px solid ${active ? "var(--acc)" : "transparent"}`,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Pill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: "transparent",
+        border: 0,
+        padding: "4px 0",
+        cursor: "pointer",
+        fontWeight: 300,
+        fontSize: 10,
+        letterSpacing: "0.2em",
+        textTransform: "uppercase",
+        transition: "all .3s ease",
+        color: active ? "var(--acc)" : mix(50),
+        borderBottom: `1px solid ${active ? "var(--acc)" : "transparent"}`,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function FilterRow({
+  active,
+  label,
+  count,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  count?: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="fdm-cat-link"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        width: "100%",
+        padding: "8px 0",
+        background: "transparent",
+        border: 0,
+        cursor: "pointer",
+        color: "inherit",
+        textAlign: "left",
+      }}
+    >
+      <span
+        style={{
+          flex: "0 0 auto",
+          display: "block",
+          width: 11,
+          height: 11,
+          border: `1px solid ${active ? "var(--acc)" : mix(26)}`,
+          background: active ? "var(--acc)" : "transparent",
+          transition: "all .25s ease",
+        }}
+      />
+      <span style={{ flex: 1, fontSize: 14.5, letterSpacing: "0.01em" }}>{label}</span>
+      {count != null && (
+        <span style={{ fontSize: 11, letterSpacing: "0.12em", color: mix(45) }}>{count}</span>
+      )}
+    </button>
+  );
+}
+
+function artImg(art: any) {
+  return pickSrc(art.image) || pickSrc(art.images?.[0]) || "/placeholder.png";
+}
+
+function addBtnStyle(inCart: boolean): React.CSSProperties {
+  return {
+    flex: "0 0 auto",
+    display: "inline-flex",
+    alignItems: "center",
+    height: 36,
+    padding: "0 18px",
+    borderRadius: 999,
+    cursor: "pointer",
+    fontWeight: 300,
+    fontSize: 10,
+    letterSpacing: "0.18em",
+    textTransform: "uppercase",
+    transition: "all .3s ease",
+    background: inCart ? "var(--acc)" : "transparent",
+    color: inCart ? "#0B0B0A" : "inherit",
+    border: `1px solid ${inCart ? "var(--acc)" : mix(26)}`,
+  };
+}
+
+function ArtCard({
+  art,
+  inCart,
+  onAdd,
+}: {
+  art: ArtworkRow;
+  inCart: boolean;
+  onAdd: () => void;
+}) {
+  const href = `/obra/${encodeURIComponent(String(art._id ?? art.id))}`;
+  const dims = dimsOf(art);
+  return (
+    <article className="fdm-cat-art" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <Link href={href} style={{ display: "block" }}>
+        <div
+          className="fdm-cat-frame"
+          style={{
+            position: "relative",
+            aspectRatio: "4/5",
+            padding: "clamp(20px,2.6vw,34px)",
+            backgroundColor: mix(4),
+            border: `1px solid ${mix(10)}`,
+            transition: "border-color .4s ease, background-color .4s ease",
+          }}
+        >
+          <span
+            style={{
+              display: "block",
+              width: "100%",
+              height: "100%",
+              backgroundImage: `url('${artImg(art)}')`,
+              backgroundSize: "contain",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+              filter: `drop-shadow(0 10px 26px ${mix(16)})`,
+            }}
+          />
+        </div>
+      </Link>
+      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+        <span
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "baseline",
+            gap: "4px 12px",
+            fontWeight: 300,
+            fontSize: 9.5,
+            letterSpacing: "0.24em",
+            textTransform: "uppercase",
+            color: mix(45),
+          }}
+        >
+          <span style={{ whiteSpace: "nowrap", color: "var(--acc)" }}>
+            {(art as any)?.techniqueInfo?.name || "Técnica"}
+          </span>
+          <span style={{ whiteSpace: "nowrap" }}>{(art as any)?.pavilionInfo?.name || ""}</span>
+        </span>
+        <Link
+          href={href}
+          className="fdm-cat-link"
+          style={{ fontWeight: 300, fontSize: "clamp(19px,1.55vw,23px)", lineHeight: 1.2 }}
+        >
+          {art.title || "Sin título"}
+        </Link>
+        <span style={{ fontSize: 14, lineHeight: 1.5, color: mix(62) }}>{artistOf(art)}</span>
+        {dims && <span style={{ fontSize: 12.5, letterSpacing: "0.05em", color: mix(42) }}>{dims}</span>}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            marginTop: 8,
+            paddingTop: 14,
+            borderTop: `1px solid ${mix(14)}`,
+          }}
+        >
+          <span style={{ fontWeight: 300, fontSize: 18, letterSpacing: "0.02em" }}>
+            {formatCOP(art.price, { currency: art.currency })}
+          </span>
+          <button type="button" onClick={onAdd} style={addBtnStyle(inCart)}>
+            {inCart ? "En carrito" : "Agregar"}
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ArtRow({
+  art,
+  inCart,
+  onAdd,
+}: {
+  art: ArtworkRow;
+  inCart: boolean;
+  onAdd: () => void;
+}) {
+  const href = `/obra/${encodeURIComponent(String(art._id ?? art.id))}`;
+  const meta: React.CSSProperties = {
+    flex: "0 1 130px",
+    fontSize: 12.5,
+    letterSpacing: "0.04em",
+    color: mix(55),
+  };
+  return (
+    <article
+      className="fdm-cat-row"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "clamp(14px,2vw,28px)",
+        padding: "clamp(14px,1.5vw,20px) clamp(4px,0.8vw,12px)",
+        borderBottom: `1px solid ${mix(12)}`,
+        transition: "background-color .35s ease",
+      }}
+    >
+      <Link href={href} style={{ flex: "0 0 auto" }}>
+        <span
+          style={{
+            display: "block",
+            width: "clamp(60px,6vw,88px)",
+            aspectRatio: "1",
+            padding: 8,
+            backgroundColor: mix(4),
+            border: `1px solid ${mix(10)}`,
+            backgroundImage: `url('${artImg(art)}')`,
+            backgroundSize: "calc(100% - 16px)",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        />
+      </Link>
+      <span style={{ flex: "1 1 200px", display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+        <Link
+          href={href}
+          className="fdm-cat-link"
+          style={{ fontWeight: 300, fontSize: "clamp(16px,1.4vw,20px)", lineHeight: 1.25 }}
+        >
+          {art.title || "Sin título"}
+        </Link>
+        <span style={{ fontSize: 13.5, color: mix(62) }}>{artistOf(art)}</span>
+      </span>
+      <span className="fdm-cat-meta" style={meta}>
+        {(art as any)?.techniqueInfo?.name || ""}
+      </span>
+      <span className="fdm-cat-meta" style={meta}>
+        {dimsOf(art)}
+      </span>
+      <span
+        style={{
+          flex: "0 0 auto",
+          fontWeight: 300,
+          fontSize: 16,
+          letterSpacing: "0.01em",
+          textAlign: "right",
+          minWidth: 110,
+        }}
+      >
+        {formatCOP(art.price, { currency: art.currency })}
+      </span>
+      <button type="button" onClick={onAdd} style={addBtnStyle(inCart)}>
+        {inCart ? "En carrito" : "Agregar"}
+      </button>
+    </article>
   );
 }

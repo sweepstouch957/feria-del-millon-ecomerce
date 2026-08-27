@@ -3,10 +3,14 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+export type CatalogMode = "general" | "pabellon";
+
 type Opts = {
   initialQ?: string;
   initialPavilion?: string;
   initialArtistId?: string;
+  /** Agrupación del catálogo: "general" (plano) o "pabellon" (agrupado). */
+  initialMode?: CatalogMode;
   defaultMaxPrice?: number;
   /** Opcional: forzar un path base; si no se pasa, usa la ruta actual */
   basePath?: string;
@@ -23,6 +27,7 @@ export function useCatalogState(opts: Opts) {
   const [pavilion, setPavilion] = useState(opts.initialPavilion ?? "");
   const [artistId, setArtistId] = useState(opts.initialArtistId ?? "");
   const [techniqueIds, setTechniqueIds] = useState<string[]>([]);
+  const [mode, setMode] = useState<CatalogMode>(opts.initialMode ?? "general");
 
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(opts.defaultMaxPrice ?? 10_000_000);
@@ -41,6 +46,7 @@ export function useCatalogState(opts: Opts) {
     const currentQ = sp.get("q") ?? "";
     const currentPavilion = sp.get("pavilion") ?? "";
     const currentArtistId = sp.get("artistId") ?? "";
+    const currentMode = sp.get("modo") ?? "";
 
     if (q) sp.set("q", q);
     else sp.delete("q");
@@ -50,6 +56,9 @@ export function useCatalogState(opts: Opts) {
 
     if (artistId) sp.set("artistId", artistId);
     else sp.delete("artistId");
+
+    if (mode === "pabellon") sp.set("modo", "pabellon");
+    else sp.delete("modo");
 
     const nextQuery = sp.toString();
     const nextUrl = `${basePath}${nextQuery ? `?${nextQuery}` : ""}`;
@@ -61,12 +70,13 @@ export function useCatalogState(opts: Opts) {
       nextUrl !== currentUrl ||
       q !== currentQ ||
       pavilion !== currentPavilion ||
-      artistId !== currentArtistId
+      artistId !== currentArtistId ||
+      (mode === "pabellon" ? "pabellon" : "") !== currentMode
     ) {
       router.replace(nextUrl, { scroll: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, pavilion, artistId, basePath]);
+  }, [q, pavilion, artistId, mode, basePath]);
 
   const toggleTechnique = (id: string) =>
     setTechniqueIds((prev) =>
@@ -81,7 +91,7 @@ export function useCatalogState(opts: Opts) {
     /* noop por ahora */
   };
 
-  const clearAllAndRefetch = (refetch: () => void) => {
+  const clearAll = () => {
     setQ("");
     setPavilion("");
     setArtistId("");
@@ -98,8 +108,12 @@ export function useCatalogState(opts: Opts) {
     sp.delete("q");
     sp.delete("pavilion");
     sp.delete("artistId");
+    sp.delete("modo");
     router.replace(`${basePath}?${sp.toString()}`, { scroll: false });
+  };
 
+  const clearAllAndRefetch = (refetch: () => void) => {
+    clearAll();
     refetch();
   };
 
@@ -127,7 +141,10 @@ export function useCatalogState(opts: Opts) {
     toggleSortDir,
     viewMode,
     setViewMode,
+    mode,
+    setMode,
     applyFilters,
+    clearAll,
     clearAllAndRefetch,
   };
 }

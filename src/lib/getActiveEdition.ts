@@ -49,17 +49,22 @@ export const FALLBACK_EDITION: Edition = {
   convocatoria: null,
 };
 
+// Circuit breaker de proceso — ver la nota en getSiteConfig.
+let downUntil = 0;
+
 export async function getActiveEdition(): Promise<Edition> {
+  const base = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/+$/, "");
+  if (!base || Date.now() < downUntil) return FALLBACK_EDITION;
+
   try {
-    const base = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/+$/, "");
-    if (!base) return FALLBACK_EDITION;
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 3000);
     const res = await fetch(`${base}/event/events/current`, {
       next: { revalidate: 60 }, // ISR: cambios de edición salen solos en ~1 min
-      signal: ac.signal,
-    }).finally(() => clearTimeout(t));
-    if (!res.ok) return FALLBACK_EDITION;
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) {
+      downUntil = Date.now() + 30_000;
+      return FALLBACK_EDITION;
+    }
 
     const raw = await res.json();
     const ev = raw?.event;
@@ -96,6 +101,7 @@ export async function getActiveEdition(): Promise<Edition> {
         : null,
     };
   } catch {
+    downUntil = Date.now() + 30_000;
     return FALLBACK_EDITION;
   }
 }

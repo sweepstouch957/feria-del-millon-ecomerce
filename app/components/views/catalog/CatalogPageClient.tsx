@@ -32,9 +32,9 @@ const mix = (pct: number) =>
   `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
 
 const LABEL: React.CSSProperties = {
-  fontWeight: 300,
-  fontSize: 9.5,
-  letterSpacing: "0.26em",
+  fontWeight: 500,
+  fontSize: 10.5,
+  letterSpacing: "0.18em",
   textTransform: "uppercase",
   color: mix(50),
 };
@@ -47,16 +47,17 @@ const FIELD: React.CSSProperties = {
   border: 0,
   borderBottom: `1px solid ${mix(26)}`,
   fontSize: 15,
+  fontWeight: 400,
   outline: "none",
   cursor: "pointer",
 };
 
 const SECTION: React.CSSProperties = {
-  padding: "clamp(22px,2.4vw,30px) 0",
+  padding: "clamp(14px,1.4vw,18px) 0",
   borderBottom: `1px solid ${mix(12)}`,
   display: "flex",
   flexDirection: "column",
-  gap: 12,
+  gap: 10,
 };
 
 function artistOf(a: any) {
@@ -95,6 +96,7 @@ export default function CatalogPageClient() {
     initialPavilion: sp.get("pavilion") ?? "",
     initialArtistId: sp.get("artistId") ?? "",
     initialMode: sp.get("modo") === "pabellon" ? "pabellon" : "general",
+    initialTechniqueIds: (sp.get("tecnica") ?? "").split(",").filter(Boolean),
     defaultMaxPrice: MAX_PRICE,
   });
 
@@ -259,7 +261,7 @@ export default function CatalogPageClient() {
           background: "var(--bg)",
           color: "var(--fg)",
           fontFamily: "Jost, system-ui, sans-serif",
-          fontWeight: 300,
+          fontWeight: 400,
           letterSpacing: "0.005em",
           minHeight: "100vh",
           width: "100%",
@@ -271,10 +273,11 @@ export default function CatalogPageClient() {
         .fdm-cat select { appearance: none; }
         .fdm-cat input[type="range"] { accent-color: var(--acc); }
         .fdm-cat input::placeholder { color: color-mix(in srgb, var(--fg) 34%, transparent); }
-        .fdm-cat-shell { display:flex; flex-wrap:wrap; align-items:flex-start; gap:clamp(28px,3.4vw,58px); }
-        .fdm-cat-aside { flex:1 1 230px; max-width:290px; min-width:min(100%,230px); position:sticky; top:104px; display:flex; flex-direction:column; }
-        .fdm-cat-main { flex:999 1 62%; min-width:min(100%,280px); display:flex; flex-direction:column; gap:clamp(30px,3.4vw,54px); }
-        .fdm-cat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%,262px), 1fr)); gap:clamp(30px,3.2vw,52px) clamp(24px,2.6vw,44px); }
+        .fdm-cat-shell { display:flex; flex-wrap:wrap; align-items:flex-start; gap:clamp(22px,2.4vw,38px); }
+        .fdm-cat-aside { flex:1 1 220px; max-width:268px; min-width:min(100%,220px); position:sticky; top:88px; max-height:calc(100vh - 104px); overflow-y:auto; display:flex; flex-direction:column; scrollbar-width:thin; }
+        .fdm-cat-scroll { max-height:236px; overflow-y:auto; scrollbar-width:thin; }
+        .fdm-cat-main { flex:999 1 62%; min-width:min(100%,280px); display:flex; flex-direction:column; gap:clamp(22px,2.2vw,32px); }
+        .fdm-cat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%,240px), 1fr)); gap:clamp(20px,2vw,30px) clamp(16px,1.6vw,24px); }
         .fdm-cat-art:hover .fdm-cat-frame { border-color: var(--acc); }
         .fdm-cat-row:hover { background: color-mix(in srgb, var(--acc) 6%, transparent); }
         .fdm-cat-link:hover { color: var(--acc); }
@@ -286,17 +289,17 @@ export default function CatalogPageClient() {
 
       <div className="fdm-cat">
         {/* ── Encabezado editorial ─────────────────────────────── */}
-        <section id="top" style={{ padding: "clamp(30px,4.4vw,62px) clamp(20px,4vw,56px) 0" }}>
+        <section id="top" style={{ padding: "clamp(18px,2.2vw,28px) clamp(20px,4vw,56px) 0" }}>
           <div style={{ maxWidth: 1600, margin: "0 auto" }}>
             <div
               style={{
                 display: "flex",
                 flexWrap: "wrap",
-                gap: "12px clamp(24px,3vw,48px)",
-                paddingBottom: "clamp(18px,2.2vw,26px)",
-                fontWeight: 300,
+                gap: "10px clamp(20px,2.4vw,34px)",
+                paddingBottom: "clamp(12px,1.4vw,16px)",
+                fontWeight: 500,
                 fontSize: 10.5,
-                letterSpacing: "0.28em",
+                letterSpacing: "0.16em",
                 textTransform: "uppercase",
                 color: mix(52),
               }}
@@ -316,15 +319,15 @@ export default function CatalogPageClient() {
                 flexWrap: "wrap",
                 alignItems: "flex-end",
                 justifyContent: "space-between",
-                gap: "clamp(24px,3.4vw,64px)",
-                padding: "clamp(34px,4.6vw,70px) 0 clamp(28px,3.2vw,44px)",
+                gap: "clamp(20px,2.6vw,40px)",
+                padding: "clamp(20px,2.4vw,32px) 0 clamp(16px,1.8vw,24px)",
               }}
             >
               <div
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: "clamp(18px,2vw,28px)",
+                  gap: "clamp(12px,1.2vw,18px)",
                   minWidth: "min(100%,300px)",
                   maxWidth: "56ch",
                 }}
@@ -332,10 +335,10 @@ export default function CatalogPageClient() {
                 <h1
                   style={{
                     margin: 0,
-                    fontWeight: 200,
-                    fontSize: "clamp(50px,9vw,138px)",
-                    lineHeight: 0.92,
-                    letterSpacing: "0.045em",
+                    fontWeight: 300,
+                    fontSize: "clamp(38px,5.2vw,78px)",
+                    lineHeight: 0.95,
+                    letterSpacing: "0.03em",
                     textTransform: "uppercase",
                   }}
                 >
@@ -345,8 +348,8 @@ export default function CatalogPageClient() {
                   style={{
                     margin: 0,
                     maxWidth: "48ch",
-                    fontSize: "clamp(15.5px,1.25vw,19px)",
-                    lineHeight: 1.75,
+                    fontSize: "clamp(15px,1.1vw,17px)",
+                    lineHeight: 1.6,
                     color: mix(68),
                     textWrap: "pretty",
                   }}
@@ -367,13 +370,13 @@ export default function CatalogPageClient() {
                   borderLeft: "1px solid var(--acc)",
                 }}
               >
-                <div style={{ fontWeight: 200, fontSize: "clamp(38px,4.2vw,66px)", lineHeight: 1 }}>
+                <div style={{ fontWeight: 300, fontSize: "clamp(30px,3vw,46px)", lineHeight: 1 }}>
                   {rows.length}
                   <span style={{ fontSize: "0.3em", letterSpacing: "0.2em", color: mix(42), marginLeft: 12 }}>
                     de {totalLabel}
                   </span>
                 </div>
-                <div style={{ ...LABEL, fontSize: 10, letterSpacing: "0.26em" }}>Obras visibles</div>
+                <div style={{ ...LABEL, fontSize: 10 }}>Obras visibles</div>
               </div>
             </div>
 
@@ -384,8 +387,8 @@ export default function CatalogPageClient() {
                 flexWrap: "wrap",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: 16,
-                padding: "clamp(14px,1.6vw,20px) 0",
+                gap: 14,
+                padding: "clamp(10px,1vw,14px) 0",
                 borderTop: `1px solid ${mix(14)}`,
               }}
             >
@@ -405,15 +408,15 @@ export default function CatalogPageClient() {
                     display: "inline-flex",
                     alignItems: "baseline",
                     gap: 10,
-                    fontWeight: 300,
-                    fontSize: 10,
-                    letterSpacing: "0.2em",
+                    fontWeight: 500,
+                    fontSize: 10.5,
+                    letterSpacing: "0.14em",
                     textTransform: "uppercase",
-                    color: mix(58),
+                    color: mix(65),
                   }}
                 >
                   Carrito
-                  <span style={{ fontSize: 15, letterSpacing: 0, color: "var(--acc)" }}>{totalItems}</span>
+                  <span style={{ fontSize: 15, fontWeight: 500, letterSpacing: 0, color: "var(--acc)" }}>{totalItems}</span>
                 </Link>
                 <span style={{ display: "block", width: 1, height: 20, background: mix(20) }} />
                 <Pill active={viewMode === "grid"} onClick={() => setViewMode("grid")}>
@@ -433,7 +436,7 @@ export default function CatalogPageClient() {
           style={{
             maxWidth: 1600,
             margin: "0 auto",
-            padding: "clamp(26px,3vw,44px) clamp(20px,4vw,56px) clamp(60px,7vw,120px)",
+            padding: "clamp(18px,1.8vw,26px) clamp(20px,4vw,56px) clamp(40px,4vw,64px)",
           }}
         >
           <aside className="fdm-cat-aside">
@@ -443,11 +446,11 @@ export default function CatalogPageClient() {
                 alignItems: "baseline",
                 justifyContent: "space-between",
                 gap: 12,
-                paddingBottom: 16,
+                paddingBottom: 12,
                 borderBottom: `1px solid ${mix(22)}`,
               }}
             >
-              <span style={{ fontWeight: 300, fontSize: 10.5, letterSpacing: "0.26em", textTransform: "uppercase" }}>
+              <span style={{ fontWeight: 500, fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase" }}>
                 Filtros
               </span>
               {activeFilters && (
@@ -461,9 +464,9 @@ export default function CatalogPageClient() {
                     padding: 0,
                     cursor: "pointer",
                     color: "var(--acc)",
-                    fontWeight: 300,
-                    fontSize: 10,
-                    letterSpacing: "0.18em",
+                    fontWeight: 500,
+                    fontSize: 10.5,
+                    letterSpacing: "0.12em",
                     textTransform: "uppercase",
                   }}
                 >
@@ -489,21 +492,23 @@ export default function CatalogPageClient() {
 
             {/* Pabellón — filtrable y compartible por URL (?pavilion=<id>) */}
             <div style={{ ...SECTION, gap: 2 }}>
-              <span style={{ ...LABEL, marginBottom: 10 }}>Pabellón</span>
-              <FilterRow
-                active={!pavilion}
-                label="Todos los pabellones"
-                onClick={() => setPavilion("")}
-              />
-              {pavilionOptions.map((p) => (
+              <span style={{ ...LABEL, marginBottom: 8 }}>Pabellón</span>
+              <div className="fdm-cat-scroll">
                 <FilterRow
-                  key={p.id}
-                  active={pavilion === p.id}
-                  label={p.name}
-                  count={p.count || undefined}
-                  onClick={() => setPavilion(pavilion === p.id ? "" : p.id)}
+                  active={!pavilion}
+                  label="Todos los pabellones"
+                  onClick={() => setPavilion("")}
                 />
-              ))}
+                {pavilionOptions.map((p) => (
+                  <FilterRow
+                    key={p.id}
+                    active={pavilion === p.id}
+                    label={p.name}
+                    count={p.count || undefined}
+                    onClick={() => setPavilion(pavilion === p.id ? "" : p.id)}
+                  />
+                ))}
+              </div>
             </div>
 
             {/* Artista */}
@@ -528,26 +533,28 @@ export default function CatalogPageClient() {
 
             {/* Técnica */}
             <div style={{ ...SECTION, gap: 2 }}>
-              <span style={{ ...LABEL, marginBottom: 10 }}>Técnica</span>
-              {techniquesData.map((t: any) => {
-                const id = String(t.id ?? t._id);
-                const facet = techFacets.find((f) => f.name === t.name);
-                return (
-                  <FilterRow
-                    key={id}
-                    active={techniqueIds.includes(id)}
-                    label={t.name}
-                    count={facet?.count}
-                    onClick={() => toggleTechnique(id)}
-                  />
-                );
-              })}
+              <span style={{ ...LABEL, marginBottom: 8 }}>Técnica</span>
+              <div className="fdm-cat-scroll">
+                {techniquesData.map((t: any) => {
+                  const id = String(t.id ?? t._id);
+                  const facet = techFacets.find((f) => f.name === t.name);
+                  return (
+                    <FilterRow
+                      key={id}
+                      active={techniqueIds.includes(id)}
+                      label={t.name}
+                      count={facet?.count}
+                      onClick={() => toggleTechnique(id)}
+                    />
+                  );
+                })}
+              </div>
             </div>
 
             {/* Precio máximo */}
             <div style={{ ...SECTION, gap: 14 }}>
               <span style={LABEL}>Precio máximo</span>
-              <span style={{ fontWeight: 300, fontSize: 19 }}>Hasta {formatCOP(effectiveMax)}</span>
+              <span style={{ fontWeight: 500, fontSize: 17 }}>Hasta {formatCOP(effectiveMax)}</span>
               <input
                 type="range"
                 min={MIN_PRICE}
@@ -610,15 +617,15 @@ export default function CatalogPageClient() {
               >
                 <span
                   style={{
-                    fontWeight: 200,
-                    fontSize: "clamp(24px,3vw,38px)",
+                    fontWeight: 400,
+                    fontSize: "clamp(21px,2.4vw,30px)",
                     textTransform: "uppercase",
                     letterSpacing: "0.02em",
                   }}
                 >
                   Sin resultados
                 </span>
-                <p style={{ margin: 0, maxWidth: "40ch", fontSize: 15, lineHeight: 1.7, color: mix(62) }}>
+                <p style={{ margin: 0, maxWidth: "40ch", fontSize: 15, lineHeight: 1.6, color: mix(70) }}>
                   Ninguna obra coincide con estos filtros. Amplía el rango de precio o quita una técnica.
                 </p>
                 <button
@@ -633,7 +640,8 @@ export default function CatalogPageClient() {
                     borderRadius: 999,
                     cursor: "pointer",
                     fontSize: 11,
-                    letterSpacing: "0.2em",
+                    fontWeight: 500,
+                    letterSpacing: "0.12em",
                     textTransform: "uppercase",
                   }}
                 >
@@ -659,8 +667,8 @@ export default function CatalogPageClient() {
                   >
                     <span
                       style={{
-                        fontWeight: 200,
-                        fontSize: "clamp(22px,2.6vw,34px)",
+                        fontWeight: 400,
+                        fontSize: "clamp(19px,2vw,26px)",
                         textTransform: "uppercase",
                         letterSpacing: "0.02em",
                       }}
@@ -669,9 +677,9 @@ export default function CatalogPageClient() {
                     </span>
                     <span
                       style={{
-                        fontWeight: 300,
+                        fontWeight: 500,
                         fontSize: 10,
-                        letterSpacing: "0.24em",
+                        letterSpacing: "0.16em",
                         textTransform: "uppercase",
                         color: mix(48),
                       }}
@@ -721,7 +729,7 @@ export default function CatalogPageClient() {
               style={{
                 background: "var(--panel)",
                 color: "#F5F4EF",
-                padding: "clamp(30px,3.6vw,52px) clamp(24px,3vw,44px)",
+                padding: "clamp(22px,2.4vw,34px) clamp(20px,2.4vw,32px)",
                 display: "flex",
                 flexWrap: "wrap",
                 alignItems: "center",
@@ -732,9 +740,9 @@ export default function CatalogPageClient() {
               <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: "46ch" }}>
                 <span
                   style={{
-                    fontWeight: 300,
-                    fontSize: 9.5,
-                    letterSpacing: "0.28em",
+                    fontWeight: 500,
+                    fontSize: 10,
+                    letterSpacing: "0.18em",
                     textTransform: "uppercase",
                     color: "var(--acc)",
                   }}
@@ -743,8 +751,8 @@ export default function CatalogPageClient() {
                 </span>
                 <span
                   style={{
-                    fontWeight: 200,
-                    fontSize: "clamp(24px,2.6vw,38px)",
+                    fontWeight: 400,
+                    fontSize: "clamp(21px,2.2vw,30px)",
                     lineHeight: 1.15,
                     textTransform: "uppercase",
                     letterSpacing: "0.03em",
@@ -752,7 +760,7 @@ export default function CatalogPageClient() {
                 >
                   ¿Eres artista?
                 </span>
-                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.75, color: "rgba(245,244,239,0.72)" }}>
+                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: "rgba(245,244,239,0.8)" }}>
                   Postula tu obra al catálogo de la próxima edición.
                 </p>
               </div>
@@ -766,9 +774,9 @@ export default function CatalogPageClient() {
                   background: "var(--acc)",
                   color: "#0B0B0A",
                   borderRadius: 999,
-                  fontWeight: 300,
+                  fontWeight: 500,
                   fontSize: 11,
-                  letterSpacing: "0.2em",
+                  letterSpacing: "0.12em",
                   textTransform: "uppercase",
                 }}
               >
@@ -802,9 +810,9 @@ function Tab({
         border: 0,
         padding: "4px 0",
         cursor: "pointer",
-        fontWeight: 300,
-        fontSize: 11.5,
-        letterSpacing: "0.22em",
+        fontWeight: 500,
+        fontSize: 12,
+        letterSpacing: "0.14em",
         textTransform: "uppercase",
         transition: "all .3s ease",
         color: active ? "var(--acc)" : "inherit",
@@ -834,12 +842,12 @@ function Pill({
         border: 0,
         padding: "4px 0",
         cursor: "pointer",
-        fontWeight: 300,
-        fontSize: 10,
-        letterSpacing: "0.2em",
+        fontWeight: 500,
+        fontSize: 10.5,
+        letterSpacing: "0.14em",
         textTransform: "uppercase",
         transition: "all .3s ease",
-        color: active ? "var(--acc)" : mix(50),
+        color: active ? "var(--acc)" : mix(60),
         borderBottom: `1px solid ${active ? "var(--acc)" : "transparent"}`,
       }}
     >
@@ -867,9 +875,9 @@ function FilterRow({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 14,
+        gap: 12,
         width: "100%",
-        padding: "8px 0",
+        padding: "6px 0",
         background: "transparent",
         border: 0,
         cursor: "pointer",
@@ -888,9 +896,9 @@ function FilterRow({
           transition: "all .25s ease",
         }}
       />
-      <span style={{ flex: 1, fontSize: 14.5, letterSpacing: "0.01em" }}>{label}</span>
+      <span style={{ flex: 1, fontSize: 14.5, fontWeight: 400, letterSpacing: "0.01em" }}>{label}</span>
       {count != null && (
-        <span style={{ fontSize: 11, letterSpacing: "0.12em", color: mix(45) }}>{count}</span>
+        <span style={{ fontSize: 11.5, fontWeight: 500, color: mix(55) }}>{count}</span>
       )}
     </button>
   );
@@ -909,10 +917,11 @@ function addBtnStyle(inCart: boolean): React.CSSProperties {
     padding: "0 18px",
     borderRadius: 999,
     cursor: "pointer",
-    fontWeight: 300,
-    fontSize: 10,
-    letterSpacing: "0.18em",
+    fontWeight: 500,
+    fontSize: 10.5,
+    letterSpacing: "0.12em",
     textTransform: "uppercase",
+    whiteSpace: "nowrap",
     transition: "all .3s ease",
     background: inCart ? "var(--acc)" : "transparent",
     color: inCart ? "#0B0B0A" : "inherit",
@@ -932,14 +941,14 @@ function ArtCard({
   const href = `/obra/${encodeURIComponent(String(art._id ?? art.id))}`;
   const dims = dimsOf(art);
   return (
-    <article className="fdm-cat-art" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+    <article className="fdm-cat-art" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <Link href={href} style={{ display: "block" }}>
         <div
           className="fdm-cat-frame"
           style={{
             position: "relative",
             aspectRatio: "4/5",
-            padding: "clamp(20px,2.6vw,34px)",
+            padding: "clamp(12px,1.4vw,18px)",
             backgroundColor: mix(4),
             border: `1px solid ${mix(10)}`,
             transition: "border-color .4s ease, background-color .4s ease",
@@ -959,16 +968,16 @@ function ArtCard({
           />
         </div>
       </Link>
-      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <span
           style={{
             display: "flex",
             flexWrap: "wrap",
             alignItems: "baseline",
-            gap: "4px 12px",
-            fontWeight: 300,
-            fontSize: 9.5,
-            letterSpacing: "0.24em",
+            gap: "4px 10px",
+            fontWeight: 500,
+            fontSize: 10,
+            letterSpacing: "0.14em",
             textTransform: "uppercase",
             color: mix(45),
           }}
@@ -981,24 +990,24 @@ function ArtCard({
         <Link
           href={href}
           className="fdm-cat-link"
-          style={{ fontWeight: 300, fontSize: "clamp(19px,1.55vw,23px)", lineHeight: 1.2 }}
+          style={{ fontWeight: 500, fontSize: "clamp(17px,1.3vw,20px)", lineHeight: 1.25 }}
         >
           {art.title || "Sin título"}
         </Link>
-        <span style={{ fontSize: 14, lineHeight: 1.5, color: mix(62) }}>{artistOf(art)}</span>
-        {dims && <span style={{ fontSize: 12.5, letterSpacing: "0.05em", color: mix(42) }}>{dims}</span>}
+        <span style={{ fontSize: 14, fontWeight: 400, lineHeight: 1.45, color: mix(72) }}>{artistOf(art)}</span>
+        {dims && <span style={{ fontSize: 12.5, letterSpacing: "0.03em", color: mix(55) }}>{dims}</span>}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: 12,
-            marginTop: 8,
-            paddingTop: 14,
+            marginTop: 4,
+            paddingTop: 10,
             borderTop: `1px solid ${mix(14)}`,
           }}
         >
-          <span style={{ fontWeight: 300, fontSize: 18, letterSpacing: "0.02em" }}>
+          <span style={{ fontWeight: 500, fontSize: 17, letterSpacing: "0.01em" }}>
             {formatCOP(art.price, { currency: art.currency })}
           </span>
           <button type="button" onClick={onAdd} style={addBtnStyle(inCart)}>
@@ -1023,8 +1032,9 @@ function ArtRow({
   const meta: React.CSSProperties = {
     flex: "0 1 130px",
     fontSize: 12.5,
-    letterSpacing: "0.04em",
-    color: mix(55),
+    fontWeight: 400,
+    letterSpacing: "0.02em",
+    color: mix(62),
   };
   return (
     <article
@@ -1033,7 +1043,7 @@ function ArtRow({
         display: "flex",
         alignItems: "center",
         gap: "clamp(14px,2vw,28px)",
-        padding: "clamp(14px,1.5vw,20px) clamp(4px,0.8vw,12px)",
+        padding: "clamp(10px,1vw,14px) clamp(4px,0.8vw,10px)",
         borderBottom: `1px solid ${mix(12)}`,
         transition: "background-color .35s ease",
       }}
@@ -1058,11 +1068,11 @@ function ArtRow({
         <Link
           href={href}
           className="fdm-cat-link"
-          style={{ fontWeight: 300, fontSize: "clamp(16px,1.4vw,20px)", lineHeight: 1.25 }}
+          style={{ fontWeight: 500, fontSize: "clamp(15px,1.2vw,18px)", lineHeight: 1.3 }}
         >
           {art.title || "Sin título"}
         </Link>
-        <span style={{ fontSize: 13.5, color: mix(62) }}>{artistOf(art)}</span>
+        <span style={{ fontSize: 13.5, fontWeight: 400, color: mix(72) }}>{artistOf(art)}</span>
       </span>
       <span className="fdm-cat-meta" style={meta}>
         {(art as any)?.techniqueInfo?.name || ""}
@@ -1073,7 +1083,7 @@ function ArtRow({
       <span
         style={{
           flex: "0 0 auto",
-          fontWeight: 300,
+          fontWeight: 500,
           fontSize: 16,
           letterSpacing: "0.01em",
           textAlign: "right",

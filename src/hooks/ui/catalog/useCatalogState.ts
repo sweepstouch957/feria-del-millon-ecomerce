@@ -9,6 +9,8 @@ type Opts = {
   initialQ?: string;
   initialPavilion?: string;
   initialArtistId?: string;
+  /** Ids de tecnica preseleccionados (llegan como csv en ?tecnica=). */
+  initialTechniqueIds?: string[];
   /** Agrupación del catálogo: "general" (plano) o "pabellon" (agrupado). */
   initialMode?: CatalogMode;
   defaultMaxPrice?: number;
@@ -26,7 +28,9 @@ export function useCatalogState(opts: Opts) {
   const [q, setQ] = useState(opts.initialQ ?? "");
   const [pavilion, setPavilion] = useState(opts.initialPavilion ?? "");
   const [artistId, setArtistId] = useState(opts.initialArtistId ?? "");
-  const [techniqueIds, setTechniqueIds] = useState<string[]>([]);
+  const [techniqueIds, setTechniqueIds] = useState<string[]>(
+    opts.initialTechniqueIds ?? []
+  );
   const [mode, setMode] = useState<CatalogMode>(opts.initialMode ?? "general");
 
   const [minPrice, setMinPrice] = useState(0);
@@ -47,6 +51,7 @@ export function useCatalogState(opts: Opts) {
     const currentPavilion = sp.get("pavilion") ?? "";
     const currentArtistId = sp.get("artistId") ?? "";
     const currentMode = sp.get("modo") ?? "";
+    const currentTech = sp.get("tecnica") ?? "";
 
     if (q) sp.set("q", q);
     else sp.delete("q");
@@ -60,6 +65,10 @@ export function useCatalogState(opts: Opts) {
     if (mode === "pabellon") sp.set("modo", "pabellon");
     else sp.delete("modo");
 
+    const techCsv = techniqueIds.join(",");
+    if (techCsv) sp.set("tecnica", techCsv);
+    else sp.delete("tecnica");
+
     const nextQuery = sp.toString();
     const nextUrl = `${basePath}${nextQuery ? `?${nextQuery}` : ""}`;
     const currentQuery = searchParams.toString();
@@ -71,12 +80,13 @@ export function useCatalogState(opts: Opts) {
       q !== currentQ ||
       pavilion !== currentPavilion ||
       artistId !== currentArtistId ||
-      (mode === "pabellon" ? "pabellon" : "") !== currentMode
+      (mode === "pabellon" ? "pabellon" : "") !== currentMode ||
+      techniqueIds.join(",") !== currentTech
     ) {
       router.replace(nextUrl, { scroll: false });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, pavilion, artistId, mode, basePath]);
+  }, [q, pavilion, artistId, mode, techniqueIds, basePath]);
 
   const toggleTechnique = (id: string) =>
     setTechniqueIds((prev) =>
@@ -109,6 +119,7 @@ export function useCatalogState(opts: Opts) {
     sp.delete("pavilion");
     sp.delete("artistId");
     sp.delete("modo");
+    sp.delete("tecnica");
     router.replace(`${basePath}?${sp.toString()}`, { scroll: false });
   };
 

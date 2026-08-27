@@ -20,7 +20,8 @@ export interface ArtworkDoc {
   currency?: string; // "COP" por defecto si lo define backend
   stock?: number; // si viene, backend siembra copias
   image?: string;
-  images?: string[];
+  /** Backend devuelve objetos ImageSchema; strings solo por compat. Usar pickSrc(). */
+  images?: Array<string | { src: string; alt?: string; role?: string; order?: number; meta?: Record<string, any> }>;
   imageMeta?: Record<string, any>;
   tags?: string[];
   channel?: "event" | "online";

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useArtworksCursor } from "@hooks/queries/useArtworksCursor";
 import { formatCOP } from "@lib/money";
+import { pickSrc } from "@lib/utils";
 
 const ON_DARK = "var(--fdm-on-dark,#F5F4EF)";
 const GREEN = "var(--fdm-green,#3FA46E)";
@@ -18,9 +19,8 @@ function artistOf(a: any) {
 }
 
 function imageOf(a: any): string {
-  if (Array.isArray(a?.images) && a.images[0]) return a.images[0];
-  if (typeof a?.image === "string" && a.image) return a.image;
-  return "";
+  if (Array.isArray(a?.images) && a.images[0]) return pickSrc(a.images[0]);
+  return pickSrc(a?.image);
 }
 
 // Rejilla de obras destacadas del diseño v2. Trae obras reales del catálogo;

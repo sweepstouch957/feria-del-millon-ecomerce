@@ -31,6 +31,7 @@ import {
 import { useEventArtists } from "@hooks/queries/useEventArtists";
 import type { AutocompleteOption } from "@components/ui/autocomplete";
 import { formatCOP } from "@lib/money";
+import { pickSrc } from "@lib/utils";
 
 type Props = { eventId: string; slug: string };
 
@@ -176,7 +177,7 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
         id: String(art._id),
         title: art.title,
         price: Number(art.price ?? 0),
-        image: art.image ?? art.images?.[0] ?? "/placeholder.png",
+        image: pickSrc(art.image) || pickSrc(art.images?.[0]) || "/placeholder.png",
         artist: art?.artist ?? "Desconocido",
       },
       qty

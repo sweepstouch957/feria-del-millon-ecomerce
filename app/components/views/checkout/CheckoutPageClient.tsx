@@ -35,6 +35,7 @@ import { useEdition } from "@provider/editionProvider";
 import PaymentForm, { PaymentFormPayload } from "../payment/PaymentForm";
 import { useAuth } from "@provider/authProvider";
 import { getArtworkByIdOrSlug } from "@services/artworks.service";
+import { pickSrc } from "@lib/utils";
 
 // Validación simple para documento colombiano
 const isValidColDocument = (doc: string) => {
@@ -141,7 +142,7 @@ export default function CheckoutPageClient() {
                         title: artwork.title,
                         artist: artwork.artist,
                         price: artwork.price ?? 0,
-                        image: artwork.image ?? artwork.images?.[0],
+                        image: pickSrc(artwork.image) || pickSrc(artwork.images?.[0]),
                     },
                     1
                 );

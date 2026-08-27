@@ -20,6 +20,7 @@ import { useFacetCounts } from "@hooks/ui/catalog/useFacetCounts";
 import { useEventArtists } from "@hooks/queries/useEventArtists";
 import { useEdition } from "@provider/editionProvider";
 import { AutocompleteOption } from "@components/ui/autocomplete";
+import { pickSrc } from "@lib/utils";
 
 export default function CatalogPageClient() {
   const sp = useSearchParams();
@@ -175,7 +176,7 @@ export default function CatalogPageClient() {
         title: art.title,
         artist: art?.artist ?? "Desconocido",
         price: Number(art.price ?? 0),
-        image: art.image ?? art.images?.[0] ?? "/placeholder.png",
+        image: pickSrc(art.image) || pickSrc(art.images?.[0]) || "/placeholder.png",
       },
       qty
     );

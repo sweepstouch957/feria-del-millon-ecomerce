@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import useCart from "@store/useCart";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
-import { formatMoney, mergeImages } from "@lib/utils";
+import { formatMoney, mergeImages, pickSrc } from "@lib/utils";
 
 type ArtworkDoc = {
   _id: string;
@@ -56,7 +56,7 @@ const toCartPayload = (doc: any, artistName?: string) => ({
   id: String(doc._id),
   title: doc.title,
   price: Number(doc.price ?? 0),
-  image: doc.image ?? doc.images?.[0] ?? "/placeholder.png",
+  image: pickSrc(doc.image) || pickSrc(doc.images?.[0]) || "/placeholder.png",
   artist: artistName || "Desconocido",
 });
 
@@ -499,7 +499,7 @@ export default function Page() {
                   className="bg-white rounded-xl border shadow-sm overflow-hidden"
                 >
                   <img
-                    src={ra.image ?? ra.images?.[0] ?? "/placeholder.png"}
+                    src={pickSrc(ra.image) || pickSrc(ra.images?.[0]) || "/placeholder.png"}
                     alt={ra.title}
                     className="w-full h-56 object-cover"
                   />

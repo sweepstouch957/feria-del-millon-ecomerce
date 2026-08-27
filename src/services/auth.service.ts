@@ -69,8 +69,11 @@ export interface ResetPasswordResponse {
 
 // ------- Helpers -------
 
-/** Días que dura la sesión cuando el usuario marca "Recordarme". */
-export const REMEMBER_DAYS = 30;
+/** Días que dura la sesión cuando el usuario marca "Recordarme".
+ *  Alineado al `jwtExpire` de auth-svc (7d): si la cookie durase más que el
+ *  token, el usuario volvería "logueado" a una sesión que el backend ya
+ *  rechaza — y vería errores en vez de la pantalla de acceso. */
+export const REMEMBER_DAYS = 7;
 
 const setAuthToken = (token: string | null, remember = false) => {
   if (token) {

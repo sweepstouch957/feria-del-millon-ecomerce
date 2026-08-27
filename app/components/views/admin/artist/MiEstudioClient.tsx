@@ -27,6 +27,7 @@ import { useEventId } from "@provider/editionProvider";
 // Modales extra
 import CreateEditArtworkModal from "./CreateEditArtworkModal";
 import QRModal from "./QrModal";
+import ApplicationStatusCard from "@components/views/admin/artist/ApplicationStatusCard";
 
 export default function MiEstudioClient() {
   const router = useRouter();
@@ -130,13 +131,63 @@ export default function MiEstudioClient() {
     );
   }
 
-  // Prevent flashing content if we are about to redirect because user is not approved
+  // Sin resolución aceptada no hay catálogo que cargar. En vez de un
+  // "redirigiendo" que no explica nada, se muestra en qué punto va y qué le
+  // toca hacer — el mismo panel que usa /admin/account.
   const isApproved = apps.some((app) => app.status === "accepted");
   if (!isApproved && !appsLoading) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-gray-600">
-        <Loader2 className="w-6 h-6 mb-2 animate-spin" />
-        <p>Redirigiendo a tu solicitud…</p>
+      <div
+        style={{
+          "--bg": "var(--fdm-bg,#F7F6F2)",
+          "--fg": "var(--fdm-fg,#0B0B0A)",
+          "--acc": "var(--fdm-green,#3FA46E)",
+          background: "var(--bg)",
+          color: "var(--fg)",
+          fontFamily: "Jost, system-ui, sans-serif",
+          fontWeight: 400,
+          minHeight: "60vh",
+        } as React.CSSProperties}
+      >
+        <div
+          style={{
+            maxWidth: 720,
+            margin: "0 auto",
+            padding: "clamp(30px,5vw,70px) clamp(20px,4vw,56px)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 22,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <h1
+              style={{
+                margin: 0,
+                fontWeight: 300,
+                fontSize: "clamp(28px,3.4vw,44px)",
+                lineHeight: 1.05,
+                letterSpacing: "0.02em",
+                textTransform: "uppercase",
+              }}
+            >
+              Tu estudio te espera
+            </h1>
+            <p
+              style={{
+                margin: 0,
+                maxWidth: "56ch",
+                fontSize: 15,
+                lineHeight: 1.6,
+                color: "color-mix(in srgb, var(--fg) 72%, transparent)",
+              }}
+            >
+              Vas a poder cargar las obras finales que salen al catálogo en cuanto
+              tu postulación quede aceptada. Este es el punto en el que va.
+            </p>
+          </div>
+
+          <ApplicationStatusCard />
+        </div>
       </div>
     );
   }

@@ -86,3 +86,20 @@ export const checkPaymentStatusPublic = async (id: string) => {
   return data as { ok: boolean; paymentStatus: string; isPaid: boolean };
 };
 
+
+/** Perfil público del artista: solo bio y reseña, de solicitudes aceptadas.
+ *  Sin auth — el backend filtra qué campos salen. */
+export interface PublicArtistProfile {
+  bio: string;
+  projectReview: string;
+  photoUrl: string;
+}
+
+export const getPublicArtistProfile = async (
+  artistId: string
+): Promise<PublicArtistProfile | null> => {
+  const { data } = await apiClient.get(
+    `/applications/applications/public/artist/${artistId}`
+  );
+  return data?.profile ?? null;
+};

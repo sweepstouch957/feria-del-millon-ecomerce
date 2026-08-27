@@ -1,8 +1,8 @@
 "use client";
 
 import SmartImage from "@components/ui/SmartImage";
-import { Shield, Truck, CheckCircle } from "lucide-react";
 import { formatCOP } from "@lib/money";
+import { EYEBROW } from "@components/views/checkout/checkoutTheme";
 
 type ImgLike = string | string[] | undefined | null;
 
@@ -21,7 +21,8 @@ const getFirstImage = (img: ImgLike): string => {
   return "/placeholder.png";
 };
 
-const formatPrice = (price: number) => formatCOP(price);
+const DIM = "rgba(245,244,239,0.66)";
+const RULE = "1px solid rgba(245,244,239,0.18)";
 
 type Props = {
   items: CartViewItem[];
@@ -29,87 +30,158 @@ type Props = {
   total: number;
 };
 
-export function CheckoutOrderSummary({
-  items,
-  subtotal,
-  total,
-}: Props) {
-  
+export function CheckoutOrderSummary({ items, subtotal, total }: Props) {
+  const count = items.reduce((a, i) => a + Number(i.quantity ?? 1), 0);
+
   return (
-    <aside className="lg:col-span-1">
-      <div className="bg-white/80 backdrop-blur rounded-2xl shadow-md border border-gray-100 p-6 sticky top-24">
-        <div className="mb-4 flex flex-wrap gap-2">
-          <span className="rounded-full bg-blue-50 text-blue-700 text-xs px-3 py-1">
-            Pago seguro
-          </span>
-          <span className="rounded-full bg-indigo-50 text-indigo-700 text-xs px-3 py-1">
-            Envío asegurado
-          </span>
-          <span className="rounded-full bg-fuchsia-50 text-fuchsia-700 text-xs px-3 py-1">
-            Certificado autenticidad
-          </span>
-        </div>
+    <aside style={{ position: "sticky", top: 88, alignSelf: "flex-start" }}>
+      <div
+        style={{
+          background: "var(--panel)",
+          color: "#F5F4EF",
+          padding: "clamp(20px,2.2vw,28px)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+        }}
+      >
+        <span style={{ ...EYEBROW, fontSize: 10, color: "var(--acc)" }}>Tu pedido</span>
 
-        <h2 className="text-xl font-semibold tracking-tight mb-6">
-          Resumen del Pedido
-        </h2>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {items.map((item) => {
+            const qty = Number(item.quantity ?? 1);
+            return (
+              <div
+                key={item.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "10px 0",
+                  borderBottom: RULE,
+                }}
+              >
+                <span
+                  style={{
+                    position: "relative",
+                    flex: "0 0 auto",
+                    display: "block",
+                    width: 54,
+                    aspectRatio: "1",
+                    padding: 5,
+                    background: "rgba(245,244,239,0.06)",
+                  }}
+                >
+                  <span style={{ position: "absolute", inset: 5, display: "block" }}>
+                    <SmartImage src={getFirstImage(item.image)} alt={item.title} sizes="60px" />
+                  </span>
+                </span>
 
-        {/* Items */}
-        <div className="space-y-4 mb-6">
-          {items.map((item) => (
-            <div key={item.id} className="flex gap-3">
-              <SmartImage
-                src={getFirstImage(item.image)}
-                alt={item.title}
-                fill={false}
-                width={64}
-                height={64}
-                sizes="64px"
-                className="w-16 h-16 object-contain rounded-md border shadow-sm"
-              />
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-medium truncate">{item.title}</h4>
-                {item.artist && (
-                  <p className="text-xs text-gray-600 truncate">
-                    {item.artist}
-                  </p>
-                )}
-                <p className="text-sm font-medium">
-                  {item.quantity} × {formatPrice(item.price ?? 0)}
-                </p>
+                <span
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 3,
+                    minWidth: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontWeight: 500,
+                      fontSize: 14.5,
+                      lineHeight: 1.3,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {item.title}
+                  </span>
+                  {item.artist && (
+                    <span
+                      style={{
+                        fontSize: 12.5,
+                        color: DIM,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.artist}
+                    </span>
+                  )}
+                </span>
+
+                <span style={{ flex: "0 0 auto", fontSize: 13.5, color: DIM, whiteSpace: "nowrap" }}>
+                  {qty} × {formatCOP(item.price ?? 0)}
+                </span>
               </div>
-            </div>
+            );
+          })}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: 12,
+            fontSize: 14.5,
+            color: DIM,
+          }}
+        >
+          <span>
+            Subtotal · {count} {count === 1 ? "pieza" : "piezas"}
+          </span>
+          <span>{formatCOP(subtotal)}</span>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: 12,
+            paddingTop: 14,
+            borderTop: RULE,
+          }}
+        >
+          <span style={{ ...EYEBROW, fontSize: 10, color: "rgba(245,244,239,0.6)" }}>Total</span>
+          <span style={{ fontWeight: 500, fontSize: "clamp(24px,2.4vw,32px)", lineHeight: 1 }}>
+            {formatCOP(total)}
+          </span>
+        </div>
+
+        <ul
+          style={{
+            margin: 0,
+            padding: 0,
+            listStyle: "none",
+            display: "flex",
+            flexDirection: "column",
+            gap: 7,
+            paddingTop: 12,
+            borderTop: RULE,
+            fontSize: 12.5,
+            color: DIM,
+          }}
+        >
+          {["Pago seguro", "Envío asegurado", "Garantía de autenticidad"].map((t) => (
+            <li key={t} style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              <span
+                style={{
+                  display: "block",
+                  width: 5,
+                  height: 5,
+                  borderRadius: 999,
+                  background: "var(--acc)",
+                  flex: "0 0 auto",
+                }}
+              />
+              {t}
+            </li>
           ))}
-        </div>
-
-        {/* Totales */}
-        <div className="my-4 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-        <div className="space-y-2 mb-6">
-          <div className="flex justify-between">
-            <span className="text-gray-600">Subtotal</span>
-            <span className="font-medium">{formatPrice(subtotal)}</span>
-          </div>
-          
-          <div className="flex justify-between text-lg font-bold border-t pt-3">
-            <span>Total</span>
-            <span>{formatPrice(total)}</span>
-          </div>
-        </div>
-
-        {/* Garantías */}
-        <ul className="text-sm text-gray-600 space-y-2">
-          <li className="flex items-center">
-            <Shield className="h-4 w-4 mr-2" />
-            Pago 100% seguro
-          </li>
-          <li className="flex items-center">
-            <Truck className="h-4 w-4 mr-2" />
-            Envío asegurado
-          </li>
-          <li className="flex items-center">
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Garantía de autenticidad
-          </li>
         </ul>
       </div>
     </aside>

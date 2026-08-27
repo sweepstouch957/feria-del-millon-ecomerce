@@ -107,6 +107,15 @@ export default function Page() {
   const id = params?.id;
   const { data, isLoading, isError, error } = useArtworkDetail(id);
   const { add, items } = useCart();
+  const reduce = useReducedMotion();
+  const rise = reduce
+    ? {}
+    : {
+        initial: { opacity: 0, y: 14 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
+      };
+
 
   const doc: any = data?.doc;
   const copies = data?.copies ?? [];
@@ -212,15 +221,6 @@ export default function Page() {
       </Shell>
     );
   }
-
-  const reduce = useReducedMotion();
-  const rise = reduce
-    ? {}
-    : {
-        initial: { opacity: 0, y: 14 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
-      };
 
   const currency = doc.currency || "COP";
   const stock = Number(doc.stock ?? (copies.length ? 1 : 0));
@@ -603,11 +603,11 @@ export default function Page() {
               </span>
               {doc.artist && (
                 <Link
-                  href={`/catalogo?artistId=${encodeURIComponent(String(doc.artist))}`}
+                  href={`/artista/${encodeURIComponent(String(doc.artist))}`}
                   className="fdm-obra-link"
                   style={{ flex: "0 0 auto", ...EYEBROW, fontSize: 10, color: "var(--acc)" }}
                 >
-                  Ver obras →
+                  Ver perfil →
                 </Link>
               )}
             </div>

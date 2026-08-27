@@ -10,9 +10,9 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useSearchParams } from "next/navigation";
 
-import { Button } from "@components/ui/button";
 import { Stepper } from "@components/ui/stepper";
-import { ArrowLeft, ShoppingBag } from "lucide-react";
+import SiteFooter from "@components/SiteFooter";
+import { CHECKOUT_CSS, EYEBROW, ROOT_VARS, mix } from "@components/views/checkout/checkoutTheme";
 
 import useCart from "@store/useCart";
 import { useCities } from "@hooks/queries/useCities";
@@ -252,46 +252,101 @@ export default function CheckoutPageClient() {
     // Carrito vacío
     if (items.length === 0 && step !== 3) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center max-w-md px-4">
-                    <ShoppingBag className="h-24 w-24 text-gray-400 mx-auto mb-6" />
-                    <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                        {artworkUnavailable
-                            ? "Obra no disponible"
-                            : "No hay productos en el carrito"}
-                    </h1>
-
-                    <p className="text-gray-600 mb-6">
+            <div style={ROOT_VARS}>
+                <style>{CHECKOUT_CSS}</style>
+                <div
+                    className="fdm-check"
+                    style={{
+                        maxWidth: 1600,
+                        margin: "0 auto",
+                        padding: "clamp(50px,7vw,110px) clamp(20px,4vw,56px)",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 18,
+                        textAlign: "center",
+                    }}
+                >
+                    <span
+                        style={{
+                            fontWeight: 400,
+                            fontSize: "clamp(21px,2.4vw,32px)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.02em",
+                        }}
+                    >
+                        {artworkUnavailable ? "Obra no disponible" : "No hay obras en el carrito"}
+                    </span>
+                    <p style={{ margin: 0, maxWidth: "42ch", fontSize: 15, lineHeight: 1.6, color: mix(70) }}>
                         {artworkUnavailable
                             ? artworkUnavailable
-                            : "Agrega obras a tu carrito para continuar con el pago."}
+                            : "Agregá obras al carrito para continuar con el pago."}
                     </p>
-
-                    <Link href="/catalogo">
-                        <Button>Explorar catálogo</Button>
+                    <Link
+                        href="/catalogo"
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            height: 48,
+                            padding: "0 30px",
+                            background: "var(--fg)",
+                            color: "var(--bg)",
+                            borderRadius: 999,
+                            ...EYEBROW,
+                            fontSize: 11,
+                            letterSpacing: "0.12em",
+                        }}
+                    >
+                        Ver catálogo
                     </Link>
                 </div>
+                <SiteFooter />
             </div>
         );
     }
 
     return (
-        <main className="min-h-screen bg-gray-50">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-6 sm:mb-8">
-                    {step !== 3 && (
-                        <Link
-                            href="/carrito"
-                            className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-3"
-                        >
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Volver al Carrito
-                        </Link>
-                    )}
-                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                        {steps[step - 1]}
-                    </h1>
-                </div>
+        <div style={ROOT_VARS}>
+            <style>{CHECKOUT_CSS}</style>
+            <main
+                className="fdm-check"
+                style={{ maxWidth: 1600, margin: "0 auto", padding: "0 clamp(20px,4vw,56px)" }}
+            >
+                <nav
+                    aria-label="Migas de pan"
+                    style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        alignItems: "center",
+                        gap: 9,
+                        padding: "12px 0",
+                        borderBottom: `1px solid ${mix(12)}`,
+                        ...EYEBROW,
+                        fontSize: 10.5,
+                        letterSpacing: "0.14em",
+                        color: mix(55),
+                    }}
+                >
+                    <Link href="/catalogo" className="fdm-check-link">Catálogo</Link>
+                    <span aria-hidden>/</span>
+                    <Link href="/carrito" className="fdm-check-link">Carrito</Link>
+                    <span aria-hidden>/</span>
+                    <span aria-current="page" style={{ color: mix(85) }}>{steps[step - 1]}</span>
+                </nav>
+
+                <h1
+                    style={{
+                        margin: 0,
+                        padding: "clamp(20px,2.4vw,32px) 0 clamp(14px,1.6vw,20px)",
+                        fontWeight: 300,
+                        fontSize: "clamp(32px,4vw,60px)",
+                        lineHeight: 0.98,
+                        letterSpacing: "0.03em",
+                        textTransform: "uppercase",
+                    }}
+                >
+                    {steps[step - 1]}
+                </h1>
 
                 <Stepper
                     steps={steps}
@@ -322,7 +377,7 @@ export default function CheckoutPageClient() {
                         )}
 
                         {step === 2 && currentOrder && (
-                            <div className="bg-white p-6 rounded-2xl shadow">
+                            <div style={{ background: mix(3), border: `1px solid ${mix(12)}`, padding: "clamp(18px,2vw,26px)" }}>
                                 <PaymentForm
                                     total={subtotal}
                                     isProcessing={isProcessing}
@@ -346,8 +401,9 @@ export default function CheckoutPageClient() {
                         />
                     )}  
                 </div>
-            </div>
-        </main>
+            </main>
+            <SiteFooter />
+        </div>
     );
 }
             

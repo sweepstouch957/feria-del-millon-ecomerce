@@ -2,365 +2,459 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import SmartImage from "@components/ui/SmartImage";
-import {
-  Search,
-  Landmark,
-  User,
-  Palette,
-  ChevronLeft,
-  ChevronRight,
-  Sparkles,
-} from "lucide-react";
-import { Button } from "@components/ui/button";
-import { Input } from "@components/ui/input";
-
+import { motion, useReducedMotion } from "framer-motion";
 import { useEventArtists } from "@hooks/queries/useEventArtists";
 import { useEdition } from "@provider/editionProvider";
+import SmartImage from "@components/ui/SmartImage";
+import Skeleton from "@components/ui/Skeleton";
+import SiteFooter from "@components/SiteFooter";
 
+/* ──────────────────────────────────────────────────────────────
+   Artistas — mismo sistema editorial v2 que /catalogo y /obra.
+   Cada tarjeta lleva al perfil en /artista/[id].
+   ────────────────────────────────────────────────────────────── */
 
 const PAGE_SIZE = 24;
 
-function StatCard({
-  icon,
-  value,
-  label,
-  bg = "bg-white",
-}: {
-  icon: React.ReactNode;
-  value: number | string;
-  label: string;
-  bg?: string;
-}) {
+const mix = (pct: number) => `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
+
+const EYEBROW: React.CSSProperties = {
+  fontWeight: 500,
+  fontSize: 10.5,
+  letterSpacing: "0.16em",
+  textTransform: "uppercase",
+};
+
+const ROOT_VARS = {
+  "--bg": "var(--fdm-bg,#F7F6F2)",
+  "--fg": "var(--fdm-fg,#0B0B0A)",
+  "--acc": "var(--fdm-green,#3FA46E)",
+  "--panel": "var(--fdm-panel,#0B0B0A)",
+  background: "var(--bg)",
+  color: "var(--fg)",
+  fontFamily: "Jost, system-ui, sans-serif",
+  fontWeight: 400,
+  letterSpacing: "0.005em",
+  minHeight: "100vh",
+  width: "100%",
+  overflowX: "hidden",
+} as React.CSSProperties;
+
+const PAGE_CSS = `
+  .fdm-arts a { transition: color .3s ease, border-color .3s ease, opacity .3s ease; }
+  .fdm-arts-link:hover { color: var(--acc); }
+  .fdm-arts-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%,232px), 1fr)); gap:clamp(20px,2.2vw,34px) clamp(16px,1.8vw,26px); }
+  .fdm-arts-card:hover .fdm-arts-photo { border-color: var(--acc); }
+  .fdm-arts-input { width:100%; padding:8px 0; background:transparent; color:inherit; border:0; border-bottom:1px solid color-mix(in srgb, var(--fg) 26%, transparent); font-size:16px; outline:none; }
+  .fdm-arts-input:focus { border-color: var(--acc); }
+  .fdm-arts-input::placeholder { color: color-mix(in srgb, var(--fg) 34%, transparent); }
+`;
+
+function initialsOf(name: string) {
   return (
-    <div
-      className={`${bg} rounded-2xl shadow-md p-6 text-center border border-gray-100`}
-    >
-      <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
-        {icon}
-      </div>
-      <h3 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-1">
-        {value}
-      </h3>
-      <p className="text-gray-600">{label}</p>
-    </div>
+    name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase())
+      .join("") || "A"
   );
 }
 
-function ArtistSkeleton() {
-  return (
-    <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100">
-      <div className="h-64 w-full bg-gray-100 animate-pulse" />
-      <div className="p-6 space-y-4">
-        <div className="h-5 w-2/3 bg-gray-100 rounded animate-pulse" />
-        <div className="h-4 w-1/2 bg-gray-100 rounded animate-pulse" />
-        <div className="flex gap-2">
-          <div className="h-6 w-24 bg-gray-100 rounded-full animate-pulse" />
-          <div className="h-6 w-32 bg-gray-100 rounded-full animate-pulse" />
-        </div>
-        <div className="h-10 w-full bg-gray-100 rounded-md animate-pulse" />
-      </div>
-    </div>
-  );
-}
+export default function ArtistasPage() {
+  const { eventId, eventName } = useEdition();
+  const reduce = useReducedMotion();
 
-export default function ArtistsPage() {
-  const { eventId, eventName, pavilions } = useEdition();
-  // filtros UI
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPavilion, setSelectedPavilion] = useState<string>("all");
+  const [q, setQ] = useState("");
   const [sort, setSort] = useState<"artworks" | "name">("artworks");
   const [page, setPage] = useState(1);
 
-
-  const pavilionId = selectedPavilion !== "all" ? selectedPavilion : undefined;
-
-  // Artistas con stats
-  const { data, isFetching, error } = useEventArtists(
+  const { data, isLoading, isFetching } = useEventArtists(
     eventId,
-    {
-      q: searchTerm,
-      pavilionId,
-      sort,
-      page,
-      limit: PAGE_SIZE,
-    },
-    {
-      staleTime: 60_000,
-      gcTime: 5 * 60_000,
-      refetchOnWindowFocus: false,
-    }
+    { q: q.trim() || undefined, sort, page, limit: PAGE_SIZE },
+    { staleTime: 60_000, refetchOnWindowFocus: false }
   );
 
-  const rows = data?.rows ?? [];
-  const total = data?.total ?? 0;
-  const totalPages = data?.totalPages ?? 1;
+  const rows: any[] = data?.rows ?? [];
+  const total = Number(data?.total ?? 0);
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // KPI: total de obras en la página actual (y podrías mostrar total global si lo agregas en backend)
-  const totalArtworksOnPage = useMemo(
-    () => rows.reduce((acc, r) => acc + (r.stats?.totalArtworks ?? 0), 0),
+  const totalArtworks = useMemo(
+    () => rows.reduce((a, r) => a + Number(r?.stats?.totalArtworks ?? 0), 0),
     [rows]
   );
 
-  const headerSubtitle = useMemo(() => {
-    if (searchTerm && pavilionId)
-      return `Artistas en ${eventName} • Filtro: “${searchTerm}”, Pabellón seleccionado`;
-    if (searchTerm)
-      return `Artistas en ${eventName} • Resultados para “${searchTerm}”`;
-    if (pavilionId)
-      return `Artistas en ${eventName} • Filtrado por pabellón`;
-    return `Explora el talento de ${eventName}`;
-  }, [searchTerm, pavilionId]);
-
-  const onPrev = () => setPage((p) => Math.max(1, p - 1));
-  const onNext = () => setPage((p) => Math.min(totalPages, p + 1));
+  // Cambiar de filtro siempre vuelve a la primera página: si estabas en la 3 y
+  // el nuevo filtro trae 1 sola, te quedabas mirando una página vacía.
+  const onQuery = (v: string) => {
+    setQ(v);
+    setPage(1);
+  };
+  const onSort = (v: "artworks" | "name") => {
+    setSort(v);
+    setPage(1);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black text-white text-xs uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5" />
-            Curaduría {new Date().getFullYear()}
-          </div>
-          <h1 className="mt-3 text-4xl md:text-5xl font-black text-gray-900 leading-tight">
-            Artistas de la {eventName}
-          </h1>
-          <p className="mt-3 text-lg text-gray-600">{headerSubtitle}</p>
-        </div>
+    <div style={ROOT_VARS}>
+      <style>{PAGE_CSS}</style>
 
-        {/* Filtros */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-          <div className="grid lg:grid-cols-3 gap-4">
-            {/* Búsqueda */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Buscar por nombre o email…"
-                value={searchTerm}
-                onChange={(e) => {
-                  setPage(1);
-                  setSearchTerm(e.target.value);
+      <div
+        className="fdm-arts"
+        style={{ maxWidth: 1600, margin: "0 auto", padding: "0 clamp(20px,4vw,56px)" }}
+      >
+        {/* ── Encabezado ─────────────────────────────────── */}
+        <section style={{ padding: "clamp(18px,2.2vw,28px) 0 0" }}>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "10px clamp(20px,2.4vw,34px)",
+              paddingBottom: "clamp(12px,1.4vw,16px)",
+              ...EYEBROW,
+              letterSpacing: "0.16em",
+              color: mix(52),
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--acc)" }}>
+              <span
+                style={{ display: "block", width: 6, height: 6, borderRadius: 999, background: "var(--acc)" }}
+              />
+              Artistas
+            </span>
+            <span>{eventName}</span>
+          </div>
+
+          <div
+            style={{
+              borderTop: `1px solid ${mix(22)}`,
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: "clamp(20px,2.6vw,40px)",
+              padding: "clamp(20px,2.4vw,32px) 0 clamp(16px,1.8vw,24px)",
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: "56ch" }}>
+              <h1
+                style={{
+                  margin: 0,
+                  fontWeight: 300,
+                  fontSize: "clamp(38px,5.2vw,78px)",
+                  lineHeight: 0.95,
+                  letterSpacing: "0.03em",
+                  textTransform: "uppercase",
                 }}
-                className="pl-10"
+              >
+                Artistas
+              </h1>
+              <p
+                style={{
+                  margin: 0,
+                  maxWidth: "48ch",
+                  fontSize: "clamp(15px,1.1vw,17px)",
+                  lineHeight: 1.6,
+                  color: mix(68),
+                  textWrap: "pretty",
+                }}
+              >
+                Quienes exponen en esta edición. Entrá a cada perfil para ver su{" "}
+                <span style={{ color: "var(--acc)" }}>obra completa</span>.
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                gap: 10,
+                paddingLeft: "clamp(14px,1.6vw,22px)",
+                borderLeft: "1px solid var(--acc)",
+              }}
+            >
+              <div style={{ fontWeight: 300, fontSize: "clamp(30px,3vw,46px)", lineHeight: 1 }}>
+                {isLoading ? "—" : total}
+              </div>
+              <div style={{ ...EYEBROW, fontSize: 10, color: mix(50) }}>
+                {totalArtworks > 0 ? `${totalArtworks} obras en pantalla` : "En la edición"}
+              </div>
+            </div>
+          </div>
+
+          {/* Buscador + orden */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: "16px clamp(20px,3vw,44px)",
+              padding: "clamp(10px,1vw,14px) 0",
+              borderTop: `1px solid ${mix(14)}`,
+            }}
+          >
+            <div style={{ flex: "1 1 260px", maxWidth: 380, display: "flex", flexDirection: "column", gap: 8 }}>
+              <label htmlFor="fdm-artist-q" style={{ ...EYEBROW, fontSize: 10, color: mix(50) }}>
+                Buscar artista
+              </label>
+              <input
+                id="fdm-artist-q"
+                className="fdm-arts-input"
+                type="text"
+                value={q}
+                onChange={(e) => onQuery(e.target.value)}
+                placeholder="Nombre"
               />
             </div>
 
-            {/* Pabellón */}
-            <div>
-              <select
-                value={selectedPavilion}
-                onChange={(e) => {
-                  setPage(1);
-                  setSelectedPavilion(e.target.value);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black bg-white"
-              >
-                <option value="all">Todos los pabellones</option>
-                {pavilions.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Orden */}
-            <div>
-              <select
-                value={sort}
-                onChange={(e) => {
-                  setPage(1);
-                  setSort(e.target.value as "artworks" | "name");
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black bg-white"
-              >
-                <option value="artworks">Ordenar por # de obras</option>
-                <option value="name">Ordenar por nombre</option>
-              </select>
+            <div style={{ display: "flex", alignItems: "center", gap: "clamp(16px,2vw,28px)" }}>
+              <span style={{ ...EYEBROW, fontSize: 10, color: mix(50) }}>Ordenar</span>
+              <SortTab active={sort === "artworks"} onClick={() => onSort("artworks")}>
+                Más obras
+              </SortTab>
+              <SortTab active={sort === "name"} onClick={() => onSort("name")}>
+                Nombre
+              </SortTab>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* KPIs */}
-        <div className="grid md:grid-cols-3 gap-6 mb-10">
-          <StatCard
-            icon={<User className="h-8 w-8 text-gray-900" />}
-            value={total}
-            label="Artistas encontrados"
-          />
-          <StatCard
-            icon={<Palette className="h-8 w-8 text-gray-900" />}
-            value={totalArtworksOnPage}
-            label="Obras (página actual)"
-          />
-          <StatCard
-            icon={<Landmark className="h-8 w-8 text-gray-900" />}
-            value={1}
-            label="Pabellones"
-          />
-        </div>
-
-        {/* Info de conteo */}
-        <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
-          <p>
-            Mostrando <span className="font-semibold">{rows.length}</span> de{" "}
-            <span className="font-semibold">{total}</span> artistas
-          </p>
-          <p>
-            Página <span className="font-semibold">{page}</span> de{" "}
-            <span className="font-semibold">{totalPages}</span>
-          </p>
-        </div>
-
-        {/* Grid */}
-        {isFetching ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <ArtistSkeleton key={i} />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="text-center py-16">
-            <p className="text-lg text-red-600 font-medium">
-              Ocurrió un error cargando los artistas.
-            </p>
-            <p className="text-gray-500">Intenta de nuevo en unos segundos.</p>
-          </div>
-        ) : rows.length === 0 ? (
-          <div className="text-center py-16">
-            <User className="h-24 w-24 text-gray-300 mx-auto mb-6" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No se encontraron artistas
-            </h3>
-            <p className="text-gray-500">
-              Ajusta los filtros o cambia el término de búsqueda.
-            </p>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {rows.map((r) => {
-              const artist = r.artist;
-              const byPavilion = r.stats?.byPavilion || [];
-              const sampleCover  = artist?.image || "/api/placeholder/1200/800"; // si luego quieres traer cover del artista, cámbialo aquí
-
-              return (
-                <div
-                  key={artist.id}
-                  className="bg-white rounded-2xl shadow-md overflow-hidden border border-gray-100 group hover:shadow-xl transition-all"
-                >
-                  {/* Cover */}
-                  <div className="relative">
-                    <SmartImage
-                      src={sampleCover}
-                      alt={artist.name}
-                      fill={false}
-                      width={1200}
-                      height={800}
-                      sizes="(max-width: 768px) 100vw, 380px"
-                      fit="cover"
-                      className="w-full h-64 object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                    <div className="absolute bottom-4 left-4 text-white">
-                      <h3 className="text-xl font-bold">{artist.name}</h3>
-                      <p className="text-sm opacity-90">
-                        {r.stats?.totalArtworks ?? 0}{" "}
-                        {(r.stats?.totalArtworks ?? 0) === 1 ? "obra" : "obras"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Body */}
-                  <div className="p-6 space-y-4">
-                    {/* Pabellones */}
-                    {byPavilion.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {byPavilion.slice(0, 3).map((p) => (
-                          <Link
-                            key={String(p.pavilionId)}
-                            href={`/pabellones/${p.slug}`}
-                            className="inline-flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-full transition"
-                          >
-                            <Landmark className="w-3.5 h-3.5" />
-                            <span className="font-medium">
-                              {p.name ?? "Pabellón"}
-                            </span>
-                            <span className="opacity-70">
-                              · {p.artworksCount}
-                            </span>
-                          </Link>
-                        ))}
-                        {byPavilion.length > 3 && (
-                          <span className="text-xs text-gray-500">
-                            +{byPavilion.length - 3} pab.
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500">
-                        Sin pabellón asignado
-                      </p>
-                    )}
-
-                    {/* Acciones */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <Link
-                        href={`/catalogo?artistId=${encodeURIComponent(
-                          artist.id
-                        )}`}
-                        className="col-span-2"
-                      >
-                        <Button className="w-full" variant="outline">
-                          Ver todas sus obras
-                        </Button>
-                      </Link>
-                      {/* Si quieres mostrar email/rol */}
-                      {/* <Button disabled className="w-full" variant="ghost">@{artist.email?.split("@")[0]}</Button> */}
-                    </div>
-                  </div>
+        {/* ── Grilla ─────────────────────────────────────── */}
+        <section style={{ padding: "clamp(18px,2vw,28px) 0 clamp(40px,4vw,64px)" }}>
+          {isLoading ? (
+            <div className="fdm-arts-grid">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <Skeleton aspect="1" radius={999} />
+                  <Skeleton w="70%" h={18} />
+                  <Skeleton w="45%" h={12} />
                 </div>
-              );
-            })}
-          </div>
-        )}
+              ))}
+            </div>
+          ) : rows.length === 0 ? (
+            <div
+              style={{
+                borderTop: `1px solid ${mix(22)}`,
+                borderBottom: `1px solid ${mix(22)}`,
+                padding: "clamp(46px,6vw,96px) clamp(20px,3vw,40px)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 18,
+                textAlign: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontWeight: 400,
+                  fontSize: "clamp(21px,2.4vw,30px)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                Sin resultados
+              </span>
+              <p style={{ margin: 0, maxWidth: "40ch", fontSize: 15, lineHeight: 1.6, color: mix(70) }}>
+                Ningún artista coincide con esa búsqueda.
+              </p>
+              {q && (
+                <button
+                  type="button"
+                  onClick={() => onQuery("")}
+                  style={{
+                    height: 46,
+                    padding: "0 28px",
+                    background: "var(--fg)",
+                    color: "var(--bg)",
+                    border: 0,
+                    borderRadius: 999,
+                    cursor: "pointer",
+                    ...EYEBROW,
+                    fontSize: 11,
+                    letterSpacing: "0.12em",
+                  }}
+                >
+                  Limpiar búsqueda
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="fdm-arts-grid" style={{ opacity: isFetching ? 0.6 : 1, transition: "opacity .2s ease" }}>
+                {rows.map((r, i) => (
+                  <ArtistCard key={String(r.artist?.id ?? i)} row={r} index={i} reduce={!!reduce} />
+                ))}
+              </div>
 
-        {/* Paginación */}
-        <div className="flex items-center justify-between mt-10">
-          <Button onClick={onPrev} disabled={page <= 1} variant="outline">
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Anterior
-          </Button>
-          <span className="text-sm text-gray-600">
-            Página <strong>{page}</strong> de <strong>{totalPages}</strong>
-          </span>
-          <Button
-            onClick={onNext}
-            disabled={page >= totalPages}
-            variant="outline"
-          >
-            Siguiente
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
-        </div>
-
-        {/* CTA */}
-        <div className="mt-16 rounded-3xl p-10 text-center text-white bg-[radial-gradient(1200px_400px_at_50%_-10%,#0ea5e9,transparent),linear-gradient(135deg,#0f172a,#111827)] shadow-2xl">
-          <h2 className="text-2xl md:text-3xl font-extrabold mb-3 tracking-tight">
-            ¿Eres artista y quieres participar?
-          </h2>
-          <p className="text-lg md:text-xl mb-6 text-blue-100">
-            Súmate a la próxima edición y muestra tu obra al mundo.
-          </p>
-          <div className="space-y-2">
-            <p className="text-base">
-              <strong>Contacto:</strong> coordinaciongeneral@feriadelmillon.com
-            </p>
-            <p className="text-base">
-              <strong>Teléfono:</strong> +(57) 322 700 85 76
-            </p>
-          </div>
-        </div>
+              {pages > 1 && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 18,
+                    paddingTop: "clamp(26px,3vw,44px)",
+                  }}
+                >
+                  <PagerButton disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                    ← Anterior
+                  </PagerButton>
+                  <span style={{ ...EYEBROW, fontSize: 10.5, color: mix(55) }}>
+                    {page} / {pages}
+                  </span>
+                  <PagerButton
+                    disabled={page >= pages}
+                    onClick={() => setPage((p) => Math.min(pages, p + 1))}
+                  >
+                    Siguiente →
+                  </PagerButton>
+                </div>
+              )}
+            </>
+          )}
+        </section>
       </div>
+
+      <SiteFooter />
     </div>
+  );
+}
+
+/* ── Piezas ──────────────────────────────────────────────────── */
+
+function SortTab({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: "transparent",
+        border: 0,
+        padding: "4px 0",
+        cursor: "pointer",
+        ...EYEBROW,
+        fontSize: 10.5,
+        letterSpacing: "0.14em",
+        transition: "all .3s ease",
+        color: active ? "var(--acc)" : mix(60),
+        borderBottom: `1px solid ${active ? "var(--acc)" : "transparent"}`,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PagerButton({
+  disabled,
+  onClick,
+  children,
+}: {
+  disabled: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        height: 44,
+        padding: "0 24px",
+        background: "transparent",
+        color: "inherit",
+        border: `1px solid ${mix(26)}`,
+        borderRadius: 999,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+        ...EYEBROW,
+        fontSize: 10.5,
+        letterSpacing: "0.12em",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ArtistCard({ row, index, reduce }: { row: any; index: number; reduce: boolean }) {
+  const artist = row?.artist ?? {};
+  const stats = row?.stats ?? {};
+  const name = String(artist.name || "").trim() || "Artista";
+  const photo = String(artist.image || "").trim();
+  const count = Number(stats.totalArtworks ?? 0);
+  const pavilions: any[] = stats.byPavilion ?? [];
+
+  return (
+    <motion.div
+      initial={reduce ? undefined : { opacity: 0, y: 12 }}
+      whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ duration: 0.45, delay: reduce ? 0 : Math.min(index, 10) * 0.04 }}
+      whileHover={reduce ? undefined : { y: -4 }}
+    >
+      <Link
+        href={`/artista/${encodeURIComponent(String(artist.id))}`}
+        className="fdm-arts-card"
+        style={{ display: "flex", flexDirection: "column", gap: 14 }}
+      >
+        <span
+          className="fdm-arts-photo"
+          style={{
+            position: "relative",
+            display: "block",
+            aspectRatio: "1",
+            borderRadius: 999,
+            overflow: "hidden",
+            background: mix(6),
+            border: `1px solid ${mix(12)}`,
+            transition: "border-color .4s ease",
+          }}
+        >
+          {photo ? (
+            <SmartImage src={photo} alt={name} fit="cover" sizes="(max-width: 640px) 50vw, 232px" />
+          ) : (
+            <span
+              style={{
+                display: "grid",
+                placeItems: "center",
+                width: "100%",
+                height: "100%",
+                fontWeight: 300,
+                fontSize: "clamp(28px,3vw,44px)",
+                color: mix(40),
+              }}
+            >
+              {initialsOf(name)}
+            </span>
+          )}
+        </span>
+
+        <span style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <span style={{ fontWeight: 500, fontSize: "clamp(17px,1.3vw,20px)", lineHeight: 1.25 }}>
+            {name}
+          </span>
+          <span style={{ ...EYEBROW, fontSize: 10, letterSpacing: "0.14em", color: "var(--acc)" }}>
+            {count} {count === 1 ? "obra" : "obras"}
+          </span>
+          {pavilions.length > 0 && (
+            <span style={{ fontSize: 13, color: mix(58), lineHeight: 1.4 }}>
+              {pavilions.map((p) => p?.name).filter(Boolean).join(" · ")}
+            </span>
+          )}
+        </span>
+      </Link>
+    </motion.div>
   );
 }

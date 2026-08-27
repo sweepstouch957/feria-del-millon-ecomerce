@@ -1,12 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import SmartImage from "@components/ui/SmartImage";
-import { Button } from "@components/ui/button";
-import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag } from "lucide-react";
-import useCart from "@store/useCart";
 import { useMemo } from "react";
+import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import useCart from "@store/useCart";
+import SmartImage from "@components/ui/SmartImage";
+import SiteFooter from "@components/SiteFooter";
 import { formatCOP } from "@lib/money";
+
+/* ──────────────────────────────────────────────────────────────
+   Carrito — mismo sistema editorial v2 que catálogo / obra.
+   ────────────────────────────────────────────────────────────── */
 
 type ImgLike = string | string[] | undefined | null;
 
@@ -16,11 +20,42 @@ type CartViewItem = {
   price: number;
   image?: ImgLike;
   quantity: number;
-  // Campos opcionales si tu flujo los trae
   artist?: string;
-  year?: number;
-  medium?: string;
 };
+
+const mix = (pct: number) => `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
+
+const EYEBROW: React.CSSProperties = {
+  fontWeight: 500,
+  fontSize: 10.5,
+  letterSpacing: "0.16em",
+  textTransform: "uppercase",
+};
+
+const ROOT_VARS = {
+  "--bg": "var(--fdm-bg,#F7F6F2)",
+  "--fg": "var(--fdm-fg,#0B0B0A)",
+  "--acc": "var(--fdm-green,#3FA46E)",
+  "--panel": "var(--fdm-panel,#0B0B0A)",
+  background: "var(--bg)",
+  color: "var(--fg)",
+  fontFamily: "Jost, system-ui, sans-serif",
+  fontWeight: 400,
+  letterSpacing: "0.005em",
+  minHeight: "100vh",
+  width: "100%",
+  overflowX: "hidden",
+} as React.CSSProperties;
+
+const PAGE_CSS = `
+  .fdm-cart a { transition: color .3s ease, border-color .3s ease, opacity .3s ease; }
+  .fdm-cart-link:hover { color: var(--acc); }
+  .fdm-cart-shell { display:flex; flex-wrap:wrap; align-items:flex-start; gap:clamp(24px,3vw,52px); padding:clamp(18px,2vw,28px) 0 clamp(40px,4vw,64px); }
+  .fdm-cart-list { flex:999 1 58%; min-width:min(100%,300px); }
+  .fdm-cart-aside { flex:1 1 280px; max-width:360px; min-width:min(100%,280px); position:sticky; top:88px; align-self:flex-start; }
+  .fdm-cart-row { display:flex; align-items:center; gap:clamp(14px,2vw,26px); padding:clamp(14px,1.6vw,20px) 0; border-bottom:1px solid color-mix(in srgb, var(--fg) 12%, transparent); }
+  @media (max-width: 719px) { .fdm-cart-row { flex-wrap:wrap; } }
+`;
 
 const getFirstImage = (img: ImgLike): string => {
   if (Array.isArray(img)) return img[0] ?? "/placeholder.png";
@@ -28,215 +63,385 @@ const getFirstImage = (img: ImgLike): string => {
   return "/placeholder.png";
 };
 
-const formatPrice = (price: number) => formatCOP(price);
+function QtyButton({
+  onClick,
+  disabled,
+  label,
+  children,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      style={{
+        width: 32,
+        height: 32,
+        display: "grid",
+        placeItems: "center",
+        background: "transparent",
+        color: "inherit",
+        border: `1px solid ${mix(24)}`,
+        borderRadius: 999,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+        fontSize: 15,
+        lineHeight: 1,
+        transition: "border-color .3s ease, color .3s ease",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
 
 export default function CartPage() {
-  // Zustand selectors
   const items = useCart((s) => s.items) as CartViewItem[];
   const updateQty = useCart((s) => s.updateQty);
   const remove = useCart((s) => s.remove);
+  const reduce = useReducedMotion();
 
-  // Derivados
   const subtotal = useMemo(
-    () => items.reduce((sum, it) => sum + (it.price ?? 0) * it.quantity, 0),
+    () => items.reduce((a, i) => a + Number(i.price ?? 0) * Number(i.quantity ?? 1), 0),
     [items]
   );
-  const shipping = subtotal > 5_000_000 ? 0 : 150_000; // Envío gratis > 5M
-  const total = subtotal + shipping;
-
-  if (!items.length) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <ShoppingBag className="h-24 w-24 text-gray-400 mx-auto mb-6" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            Tu carrito está vacío
-          </h1>
-          <p className="text-gray-600 mb-8">
-            Explora nuestro catálogo y descubre obras increíbles
-          </p>
-          <Link href="/catalogo">
-            <Button size="lg">Explorar Catálogo</Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const count = useMemo(
+    () => items.reduce((a, i) => a + Number(i.quantity ?? 1), 0),
+    [items]
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Link
-            href="/catalogo"
-            className="inline-flex items-center text-blue-600 hover:text-blue-800 mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Continuar Comprando
+    <div style={ROOT_VARS}>
+      <style>{PAGE_CSS}</style>
+
+      <div
+        className="fdm-cart"
+        style={{ maxWidth: 1600, margin: "0 auto", padding: "0 clamp(20px,4vw,56px)" }}
+      >
+        <nav
+          aria-label="Migas de pan"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: 9,
+            padding: "12px 0",
+            borderBottom: `1px solid ${mix(12)}`,
+            ...EYEBROW,
+            fontSize: 10.5,
+            letterSpacing: "0.14em",
+            color: mix(55),
+          }}
+        >
+          <Link href="/catalogo" className="fdm-cart-link">
+            Catálogo
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Carrito de Compras
+          <span aria-hidden>/</span>
+          <span aria-current="page" style={{ color: mix(85) }}>
+            Carrito
+          </span>
+        </nav>
+
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: 20,
+            padding: "clamp(20px,2.4vw,32px) 0 clamp(12px,1.4vw,18px)",
+          }}
+        >
+          <h1
+            style={{
+              margin: 0,
+              fontWeight: 300,
+              fontSize: "clamp(34px,4.4vw,68px)",
+              lineHeight: 0.95,
+              letterSpacing: "0.03em",
+              textTransform: "uppercase",
+            }}
+          >
+            Carrito
           </h1>
-          <p className="text-gray-600">
-            {items.length} {items.length === 1 ? "obra" : "obras"} en tu carrito
-          </p>
+          <span style={{ ...EYEBROW, fontSize: 10.5, color: mix(55) }}>
+            {count} {count === 1 ? "pieza" : "piezas"}
+          </span>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Items */}
-          <div className="lg:col-span-2 space-y-4">
-            {items.map((item) => (
-              <div key={item.id} className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex flex-col md:flex-row gap-6">
-                  {/* Imagen */}
-                  <div className="flex-shrink-0 w-full md:w-32">
-                    <SmartImage
-                      src={getFirstImage(item.image)}
-                      alt={item.title}
-                      fill={false}
-                      width={256}
-                      height={256}
-                      sizes="256px"
-                      className="w-full h-32 object-contain rounded-lg"
-                    />
-                  </div>
-
-                  {/* Información */}
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {item.title}
-                        </h3>
-                        {(item.artist || item.year) && (
-                          <p className="text-gray-600">
-                            {item.artist ?? ""}{" "}
-                            {item.artist && item.year ? "• " : ""}
-                            {item.year ?? ""}
-                          </p>
-                        )}
-                        {item.medium && (
-                          <p className="text-sm text-gray-500">{item.medium}</p>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => remove(item.id)}
-                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-4">
-                      {/* Cantidad */}
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600">Cantidad:</span>
-                        <div className="flex items-center border rounded-md">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              updateQty(item.id, Math.max(1, item.quantity - 1))
-                            }
-                            className="h-8 w-8 p-0"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="px-3 py-1 text-sm font-medium">
-                            {item.quantity}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              updateQty(item.id, item.quantity + 1)
-                            }
-                            className="h-8 w-8 p-0"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Precio */}
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-gray-900">
-                          {formatPrice((item.price ?? 0) * item.quantity)}
-                        </p>
-                        {item.quantity > 1 && (
-                          <p className="text-sm text-gray-600">
-                            {formatPrice(item.price ?? 0)} c/u
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+        {items.length === 0 ? (
+          <div
+            style={{
+              borderTop: `1px solid ${mix(22)}`,
+              borderBottom: `1px solid ${mix(22)}`,
+              padding: "clamp(46px,6vw,96px) clamp(20px,3vw,40px)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 18,
+              textAlign: "center",
+              marginBottom: "clamp(40px,4vw,64px)",
+            }}
+          >
+            <span
+              style={{
+                fontWeight: 400,
+                fontSize: "clamp(21px,2.4vw,30px)",
+                textTransform: "uppercase",
+                letterSpacing: "0.02em",
+              }}
+            >
+              Tu carrito está vacío
+            </span>
+            <p style={{ margin: 0, maxWidth: "40ch", fontSize: 15, lineHeight: 1.6, color: mix(70) }}>
+              Todas las obras del catálogo son piezas únicas de artistas emergentes.
+            </p>
+            <Link
+              href="/catalogo"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                height: 48,
+                padding: "0 30px",
+                background: "var(--fg)",
+                color: "var(--bg)",
+                borderRadius: 999,
+                ...EYEBROW,
+                fontSize: 11,
+                letterSpacing: "0.12em",
+              }}
+            >
+              Ver catálogo
+            </Link>
           </div>
+        ) : (
+          <div className="fdm-cart-shell">
+            <div className="fdm-cart-list">
+              <div style={{ borderTop: `1px solid ${mix(22)}` }}>
+                <AnimatePresence initial={false}>
+                  {items.map((item) => {
+                    const href = `/obra/${encodeURIComponent(String(item.id))}`;
+                    const qty = Number(item.quantity ?? 1);
+                    return (
+                      <motion.article
+                        key={item.id}
+                        layout={!reduce}
+                        initial={reduce ? undefined : { opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={reduce ? { opacity: 0 } : { opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="fdm-cart-row"
+                      >
+                        <Link href={href} style={{ flex: "0 0 auto" }}>
+                          <span
+                            style={{
+                              position: "relative",
+                              display: "block",
+                              width: "clamp(72px,7vw,104px)",
+                              aspectRatio: "1",
+                              padding: 8,
+                              background: mix(4),
+                              border: `1px solid ${mix(10)}`,
+                            }}
+                          >
+                            <span style={{ position: "absolute", inset: 8, display: "block" }}>
+                              <SmartImage
+                                src={getFirstImage(item.image)}
+                                alt={item.title}
+                                sizes="110px"
+                              />
+                            </span>
+                          </span>
+                        </Link>
 
-          {/* Resumen */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6 sticky top-24">
-              <h2 className="text-xl font-semibold mb-6">Resumen del Pedido</h2>
+                        <span
+                          style={{
+                            flex: "1 1 200px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 5,
+                            minWidth: 0,
+                          }}
+                        >
+                          <Link
+                            href={href}
+                            className="fdm-cart-link"
+                            style={{
+                              fontWeight: 500,
+                              fontSize: "clamp(16px,1.3vw,19px)",
+                              lineHeight: 1.25,
+                            }}
+                          >
+                            {item.title}
+                          </Link>
+                          {item.artist && (
+                            <span style={{ fontSize: 13.5, color: mix(65) }}>{item.artist}</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => remove(item.id)}
+                            className="fdm-cart-link"
+                            style={{
+                              alignSelf: "flex-start",
+                              marginTop: 2,
+                              background: "transparent",
+                              border: 0,
+                              padding: 0,
+                              cursor: "pointer",
+                              color: mix(50),
+                              ...EYEBROW,
+                              fontSize: 10,
+                              letterSpacing: "0.12em",
+                            }}
+                          >
+                            Quitar
+                          </button>
+                        </span>
 
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">{formatPrice(subtotal)}</span>
+                        <span
+                          style={{
+                            flex: "0 0 auto",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                          }}
+                        >
+                          <QtyButton
+                            label="Quitar una"
+                            disabled={qty <= 1}
+                            onClick={() => updateQty(item.id, qty - 1)}
+                          >
+                            −
+                          </QtyButton>
+                          <span
+                            style={{
+                              minWidth: 22,
+                              textAlign: "center",
+                              fontWeight: 500,
+                              fontSize: 15,
+                            }}
+                          >
+                            {qty}
+                          </span>
+                          <QtyButton label="Agregar una" onClick={() => updateQty(item.id, qty + 1)}>
+                            +
+                          </QtyButton>
+                        </span>
+
+                        <span
+                          style={{
+                            flex: "0 0 auto",
+                            minWidth: 118,
+                            textAlign: "right",
+                            fontWeight: 500,
+                            fontSize: 16,
+                          }}
+                        >
+                          {formatCOP(Number(item.price ?? 0) * qty)}
+                        </span>
+                      </motion.article>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+
+              <div style={{ paddingTop: 18 }}>
+                <Link href="/catalogo" className="fdm-cart-link" style={{ ...EYEBROW, fontSize: 10.5, color: mix(60) }}>
+                  ← Seguir viendo obras
+                </Link>
+              </div>
+            </div>
+
+            {/* Resumen */}
+            <aside className="fdm-cart-aside">
+              <div
+                style={{
+                  background: "var(--panel)",
+                  color: "#F5F4EF",
+                  padding: "clamp(22px,2.4vw,32px) clamp(20px,2.2vw,28px)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 16,
+                }}
+              >
+                <span style={{ ...EYEBROW, fontSize: 10, color: "var(--acc)" }}>Resumen</span>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    paddingBottom: 14,
+                    borderBottom: "1px solid rgba(245,244,239,0.2)",
+                    fontSize: 14.5,
+                    color: "rgba(245,244,239,0.75)",
+                  }}
+                >
+                  <span>
+                    Subtotal · {count} {count === 1 ? "pieza" : "piezas"}
+                  </span>
+                  <span>{formatCOP(subtotal)}</span>
                 </div>
 
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Envío</span>
-                  <span className="font-medium">
-                    {shipping === 0 ? "Gratis" : formatPrice(shipping)}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <span style={{ ...EYEBROW, fontSize: 10, color: "rgba(245,244,239,0.6)" }}>
+                    Total
+                  </span>
+                  <span style={{ fontWeight: 500, fontSize: "clamp(24px,2.4vw,32px)", lineHeight: 1 }}>
+                    {formatCOP(subtotal)}
                   </span>
                 </div>
 
-                <div className="border-t pt-4">
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <span>{formatPrice(total)}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <Link href="/checkout" className="block">
-                  <Button
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                    size="lg"
-                    variant="secondary"
-                  >
-                    Proceder al Pago
-                  </Button>
+                <Link
+                  href="/checkout"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: 52,
+                    marginTop: 4,
+                    background: "var(--acc)",
+                    color: "#0B0B0A",
+                    borderRadius: 999,
+                    ...EYEBROW,
+                    fontSize: 11,
+                    letterSpacing: "0.14em",
+                  }}
+                >
+                  Finalizar compra
                 </Link>
 
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">
-                    Pago seguro con Mercado Pago
-                  </p>
-                </div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12.5,
+                    lineHeight: 1.6,
+                    color: "rgba(245,244,239,0.6)",
+                  }}
+                >
+                  Cada pieza es única: si alguien la compra antes, se libera del carrito.
+                </p>
               </div>
-
-              {/* Información adicional */}
-              <div className="mt-6 pt-6 border-t">
-                <h3 className="font-semibold mb-3">Información de Compra</h3>
-                <ul className="text-sm text-gray-600 space-y-2">
-                  <li>• Garantía de autenticidad</li>
-                  <li>• Envío asegurado</li>
-                  <li>• Certificado de autenticidad incluido</li>
-                  <li>• Soporte post-venta</li>
-                </ul>
-              </div>
-            </div>
+            </aside>
           </div>
-        </div>
+        )}
       </div>
+
+      <SiteFooter />
     </div>
   );
 }

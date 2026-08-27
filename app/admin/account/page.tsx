@@ -34,6 +34,9 @@ import {
 
 import { toast } from "sonner";
 import { useAuth } from "@provider/authProvider";
+import ApplicationStatusCard from "@components/views/admin/artist/ApplicationStatusCard";
+import ArtistOrders from "@components/views/admin/artist/ArtistOrders";
+import { ACCOUNT_CSS, EYEBROW, ROOT_VARS, mix } from "@components/views/admin/artist/accountTheme";
 import { useUser, useUpdateUser } from "@hooks/queries/useUser";
 import type {
   DocumentType,
@@ -142,6 +145,9 @@ export default function MiCuentaClient() {
 
   const isSaving = updateUser.isPending;
 
+  // Las pestañas de artista solo existen si el rol está en el usuario.
+  const isArtist = Boolean((userDoc?.roles as any)?.artista);
+
   const rolesBadges = useMemo(() => {
     if (!userDoc?.roles) return [];
     return Object.entries(userDoc.roles)
@@ -231,17 +237,40 @@ export default function MiCuentaClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div style={ROOT_VARS}>
+      <style>{ACCOUNT_CSS}</style>
+      <div
+        className="fdm-acc"
+        style={{ maxWidth: 1280, margin: "0 auto", padding: "0 clamp(20px,4vw,56px)" }}
+      >
         {/* Header */}
-        <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight">
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: 18,
+            padding: "clamp(22px,2.6vw,36px) 0 clamp(14px,1.6vw,20px)",
+            borderBottom: `1px solid ${mix(20)}`,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <span style={{ ...EYEBROW, color: "var(--acc)" }}>
+              {isArtist ? "Panel de artista" : "Mi cuenta"}
+            </span>
+            <h1
+              style={{
+                margin: 0,
+                fontWeight: 300,
+                fontSize: "clamp(30px,3.6vw,54px)",
+                lineHeight: 1,
+                letterSpacing: "0.03em",
+                textTransform: "uppercase",
+              }}
+            >
               Mi cuenta
             </h1>
-            <p className="text-gray-600">
-              Gestiona tu perfil de artista y tus datos de contacto.
-            </p>
           </div>
           <Button
             type="submit"
@@ -297,7 +326,38 @@ export default function MiCuentaClient() {
               <Globe className="w-4 h-4" />
               Redes y web
             </TabsTrigger>
+
+            {isArtist && (
+              <>
+                <TabsTrigger value="postulacion" className="fdm-acc-tab">
+                  Postulación
+                </TabsTrigger>
+                <TabsTrigger value="entregas" className="fdm-acc-tab">
+                  Entregas
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
+
+          {isArtist && (
+            <>
+              <TabsContent
+                value="postulacion"
+                className="fdm-acc-panel"
+                style={{ padding: "clamp(18px,2vw,28px) 0" }}
+              >
+                <ApplicationStatusCard />
+              </TabsContent>
+
+              <TabsContent
+                value="entregas"
+                className="fdm-acc-panel"
+                style={{ padding: "clamp(18px,2vw,28px) 0" }}
+              >
+                <ArtistOrders />
+              </TabsContent>
+            </>
+          )}
 
           {/* Contenedor principal */}
           <div

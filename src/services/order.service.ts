@@ -142,3 +142,69 @@ export const chargeMercadoPagoCard = async (payload: {
     });
     return data;
 };
+
+/* ── Vista del artista ─────────────────────────────────────────────────
+   El backend acota por el artista del token: acá no se manda ningún id,
+   justamente para que no se pueda pedir la agenda de entregas de otro. */
+
+export interface ArtistOrderItem {
+  id: string;
+  artworkId: string;
+  copyId?: string | null;
+  qty: number;
+  unitPrice: number;
+  currency?: string;
+  deliveryStatus: "pending" | "delivered" | "returned";
+  deliveredAt?: string | null;
+  artistPayoutStatus?: "pending" | "ready" | "paid";
+}
+
+export interface ArtistOrderAddress {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zip?: string;
+  notes?: string;
+}
+
+export interface ArtistOrder {
+  id: string;
+  code: string;
+  createdAt: string;
+  status: string;
+  event?: string;
+  buyer: {
+    name: string;
+    email: string;
+    phone?: string;
+    address?: ArtistOrderAddress | null;
+  } | null;
+  items: ArtistOrderItem[];
+  artistSubtotal: number;
+}
+
+export const listMyArtistOrders = async (params?: {
+  event?: string;
+  deliveryStatus?: string;
+}): Promise<ArtistOrder[]> => {
+  const { data } = await apiClient.get<{ rows: ArtistOrder[] }>(
+    "/order/orders/mine/artist",
+    { params, withCredentials: true }
+  );
+  return data?.rows ?? [];
+};
+
+export const setArtistItemDelivery = async (
+  orderId: string,
+  itemId: string,
+  deliveryStatus: "pending" | "delivered" | "returned"
+): Promise<ArtistOrderItem> => {
+  const { data } = await apiClient.patch<{ item: ArtistOrderItem }>(
+    `/order/orders/mine/artist/${orderId}/items/${itemId}/delivery`,
+    { deliveryStatus },
+    { withCredentials: true }
+  );
+  return data.item;
+};

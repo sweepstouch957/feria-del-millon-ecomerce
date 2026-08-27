@@ -518,7 +518,7 @@ export default function GenericLoginPageClient() {
               </button>
 
               <Link
-                href="/convocatoria/recuperar"
+                href={`/convocatoria/recuperar?role=${role}`}
                 className="fdm-log-link"
                 style={{ fontSize: 13.5, color: mix(72) }}
               >

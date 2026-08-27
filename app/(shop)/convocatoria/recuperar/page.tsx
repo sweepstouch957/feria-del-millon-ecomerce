@@ -1,26 +1,146 @@
 "use client";
-import { useState, Suspense } from "react";
+
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { requestPasswordReset, resetPassword } from "@services/auth.service";
 
+/* ──────────────────────────────────────────────────────────────
+   Recuperar contraseña — mismo layout partido que /login y /registro.
+   Cuatro pasos: pedir correo → aviso de envío → código + contraseña
+   nueva → listo. La lógica de red no cambió.
+   ────────────────────────────────────────────────────────────── */
+
+type Role = "buyer" | "artist";
+
+const mix = (pct: number) => `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
+
+const EYEBROW: React.CSSProperties = {
+  fontWeight: 500,
+  fontSize: 10,
+  letterSpacing: "0.18em",
+  textTransform: "uppercase",
+};
+
+const ROOT_VARS = {
+  "--bg": "var(--fdm-bg,#F7F6F2)",
+  "--fg": "var(--fdm-fg,#0B0B0A)",
+  "--acc": "var(--fdm-green,#3FA46E)",
+  "--panel": "var(--fdm-panel,#0B0B0A)",
+  background: "var(--bg)",
+  color: "var(--fg)",
+  fontFamily: "Jost, system-ui, sans-serif",
+  fontWeight: 400,
+  letterSpacing: "0.005em",
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "stretch",
+  width: "100%",
+  overflowX: "hidden",
+} as React.CSSProperties;
+
+const PAGE_CSS = `
+  .fdm-rec a { transition: color .3s ease, border-color .3s ease, opacity .3s ease; }
+  .fdm-rec-link:hover { color: var(--acc); }
+  .fdm-rec-dark a:hover { color: var(--acc); }
+  .fdm-rec-dark { padding: clamp(24px,2.8vw,44px); }
+  .fdm-rec-field {
+    margin-top: 8px; width: 100%; padding: 11px 0;
+    background: transparent; color: inherit;
+    border: 0; border-bottom: 1px solid color-mix(in srgb, var(--fg) 30%, transparent);
+    font-size: 17px; font-weight: 400; outline: none;
+    transition: border-color .3s ease;
+    scroll-margin-top: 104px;
+  }
+  .fdm-rec-field:focus { border-color: var(--acc); }
+  .fdm-rec-field::placeholder { color: color-mix(in srgb, var(--fg) 38%, transparent); }
+  .fdm-rec-submit:hover:not(:disabled) { background: var(--acc); border-color: var(--acc); color: #0B0B0A; }
+
+  /* El navbar mide 80px + 1px de borde; descontarlo deja la pantalla justa. */
+  .fdm-rec { min-height: calc(100dvh - 81px); }
+
+  @media (max-width: 860px) {
+    .fdm-rec { min-height: 0; }
+    .fdm-rec-form { order: -1; }
+    .fdm-rec-dark { min-height: 0; padding-block: clamp(22px,6vw,34px); }
+    .fdm-rec-dark h1 { font-size: clamp(26px,7.5vw,40px); }
+  }
+
+  @media (max-height: 700px) and (min-width: 861px) {
+    .fdm-rec { min-height: 0; }
+  }
+`;
+
+/** Fuerza de contraseña por longitud y variedad, no por reglas arbitrarias. */
+function strengthOf(pwd: string) {
+  if (!pwd) return { score: 0, label: "", color: "" };
+  let score = 0;
+  if (pwd.length >= 8) score++;
+  if (pwd.length >= 12) score++;
+  if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) score++;
+  if (/\d/.test(pwd)) score++;
+  if (/[^\w\s]/.test(pwd)) score++;
+
+  if (score <= 2) return { score: 1, label: "Débil", color: "#B4472A" };
+  if (score === 3) return { score: 2, label: "Aceptable", color: "#C9902B" };
+  if (score === 4) return { score: 3, label: "Buena", color: "var(--acc)" };
+  return { score: 4, label: "Fuerte", color: "var(--acc)" };
+}
+
+const STEP_META: Record<string, { n: string; eyebrow: string }> = {
+  email: { n: "01", eyebrow: "Paso 1 de 3" },
+  sent: { n: "02", eyebrow: "Paso 2 de 3" },
+  token: { n: "03", eyebrow: "Paso 3 de 3" },
+  done: { n: "04", eyebrow: "Listo" },
+};
+
 function RecuperarContent() {
-  const search    = useSearchParams();
+  const search = useSearchParams();
   const tokenParam = search.get("token") || "";
 
-  const [step,            setStep]            = useState<"email"|"sent"|"token"|"done">(tokenParam ? "token" : "email");
-  const [email,           setEmail]           = useState("");
-  const [token,           setToken]           = useState(tokenParam);
-  const [newPassword,     setNewPassword]     = useState("");
+  // La pantalla la comparten compradores y artistas. Sin esto, un comprador
+  // que restablece su clave terminaba en el login de artista camino a la
+  // convocatoria.
+  const role: Role = search.get("role") === "buyer" ? "buyer" : "artist";
+  const loginHref =
+    role === "buyer"
+      ? "/login?role=buyer"
+      : "/login?role=artist&redirect=/convocatoria/aplicar";
+
+  const [step, setStep] = useState<"email" | "sent" | "token" | "done">(
+    tokenParam ? "token" : "email"
+  );
+  const [email, setEmail] = useState("");
+  const [token, setToken] = useState(tokenParam);
+  const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading,         setLoading]         = useState(false);
-  const [error,           setError]           = useState("");
-  const [showPwd,         setShowPwd]         = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
+  const [capsOn, setCapsOn] = useState(false);
+
+  const firstRef = useRef<HTMLInputElement | null>(null);
+
+  // Al cambiar de paso el foco viaja al primer campo del paso nuevo.
+  useEffect(() => {
+    const t = window.setTimeout(() => firstRef.current?.focus({ preventScroll: true }), 60);
+    return () => window.clearTimeout(t);
+  }, [step]);
+
+  const strength = useMemo(() => strengthOf(newPassword), [newPassword]);
+
+  const onPassKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const on = e.getModifierState?.("CapsLock");
+    if (typeof on === "boolean" && on !== capsOn) setCapsOn(on);
+  };
 
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!email) { setError("Ingresa tu correo electrónico"); return; }
+    if (!email) {
+      setError("Ingresa tu correo electrónico");
+      return;
+    }
     setLoading(true);
     try {
       await requestPasswordReset(email);
@@ -28,15 +148,26 @@ function RecuperarContent() {
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } }; message?: string };
       setError(e?.response?.data?.error || "Error al enviar el correo");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!token)                          { setError("Ingresa el código de recuperación"); return; }
-    if (newPassword.length < 8)          { setError("La contraseña debe tener al menos 8 caracteres"); return; }
-    if (newPassword !== confirmPassword) { setError("Las contraseñas no coinciden"); return; }
+    if (!token) {
+      setError("Ingresa el código de recuperación");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Las contraseñas no coinciden");
+      return;
+    }
     setLoading(true);
     try {
       await resetPassword({ token, newPassword });
@@ -44,351 +175,568 @@ function RecuperarContent() {
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } }; message?: string };
       setError(e?.response?.data?.error || "Token inválido o expirado");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const meta = STEP_META[step];
+
+  const submitStyle: React.CSSProperties = {
+    marginTop: 22,
+    width: "100%",
+    height: 54,
+    borderRadius: 999,
+    cursor: loading ? "wait" : "pointer",
+    opacity: loading ? 0.7 : 1,
+    ...EYEBROW,
+    fontSize: 11,
+    letterSpacing: "0.18em",
+    whiteSpace: "nowrap",
+    transition: "all .3s ease",
+    border: "1px solid var(--fg)",
+    background: "var(--fg)",
+    color: "var(--bg)",
+  };
+
+  const ghostStyle: React.CSSProperties = {
+    marginTop: 12,
+    width: "100%",
+    height: 46,
+    borderRadius: 999,
+    cursor: "pointer",
+    background: "transparent",
+    color: mix(65),
+    border: `1px solid ${mix(22)}`,
+    ...EYEBROW,
+    fontSize: 10.5,
+    letterSpacing: "0.12em",
+  };
+
+  const labelStyle: React.CSSProperties = { ...EYEBROW, fontSize: 9.5, color: mix(66) };
+
   return (
-    <div className="rc-root">
-      <div className="rc-glow rc-glow--1" aria-hidden />
-      <div className="rc-glow rc-glow--2" aria-hidden />
+    <div className="fdm-rec" style={ROOT_VARS}>
+      <style>{PAGE_CSS}</style>
 
-      <div className="rc-card">
+      {/* ══ Panel oscuro ═══════════════════════════════════ */}
+      <div
+        className="fdm-rec-dark"
+        style={{
+          flex: "1 1 400px",
+          minWidth: "min(100%,320px)",
+          background: "var(--panel)",
+          color: "#F5F4EF",
+          position: "relative",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          gap: "clamp(20px,2.4vw,32px)",
+        }}
+      >
+        <div
+          style={{
+            position: "relative",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: 16,
+          }}
+        >
+          <h1
+            style={{
+              margin: 0,
+              fontWeight: 300,
+              fontSize: "clamp(30px,3.6vw,52px)",
+              lineHeight: 1.05,
+              letterSpacing: "0.02em",
+              textTransform: "uppercase",
+            }}
+          >
+            <span style={{ display: "block" }}>Recuperá</span>
+            <span style={{ display: "block" }}>tu</span>
+            <span style={{ display: "block", color: "var(--acc)" }}>acceso</span>
+          </h1>
 
-        {/* Wordmark */}
-        <div className="rc-wordmark">
-          <GemSvg /> <span>Feria del Millón</span>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {[
+              { n: "01", t: "Escribí el correo de tu cuenta" },
+              { n: "02", t: "Abrí el correo que te enviamos" },
+              { n: "03", t: "Elegí una contraseña nueva" },
+            ].map((s, i, arr) => {
+              const active = meta.n === s.n;
+              const doneStep = Number(meta.n) > Number(s.n);
+              return (
+                <span
+                  key={s.n}
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 12,
+                    padding: "9px 0",
+                    borderTop: "1px solid rgba(245,244,239,0.16)",
+                    borderBottom: i === arr.length - 1 ? "1px solid rgba(245,244,239,0.16)" : undefined,
+                    fontSize: 14.5,
+                    color: active || doneStep ? "#F5F4EF" : "rgba(245,244,239,0.5)",
+                    transition: "color .3s ease",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 9.5,
+                      letterSpacing: "0.2em",
+                      color: active || doneStep ? "var(--acc)" : "rgba(245,244,239,0.4)",
+                    }}
+                  >
+                    {doneStep ? "✓" : s.n}
+                  </span>
+                  {s.t}
+                </span>
+              );
+            })}
+          </div>
         </div>
 
-        {/* ── Step: email ── */}
-        {step === "email" && (
-          <>
-            <div className="rc-icon-wrap">
-              <MailLockSvg />
-            </div>
-            <h1 className="rc-title">Recuperar contraseña</h1>
-            <p className="rc-sub">
-              Ingresa el correo con el que te registraste. Te enviaremos un código
-              para restablecer tu contraseña.
-            </p>
-
-            {error && <Err msg={error} />}
-
-            <form onSubmit={handleRequestReset} className="rc-form">
-              <Fld label="Correo electrónico" htmlFor="rc-em">
-                <input id="rc-em" type="email" value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  autoComplete="email" placeholder="artista@correo.com" autoFocus />
-              </Fld>
-              <button type="submit" className="rc-cta" disabled={loading}>
-                {loading ? <><Spin /> Enviando…</> : <>Enviar código de recuperación <ArrowSvg /></>}
-              </button>
-            </form>
-          </>
-        )}
-
-        {/* ── Step: sent ── */}
-        {step === "sent" && (
-          <>
-            <div className="rc-icon-wrap">
-              <InboxSvg />
-            </div>
-            <h1 className="rc-title">Revisa tu correo</h1>
-            <p className="rc-sub">
-              Te enviamos un correo de recuperación a <strong>{email}</strong>.
-              Ábrelo y haz clic en el botón de <strong>restablecer contraseña</strong> para continuar.
-            </p>
-
-            {error && <Err msg={error} />}
-
-            <button type="button" className="rc-cta" disabled={loading} onClick={handleRequestReset}>
-              {loading ? <><Spin /> Reenviando…</> : <>Reenviar correo <ArrowSvg /></>}
-            </button>
-            <button type="button" className="rc-ghost"
-              onClick={() => { setStep("email"); setError(""); }}>
-              ← Usar otro correo
-            </button>
-          </>
-        )}
-
-        {/* ── Step: token ── */}
-        {step === "token" && (
-          <>
-            <div className="rc-icon-wrap">
-              <InboxSvg />
-            </div>
-            <h1 className="rc-title">Nueva contraseña</h1>
-            <p className="rc-sub">
-              {tokenParam
-                ? "Establece tu nueva contraseña para continuar."
-                : <>Revisa tu correo{email && <> (<strong>{email}</strong>)</>}. Pega el código y establece tu nueva contraseña.</>}
-            </p>
-
-            {error && <Err msg={error} />}
-
-            <form onSubmit={handleResetPassword} className="rc-form">
-              {!tokenParam && (
-                <Fld label="Código de recuperación" htmlFor="rc-tok">
-                  <input id="rc-tok" type="text" value={token}
-                    onChange={e => setToken(e.target.value)}
-                    placeholder="Pega el código del correo"
-                    autoComplete="off" autoFocus />
-                </Fld>
-              )}
-              <Fld label="Nueva contraseña" htmlFor="rc-npw">
-                <div className="rc-pw-wrap">
-                  <input id="rc-npw" type={showPwd ? "text" : "password"}
-                    value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                    placeholder="Mínimo 8 caracteres" autoComplete="new-password"
-                    autoFocus={!!tokenParam} />
-                  <button type="button" className="rc-pw-btn" onClick={() => setShowPwd(v => !v)}>
-                    {showPwd ? "Ocultar" : "Ver"}
-                  </button>
-                </div>
-              </Fld>
-              <Fld label="Confirmar contraseña" htmlFor="rc-cpw">
-                <input id="rc-cpw" type="password" value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Repite la nueva contraseña" autoComplete="new-password" />
-              </Fld>
-              <button type="submit" className="rc-cta" disabled={loading}>
-                {loading ? <><Spin /> Restableciendo…</> : <>Restablecer contraseña <ArrowSvg /></>}
-              </button>
-              <button type="button" className="rc-ghost"
-                onClick={() => { setStep(email ? "sent" : "email"); setError(""); }}>
-                ← Volver a enviar código
-              </button>
-            </form>
-          </>
-        )}
-
-        {/* ── Step: done ── */}
-        {step === "done" && (
-          <>
-            <div className="rc-icon-wrap rc-icon-wrap--ok">
-              <CheckCircleSvg />
-            </div>
-            <h1 className="rc-title">¡Contraseña restablecida!</h1>
-            <p className="rc-sub">
-              Tu contraseña fue actualizada exitosamente. Ya puedes iniciar sesión.
-            </p>
-            <Link href="/login?role=artist&redirect=/convocatoria/aplicar" className="rc-cta" style={{ textDecoration:"none", textAlign:"center" }}>
-              Iniciar sesión <ArrowSvg />
-            </Link>
-          </>
-        )}
-
-        <div className="rc-foot">
-          <Link href="/login?role=artist&redirect=/convocatoria/aplicar">Iniciar sesión</Link>
-          <span className="rc-foot__dot" aria-hidden>·</span>
-          <Link href="/convocatoria/register">Crear cuenta</Link>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px 20px",
+            ...EYEBROW,
+            letterSpacing: "0.16em",
+            color: "rgba(245,244,239,0.7)",
+          }}
+        >
+          <Link href={loginHref}>← Iniciar sesión</Link>
+          <a href="mailto:info@feriadelmillon.com">Ayuda</a>
         </div>
       </div>
 
-      <style jsx>{`
-        .rc-root {
-          --g:      #22c55e;
-          --g-dim:  rgba(34,197,94,.09);
-          --g-ring: rgba(34,197,94,.2);
-          --g-bd:   rgba(34,197,94,.3);
-          --s1:     #0a0a0a;
-          --s2:     #111;
-          --s3:     #181818;
-          --bd:     rgba(255,255,255,.08);
-          --bd2:    rgba(255,255,255,.14);
-          --tx:     rgba(255,255,255,.93);
-          --tx2:    rgba(255,255,255,.62);
-          --tx3:    rgba(255,255,255,.32);
-          --er:     #f87171;
-          --e:      cubic-bezier(.16,1,.3,1);
-          font-family: 'Inter', system-ui, sans-serif;
-          background: #000; color: var(--tx);
-          min-height: calc(100vh - 64px);
-          display: flex; align-items: center; justify-content: center;
-          padding: 32px 16px; position: relative; overflow: hidden;
-        }
+      {/* ══ Formulario ═════════════════════════════════════ */}
+      <div
+        className="fdm-rec-form"
+        style={{
+          flex: "1 1 520px",
+          minWidth: "min(100%,320px)",
+          display: "flex",
+          flexDirection: "column",
+          padding: "clamp(20px,2.4vw,36px)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            paddingBottom: "clamp(16px,1.8vw,24px)",
+            borderBottom: `1px solid ${mix(14)}`,
+          }}
+        >
+          <span style={{ ...EYEBROW, color: mix(62) }}>{meta.eyebrow}</span>
+        </div>
 
-        /* Glows */
-        .rc-glow { position: absolute; border-radius: 50%; filter: blur(160px); opacity: .07; pointer-events: none; }
-        .rc-glow--1 { width: 400px; height: 400px; top: -120px; left: -80px; background: var(--g); }
-        .rc-glow--2 { width: 300px; height: 300px; bottom: -100px; right: -60px; background: #4ade80; }
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "clamp(16px,2vw,30px) 0",
+          }}
+        >
+          <div style={{ width: "100%", maxWidth: 440, display: "flex", flexDirection: "column" }}>
+            {/* ── Paso: correo ─────────────────────────── */}
+            {step === "email" && (
+              <form onSubmit={handleRequestReset} style={{ display: "flex", flexDirection: "column" }}>
+                <h2
+                  style={{
+                    margin: "0 0 6px",
+                    fontWeight: 300,
+                    fontSize: "clamp(26px,2.6vw,36px)",
+                    lineHeight: 1.1,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  Recuperar contraseña
+                </h2>
+                <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: mix(72) }}>
+                  Ingresá el correo con el que te registraste. Te enviamos un código para
+                  restablecerla.
+                </p>
 
-        /* Card */
-        .rc-card {
-          position: relative; z-index: 1;
-          background: linear-gradient(160deg, var(--s2) 0%, var(--s1) 100%);
-          border: 1px solid var(--bd2); border-radius: 22px;
-          padding: 44px 40px 32px; max-width: 440px; width: 100%;
-          text-align: center;
-          box-shadow: 0 0 0 1px rgba(255,255,255,.03) inset, 0 32px 80px rgba(0,0,0,.65);
-          animation: rc-in .5s var(--e) both;
-        }
-        @keyframes rc-in { from{opacity:0;transform:translateY(16px) scale(.97)} to{opacity:1;transform:none} }
+                <label htmlFor="rc-em" style={{ ...labelStyle, marginTop: 22 }}>
+                  Correo electrónico
+                </label>
+                <input
+                  id="rc-em"
+                  ref={firstRef}
+                  className="fdm-rec-field"
+                  type="email"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  placeholder="tu@correo.com"
+                  aria-invalid={!!error}
+                  required
+                />
 
-        /* Wordmark */
-        .rc-wordmark {
-          display: inline-flex; align-items: center; gap: 7px;
-          font-size: 12.5px; font-weight: 700; color: var(--tx3);
-          margin-bottom: 28px;
-        }
-        .rc-wordmark svg { color: var(--g); }
+                {error && <ErrorBox msg={error} />}
 
-        /* Icon */
-        .rc-icon-wrap {
-          width: 64px; height: 64px; border-radius: 16px;
-          background: var(--g-dim); border: 1px solid var(--g-bd);
-          color: var(--g);
-          display: flex; align-items: center; justify-content: center;
-          margin: 0 auto 20px;
-          transition: background .3s;
-        }
-        .rc-icon-wrap--ok { background: rgba(34,197,94,.15); animation: rc-pop .4s var(--e); }
-        @keyframes rc-pop { from{transform:scale(.5);opacity:0} to{transform:scale(1);opacity:1} }
+                <button type="submit" disabled={loading} className="fdm-rec-submit" style={submitStyle}>
+                  {loading ? "Enviando…" : "Enviar código"}
+                </button>
+              </form>
+            )}
 
-        .rc-title { font-size: 22px; font-weight: 900; letter-spacing: -.6px; margin: 0 0 8px; }
-        .rc-sub { font-size: 13.5px; color: var(--tx2); margin: 0 0 24px; line-height: 1.6; }
-        .rc-sub strong { color: var(--tx); font-weight: 600; }
+            {/* ── Paso: enviado ────────────────────────── */}
+            {step === "sent" && (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <h2
+                  style={{
+                    margin: "0 0 6px",
+                    fontWeight: 300,
+                    fontSize: "clamp(26px,2.6vw,36px)",
+                    lineHeight: 1.1,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  Revisá tu correo
+                </h2>
+                <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: mix(72) }}>
+                  Enviamos un correo de recuperación a{" "}
+                  <span style={{ color: "var(--acc)" }}>{email}</span>. Abrilo y seguí el enlace
+                  para restablecer tu contraseña.
+                </p>
 
-        /* Error */
-        .rc-err {
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-          background: rgba(248,113,113,.06); border: 1px solid rgba(248,113,113,.2);
-          border-radius: 10px; padding: 10px 14px; color: var(--er);
-          font-size: 13px; margin-bottom: 16px;
-        }
-        .rc-err__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--er); flex-shrink: 0; }
+                {error && <ErrorBox msg={error} />}
 
-        /* Form */
-        .rc-form { display: flex; flex-direction: column; gap: 14px; text-align: left; }
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={handleRequestReset}
+                  className="fdm-rec-submit"
+                  style={submitStyle}
+                >
+                  {loading ? "Reenviando…" : "Reenviar correo"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("token");
+                    setError("");
+                  }}
+                  style={ghostStyle}
+                >
+                  Ya tengo el código
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("email");
+                    setError("");
+                  }}
+                  style={{ ...ghostStyle, marginTop: 8, border: 0, height: 34 }}
+                >
+                  ← Usar otro correo
+                </button>
+              </div>
+            )}
 
-        .rc-form input {
-          width: 100%; background: var(--s2); border: 1.5px solid var(--bd2);
-          border-radius: 10px; padding: 11px 14px; font-size: 14px;
-          color: var(--tx); font-family: inherit; outline: none;
-          box-sizing: border-box;
-          transition: border-color .15s var(--e), background .15s var(--e), box-shadow .15s var(--e);
-        }
-        .rc-form input::placeholder { color: var(--tx3); }
-        .rc-form input:hover { border-color: rgba(255,255,255,.22); background: var(--s3); }
-        .rc-form input:focus { border-color: var(--g); background: var(--s3); box-shadow: 0 0 0 3px var(--g-ring); }
+            {/* ── Paso: código + contraseña nueva ──────── */}
+            {step === "token" && (
+              <form onSubmit={handleResetPassword} style={{ display: "flex", flexDirection: "column" }}>
+                <h2
+                  style={{
+                    margin: "0 0 6px",
+                    fontWeight: 300,
+                    fontSize: "clamp(26px,2.6vw,36px)",
+                    lineHeight: 1.1,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  Nueva contraseña
+                </h2>
+                <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: mix(72) }}>
+                  {tokenParam
+                    ? "Elegí tu nueva contraseña para continuar."
+                    : "Pegá el código que te llegó por correo y elegí tu nueva contraseña."}
+                </p>
 
-        /* Pw wrap */
-        .rc-pw-wrap { position: relative; }
-        .rc-pw-wrap input { padding-right: 62px; }
-        .rc-pw-btn {
-          position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-          font-size: 11px; font-weight: 700; color: var(--tx3);
-          background: rgba(255,255,255,.06); border: 1px solid var(--bd2);
-          padding: 3px 8px; border-radius: 6px; cursor: pointer;
-          transition: color .15s, border-color .15s;
-        }
-        .rc-pw-btn:hover { color: var(--tx); border-color: rgba(255,255,255,.22); }
+                {!tokenParam && (
+                  <>
+                    <label htmlFor="rc-tok" style={{ ...labelStyle, marginTop: 22 }}>
+                      Código de recuperación
+                    </label>
+                    <input
+                      id="rc-tok"
+                      ref={firstRef}
+                      className="fdm-rec-field"
+                      type="text"
+                      value={token}
+                      onChange={(e) => setToken(e.target.value)}
+                      placeholder="Pegá el código del correo"
+                      autoComplete="off"
+                      spellCheck={false}
+                      aria-invalid={!!error}
+                    />
+                  </>
+                )}
 
-        /* CTA */
-        .rc-cta {
-          width: 100%; background: var(--g); color: #000; border: none;
-          border-radius: 11px; padding: 13px 20px; font-size: 14.5px; font-weight: 700;
-          font-family: inherit; cursor: pointer;
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-          transition: all .2s var(--e); box-shadow: 0 4px 22px rgba(34,197,94,.22);
-        }
-        .rc-cta:hover:not(:disabled) {
-          background: #4ade80; transform: translateY(-1px);
-          box-shadow: 0 8px 30px rgba(34,197,94,.38);
-        }
-        .rc-cta:active:not(:disabled) { transform: translateY(0); }
-        .rc-cta:disabled { opacity: .28; cursor: not-allowed; box-shadow: none; }
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    marginTop: 18,
+                  }}
+                >
+                  <label htmlFor="rc-npw" style={labelStyle}>
+                    Nueva contraseña
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd((v) => !v)}
+                    className="fdm-rec-link"
+                    style={{
+                      background: "transparent",
+                      border: 0,
+                      padding: 0,
+                      cursor: "pointer",
+                      color: "var(--acc)",
+                      ...EYEBROW,
+                      fontSize: 9.5,
+                      letterSpacing: "0.16em",
+                    }}
+                  >
+                    {showPwd ? "Ocultar" : "Ver"}
+                  </button>
+                </div>
+                <input
+                  id="rc-npw"
+                  ref={tokenParam ? firstRef : undefined}
+                  className="fdm-rec-field"
+                  type={showPwd ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  onKeyUp={onPassKey}
+                  onKeyDown={onPassKey}
+                  onBlur={() => setCapsOn(false)}
+                  placeholder="Mínimo 8 caracteres"
+                  autoComplete="new-password"
+                  aria-invalid={!!error}
+                />
 
-        /* Ghost */
-        .rc-ghost {
-          width: 100%; background: rgba(255,255,255,.04); color: var(--tx3);
-          border: 1px solid var(--bd2); border-radius: 10px;
-          padding: 10px; font-size: 13px; font-weight: 600; font-family: inherit;
-          cursor: pointer; transition: all .15s var(--e);
-        }
-        .rc-ghost:hover { background: rgba(255,255,255,.08); color: var(--tx2); border-color: rgba(255,255,255,.2); }
+                {newPassword && (
+                  <span style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+                    <span style={{ display: "flex", gap: 4, flex: 1 }}>
+                      {[1, 2, 3, 4].map((n) => (
+                        <span
+                          key={n}
+                          style={{
+                            flex: 1,
+                            height: 2,
+                            background: n <= strength.score ? strength.color : mix(14),
+                            transition: "background .3s ease",
+                          }}
+                        />
+                      ))}
+                    </span>
+                    <span
+                      style={{
+                        ...EYEBROW,
+                        fontSize: 9.5,
+                        letterSpacing: "0.14em",
+                        color: strength.color,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {strength.label}
+                    </span>
+                  </span>
+                )}
 
-        /* Footer */
-        .rc-foot {
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-          margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--bd);
-        }
-        .rc-foot a { font-size: 13px; font-weight: 600; color: var(--g); text-decoration: none; }
-        .rc-foot a:hover { text-decoration: underline; }
-        .rc-foot__dot { color: var(--tx3); font-size: 13px; }
+                {capsOn && (
+                  <span
+                    role="status"
+                    style={{
+                      marginTop: 8,
+                      ...EYEBROW,
+                      fontSize: 9.5,
+                      letterSpacing: "0.14em",
+                      color: "var(--acc)",
+                    }}
+                  >
+                    Bloq Mayús activado
+                  </span>
+                )}
 
-        @keyframes rc-spin { to { transform: rotate(360deg); } }
-      `}</style>
+                <label htmlFor="rc-cpw" style={{ ...labelStyle, marginTop: 18 }}>
+                  Confirmar contraseña
+                </label>
+                <input
+                  id="rc-cpw"
+                  className="fdm-rec-field"
+                  type={showPwd ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Repetí la nueva contraseña"
+                  autoComplete="new-password"
+                  aria-invalid={!!error}
+                />
+                {confirmPassword && confirmPassword !== newPassword && (
+                  <span
+                    style={{
+                      marginTop: 8,
+                      ...EYEBROW,
+                      fontSize: 9.5,
+                      letterSpacing: "0.14em",
+                      color: "#B4472A",
+                    }}
+                  >
+                    No coinciden
+                  </span>
+                )}
+
+                {error && <ErrorBox msg={error} />}
+
+                <button type="submit" disabled={loading} className="fdm-rec-submit" style={submitStyle}>
+                  {loading ? "Restableciendo…" : "Restablecer contraseña"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep(email ? "sent" : "email");
+                    setError("");
+                  }}
+                  style={ghostStyle}
+                >
+                  ← Volver a pedir el código
+                </button>
+              </form>
+            )}
+
+            {/* ── Paso: listo ──────────────────────────── */}
+            {step === "done" && (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span style={{ ...EYEBROW, fontSize: 10, color: "var(--acc)", marginBottom: 10 }}>
+                  Contraseña actualizada
+                </span>
+                <h2
+                  style={{
+                    margin: "0 0 6px",
+                    fontWeight: 300,
+                    fontSize: "clamp(26px,2.6vw,36px)",
+                    lineHeight: 1.1,
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  Todo listo
+                </h2>
+                <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: mix(72) }}>
+                  Tu contraseña quedó actualizada. Ya podés iniciar sesión con ella.
+                </p>
+
+                <Link
+                  href={loginHref}
+                  className="fdm-rec-submit"
+                  style={{
+                    ...submitStyle,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    opacity: 1,
+                  }}
+                >
+                  Iniciar sesión
+                </Link>
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 22,
+                paddingTop: 16,
+                borderTop: `1px solid ${mix(14)}`,
+                fontSize: 14,
+                color: mix(72),
+              }}
+            >
+              <Link href={loginHref} className="fdm-rec-link">
+                Iniciar sesión
+              </Link>
+              <span aria-hidden style={{ color: mix(30) }}>
+                ·
+              </span>
+              <Link
+                href={role === "buyer" ? "/registro" : "/convocatoria/register"}
+                className="fdm-rec-link"
+              >
+                Crear cuenta
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px 20px",
+            justifyContent: "space-between",
+            paddingTop: 14,
+            borderTop: `1px solid ${mix(14)}`,
+            ...EYEBROW,
+            fontSize: 9.5,
+            letterSpacing: "0.16em",
+            color: mix(55),
+          }}
+        >
+          <span>© Feria del Millón · Oficina para la Cultura SAS</span>
+          <span style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+            <Link href="/legal" className="fdm-rec-link">
+              Privacidad
+            </Link>
+            <Link href="/legal" className="fdm-rec-link">
+              Términos
+            </Link>
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
 
-/* ── Small helpers ── */
-function Fld({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
+function ErrorBox({ msg }: { msg: string }) {
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-      <label htmlFor={htmlFor} style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,.62)" }}>{label}</label>
-      {children}
-    </div>
-  );
-}
-function Err({ msg }: { msg: string }) {
-  return (
-    <div role="alert" className="rc-err">
-      <span className="rc-err__dot" aria-hidden />
+    <div
+      role="alert"
+      style={{
+        marginTop: 18,
+        padding: "12px 14px",
+        borderLeft: "2px solid var(--acc)",
+        background: mix(5),
+        fontSize: 14,
+        lineHeight: 1.5,
+      }}
+    >
       {msg}
     </div>
   );
 }
-function Spin() {
-  return <span style={{ animation:"rc-spin .7s linear infinite", display:"flex" }}>
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" strokeOpacity=".2"/>
-      <path d="M14 8a6 6 0 01-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    </svg>
-  </span>;
-}
-
-/* ── SVG icons ── */
-function GemSvg() {
-  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-    <path d="M8 14L1 6l2-3h10l2 3-7 8z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-    <path d="M1 6h14M5 3l3 11M11 3l-3 11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-  </svg>;
-}
-function ArrowSvg() {
-  return <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>;
-}
-function MailLockSvg() {
-  return <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-    <rect x="2" y="6" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-    <path d="M2 8l8 6 8-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-    <rect x="16" y="11" width="6" height="5" rx="1" stroke="currentColor" strokeWidth="1.4"/>
-    <path d="M17.5 11V9.5a1.5 1.5 0 013 0V11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-  </svg>;
-}
-function InboxSvg() {
-  return <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-    <rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-    <path d="M2 14h4l2 3h8l2-3h4" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-    <path d="M9 9h6M9 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-  </svg>;
-}
-function CheckCircleSvg() {
-  return <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden>
-    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5"/>
-    <path d="M7 12l3.5 3.5L17 8.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>;
-}
 
 export default function RecuperarPage() {
   return (
-    <Suspense fallback={
-      <div style={{ background:"#000", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", color:"#333" }}>
-        Cargando…
-      </div>
-    }>
+    <Suspense fallback={null}>
       <RecuperarContent />
     </Suspense>
   );

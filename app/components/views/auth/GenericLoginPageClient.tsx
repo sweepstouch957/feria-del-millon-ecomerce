@@ -15,7 +15,6 @@ import ThemeToggle from "@components/views/home/v2/ThemeToggle";
 
 type Role = "buyer" | "artist";
 
-const LOGO = "/assets/fdm/logo-fdm.jpg";
 const REMEMBER_KEY = "fdm-remember";
 const LAST_EMAIL_KEY = "fdm-last-email";
 
@@ -38,9 +37,10 @@ const ROOT_VARS = {
   fontFamily: "Jost, system-ui, sans-serif",
   fontWeight: 400,
   letterSpacing: "0.005em",
-  // El navbar del layout ocupa la franja superior: descontarla evita que el
-  // split de pantalla completa genere scroll de más.
-  minHeight: "calc(100vh - 76px)",
+  // El navbar mide 80px + 1px de borde. Descontarlo exacto deja la pantalla
+  // justa, sin scroll. `dvh` en vez de `vh` porque en móvil la barra del
+  // navegador se recoge y `vh` deja un salto.
+  minHeight: "calc(100dvh - 81px)",
   display: "flex",
   flexWrap: "wrap",
   alignItems: "stretch",
@@ -215,65 +215,14 @@ export default function GenericLoginPageClient() {
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
-          gap: "clamp(24px,3vw,40px)",
+          // Sin el logo arriba, el manifiesto queda centrado y los enlaces
+          // anclados abajo.
+          justifyContent: "center",
+          gap: "clamp(20px,2.4vw,32px)",
           padding: "clamp(24px,2.8vw,44px)",
         }}
       >
-        <span
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: "auto -8% -30% auto",
-            width: "min(74%,520px)",
-            aspectRatio: "2.46",
-            backgroundImage: `url('${LOGO}')`,
-            backgroundSize: "cover",
-            backgroundPosition: "49% center",
-            filter: "invert(1) contrast(1.5)",
-            mixBlendMode: "lighten",
-            opacity: 0.08,
-            pointerEvents: "none",
-          }}
-        />
 
-        <Link href="/" style={{ position: "relative", display: "flex", alignItems: "center", gap: 14 }}>
-          <span
-            style={{
-              display: "block",
-              width: 56,
-              aspectRatio: "2.46",
-              backgroundImage: `url('${LOGO}')`,
-              backgroundSize: "cover",
-              backgroundPosition: "49% center",
-              filter: "invert(1) contrast(1.3)",
-            }}
-          />
-          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}>
-            <span
-              style={{
-                fontWeight: 500,
-                fontSize: 15,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              Feria del Millón
-            </span>
-            <span
-              style={{
-                fontWeight: 400,
-                fontSize: 9,
-                letterSpacing: "0.28em",
-                textTransform: "uppercase",
-                color: "rgba(245,244,239,0.62)",
-                marginTop: 4,
-              }}
-            >
-              Arte emergente · Bogotá
-            </span>
-          </span>
-        </Link>
 
         <div style={{ position: "relative", display: "flex", flexDirection: "column", gap: 16 }}>
           <h1
@@ -321,6 +270,7 @@ export default function GenericLoginPageClient() {
         <div
           style={{
             position: "relative",
+            marginTop: "auto",
             display: "flex",
             flexWrap: "wrap",
             gap: "10px 20px",
@@ -364,7 +314,7 @@ export default function GenericLoginPageClient() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "clamp(22px,3vw,48px) 0",
+            padding: "clamp(16px,2vw,30px) 0",
           }}
         >
           <form

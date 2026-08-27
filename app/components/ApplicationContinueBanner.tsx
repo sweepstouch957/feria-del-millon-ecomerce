@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@provider/authProvider";
-import { CreditCard, AlertTriangle, Pencil } from "lucide-react";
 import {
   getMyApplications,
   type ArtistApplication,
@@ -111,10 +110,142 @@ function getActionable(app: ArtistApplication): ActionableInfo | null {
 }
 
 /* ── Component ───────────────────────────────────────────────────── */
+const DISMISS_KEY = "fdm-app-banner-dismissed";
+
+const BANNER_CSS = `
+  .acb {
+    position: fixed;
+    right: clamp(14px, 2vw, 24px);
+    bottom: clamp(14px, 2vw, 24px);
+    z-index: 49;
+    width: min(310px, calc(100vw - 28px));
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 18px 18px;
+    background: var(--fdm-panel, #0B0B0A);
+    color: #F5F4EF;
+    border: 1px solid rgba(245, 244, 239, 0.14);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
+    font-family: Jost, system-ui, sans-serif;
+    font-weight: 400;
+  }
+
+  .acb-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .acb-eyebrow {
+    font-weight: 500;
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--acb-accent);
+  }
+
+  .acb-x {
+    flex: 0 0 auto;
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    color: rgba(245, 244, 239, 0.55);
+    border: 1px solid rgba(245, 244, 239, 0.2);
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    transition: color .3s ease, border-color .3s ease;
+  }
+  .acb-x:hover { color: #F5F4EF; border-color: rgba(245, 244, 239, 0.45); }
+
+  .acb-conv {
+    font-weight: 500;
+    font-size: 17px;
+    line-height: 1.2;
+  }
+
+  .acb-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 2px;
+  }
+
+  .acb-bars { display: flex; gap: 4px; flex: 1; }
+
+  .acb-bar {
+    flex: 1;
+    height: 2px;
+    background: rgba(245, 244, 239, 0.18);
+    transition: background .3s ease;
+  }
+  .acb-bar--done { background: rgba(245, 244, 239, 0.5); }
+  .acb-bar--active { background: var(--acb-accent); }
+
+  .acb-step {
+    font-weight: 500;
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    color: rgba(245, 244, 239, 0.55);
+    white-space: nowrap;
+  }
+
+  .acb-label {
+    font-size: 14px;
+    color: rgba(245, 244, 239, 0.8);
+  }
+
+  .acb-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    margin-top: 4px;
+    border-radius: 999px;
+    background: var(--acb-accent);
+    color: #0B0B0A;
+    font-weight: 500;
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    transition: opacity .3s ease;
+  }
+  .acb-cta:hover { opacity: 0.82; }
+
+  /* En móvil ocupa el ancho pero sin tapar la barra inferior del navegador. */
+  @media (max-width: 520px) {
+    .acb { left: 14px; right: 14px; width: auto; bottom: max(14px, env(safe-area-inset-bottom)); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .acb, .acb-bar, .acb-cta { transition: none; }
+  }
+`;
+
 export function ApplicationContinueBanner() {
   const { isAuthenticated, isAuthLoading } = useAuth();
   const pathname = usePathname();
   const [dismissed, setDismissed] = useState(false);
+
+  // Si el artista lo cierra, que siga cerrado el resto de la sesión. Antes
+  // volvía a aparecer con cada recarga.
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem(DISMISS_KEY) === "1") setDismissed(true);
+    } catch {}
+  }, []);
+
+  const dismiss = () => {
+    setDismissed(true);
+    try {
+      window.sessionStorage.setItem(DISMISS_KEY, "1");
+    } catch {}
+  };
 
   const { data: apps } = useQuery({
     queryKey: ["my-applications"],
@@ -146,313 +277,71 @@ export function ApplicationContinueBanner() {
     }
   }
 
-  const isPaying = info?.variant === "payment";
-  const isRevision = (info?.variant as string) === "revision";
-  const accent = isPaying
-    ? "oklch(0.82 0.17 80)"
-    : isRevision
-    ? "oklch(0.82 0.17 80)"
-    : "oklch(0.72 0.2 145)";
-  const accentDim = isPaying || isRevision
-    ? "rgba(251,191,36,.08)"
-    : "rgba(34,197,94,.08)";
-  const accentRing = isPaying || isRevision
-    ? "rgba(251,191,36,.22)"
-    : "rgba(34,197,94,.22)";
+  const variant = info?.variant as string | undefined;
+  // Ámbar cuando hay algo trabado (pago o correcciones), verde de marca
+  // cuando el camino sigue normal.
+  const accent =
+    variant === "payment" || variant === "revision"
+      ? "#C9902B"
+      : "var(--fdm-green,#3FA46E)";
 
   return (
     <>
+      <style>{BANNER_CSS}</style>
       <AnimatePresence>
         {info && (
-          <motion.div
+          <motion.aside
             key="app-banner"
-            className="acb-root"
+            className="acb"
+            aria-label="Estado de tu postulación"
             initial={{ y: 120, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 120, opacity: 0 }}
             transition={{ type: "spring", damping: 28, stiffness: 320 }}
-            style={
-              {
-                "--accent": accent,
-                "--accent-dim": accentDim,
-                "--accent-ring": accentRing,
-              } as React.CSSProperties
-            }
+            style={{ "--acb-accent": accent } as React.CSSProperties}
           >
-            {/* Header row */}
-            <div className="acb-header">
-              <div className="acb-pulse-wrap">
-                <span className="acb-pulse" />
-                <span className="acb-icon">{isPaying ? <CreditCard size={18} /> : isRevision ? <AlertTriangle size={18} /> : <Pencil size={18} />}</span>
-              </div>
-              <div className="acb-title-block">
-                <p className="acb-eyebrow">
-                {isRevision ? "Correcciones solicitadas" : "Postulación en progreso"}
-              </p>
-                <p className="acb-conv">{info.convName}</p>
-              </div>
-              <button
-                className="acb-dismiss"
-                onClick={() => setDismissed(true)}
-                aria-label="Cerrar"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path
-                    d="M1 1l12 12M13 1L1 13"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                </svg>
+            <div className="acb-head">
+              <span className="acb-eyebrow">
+                {variant === "revision"
+                  ? "Correcciones solicitadas"
+                  : "Postulación en progreso"}
+              </span>
+              <button type="button" className="acb-x" onClick={dismiss} aria-label="Cerrar">
+                ✕
               </button>
             </div>
 
-            {/* Step progress */}
+            <span className="acb-conv">{info.convName}</span>
+
             <div className="acb-progress">
-              <div className="acb-dots">
+              <div className="acb-bars" role="img" aria-label={`Paso ${info.stepIndex + 1} de ${STEP_LABELS.length}`}>
                 {STEP_LABELS.map((label, i) => (
-                  <div
-                    key={i}
-                    className={`acb-dot ${
-                      i < info.stepIndex
-                        ? "acb-dot--done"
-                        : i === info.stepIndex
-                        ? "acb-dot--active"
-                        : ""
-                    }`}
+                  <span
+                    key={label}
                     title={label}
+                    className={
+                      i < info!.stepIndex
+                        ? "acb-bar acb-bar--done"
+                        : i === info!.stepIndex
+                        ? "acb-bar acb-bar--active"
+                        : "acb-bar"
+                    }
                   />
                 ))}
               </div>
-              <span className="acb-step-label">
-                Paso {info.stepIndex + 1} de {STEP_LABELS.length}
+              <span className="acb-step">
+                {info.stepIndex + 1}/{STEP_LABELS.length}
               </span>
             </div>
 
-            <p className="acb-current-step">{info.stepLabel}</p>
+            <span className="acb-label">{info.stepLabel}</span>
 
-            {/* CTA */}
             <Link href={info.href} className="acb-cta">
-              {info.ctaText}
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path
-                  d="M2 7h10M8 3l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              {info.ctaText} →
             </Link>
-          </motion.div>
+          </motion.aside>
         )}
       </AnimatePresence>
-
-      <style jsx global>{`
-        .acb-root {
-          position: fixed;
-          bottom: 24px;
-          right: 24px;
-          z-index: 49;
-          width: 300px;
-          background: oklch(0.09 0.006 250);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 20px;
-          padding: 18px 20px 20px;
-          box-shadow:
-            0 32px 64px rgba(0, 0, 0, 0.8),
-            0 0 0 1px rgba(255, 255, 255, 0.04) inset;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          font-family: "Inter", system-ui, sans-serif;
-        }
-
-        /* Header */
-        .acb-header {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-        }
-
-        .acb-pulse-wrap {
-          position: relative;
-          flex-shrink: 0;
-          width: 38px;
-          height: 38px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: var(--accent-dim);
-          border: 1px solid var(--accent-ring);
-          border-radius: 12px;
-        }
-
-        .acb-pulse {
-          position: absolute;
-          inset: -4px;
-          border-radius: 14px;
-          border: 1px solid var(--accent-ring);
-          animation: acb-ripple 2s ease-out infinite;
-        }
-
-        @keyframes acb-ripple {
-          0% {
-            opacity: 0.7;
-            transform: scale(1);
-          }
-          100% {
-            opacity: 0;
-            transform: scale(1.35);
-          }
-        }
-
-        .acb-icon {
-          font-size: 18px;
-          line-height: 1;
-          position: relative;
-          z-index: 1;
-        }
-
-        .acb-title-block {
-          flex: 1;
-          min-width: 0;
-        }
-
-        .acb-eyebrow {
-          font-size: 10px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.6px;
-          color: var(--accent);
-          margin: 0 0 3px;
-        }
-
-        .acb-conv {
-          font-size: 13px;
-          font-weight: 700;
-          color: rgba(255, 255, 255, 0.9);
-          margin: 0;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .acb-dismiss {
-          flex-shrink: 0;
-          width: 28px;
-          height: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: none;
-          background: rgba(255, 255, 255, 0.06);
-          border-radius: 8px;
-          cursor: pointer;
-          color: rgba(255, 255, 255, 0.35);
-          transition: all 0.18s;
-          margin-top: -2px;
-        }
-
-        .acb-dismiss:hover {
-          background: rgba(255, 255, 255, 0.1);
-          color: rgba(255, 255, 255, 0.7);
-        }
-
-        /* Progress dots */
-        .acb-progress {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .acb-dots {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-        }
-
-        .acb-dot {
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.12);
-          transition: all 0.3s;
-        }
-
-        .acb-dot--done {
-          background: var(--accent);
-          opacity: 0.5;
-          width: 10px;
-          border-radius: 4px;
-        }
-
-        .acb-dot--active {
-          background: var(--accent);
-          width: 18px;
-          border-radius: 4px;
-          box-shadow: 0 0 10px var(--accent);
-        }
-
-        .acb-step-label {
-          font-size: 10px;
-          font-weight: 600;
-          color: rgba(255, 255, 255, 0.3);
-          letter-spacing: 0.3px;
-          white-space: nowrap;
-        }
-
-        /* Current step name */
-        .acb-current-step {
-          font-size: 12px;
-          font-weight: 600;
-          color: rgba(255, 255, 255, 0.5);
-          margin: 0;
-          letter-spacing: 0.2px;
-        }
-
-        /* CTA button */
-        .acb-cta {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 7px;
-          padding: 11px 18px;
-          border-radius: 12px;
-          font-size: 13px;
-          font-weight: 700;
-          text-decoration: none;
-          transition: all 0.2s;
-          background: var(--accent);
-          color: oklch(0.1 0.02 250);
-          box-shadow: 0 4px 16px var(--accent-ring);
-          letter-spacing: 0.1px;
-        }
-
-        .acb-cta:hover {
-          filter: brightness(1.08);
-          transform: translateY(-1px);
-          box-shadow: 0 8px 24px var(--accent-ring);
-        }
-
-        .acb-cta:active {
-          transform: translateY(0);
-        }
-
-        /* Mobile: full-width bottom strip */
-        @media (max-width: 480px) {
-          .acb-root {
-            bottom: 0;
-            right: 0;
-            left: 0;
-            width: 100%;
-            border-radius: 20px 20px 0 0;
-            box-shadow:
-              0 -16px 48px rgba(0, 0, 0, 0.7),
-              0 0 0 1px rgba(255, 255, 255, 0.06) inset;
-          }
-        }
-      `}</style>
     </>
   );
 }

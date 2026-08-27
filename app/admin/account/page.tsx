@@ -194,14 +194,21 @@ export default function MiCuentaClient() {
     try {
       setUploadingImage(true);
       const localPreview = URL.createObjectURL(file);
-      setPreviewImage(localPreview);
+      setPreviewImage((prev) => {
+        // Soltar la vista previa anterior antes de pisarla.
+        if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+        return localPreview;
+      });
 
       // Subida real
       const url = await uploadProfileImage(file);
 
 
       form.setValue("image", url.url, { shouldDirty: true, shouldValidate: true });
-      setPreviewImage(url.url);
+      setPreviewImage((prev) => {
+        if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+        return url.url;
+      });
       toast.success("Imagen subida correctamente");
     } catch (err: any) {
       console.error(err);

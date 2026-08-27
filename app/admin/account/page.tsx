@@ -20,7 +20,6 @@ import { Switch } from "@components/ui/switch";
 
 import {
   Loader2,
-  User as UserIcon,
   Camera,
   Mail,
   Phone,
@@ -293,40 +292,13 @@ export default function MiCuentaClient() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList
-            className="
-              inline-flex w-full md:w-auto items-center justify-start 
-              rounded-xl border border-gray-200 bg-white p-1 gap-2
-              shadow-sm
-            "
-          >
-            <TabsTrigger
-              value="profile"
-              className="
-                data-[state=active]:bg-gray-900 data-[state=active]:text-white
-                data-[state=inactive]:text-gray-700
-                px-4 py-2 rounded-lg text-sm font-medium
-                transition-colors flex items-center gap-2
-                hover:bg-gray-100 data-[state=active]:hover:bg-gray-800
-              "
-            >
-              <UserIcon className="w-4 h-4" />
+          <TabsList className="fdm-acc-tablist">
+            <TabsTrigger value="profile" className="fdm-acc-tab">
               Perfil
             </TabsTrigger>
-            <TabsTrigger
-              value="social"
-              className="
-                data-[state=active]:bg-gray-900 data-[state=active]:text-white
-                data-[state=inactive]:text-gray-700
-                px-4 py-2 rounded-lg text-sm font-medium
-                transition-colors flex items-center gap-2
-                hover:bg-gray-100 data-[state=active]:hover:bg-gray-800
-              "
-            >
-              <Globe className="w-4 h-4" />
+            <TabsTrigger value="social" className="fdm-acc-tab">
               Redes y web
             </TabsTrigger>
-
             {isArtist && (
               <>
                 <TabsTrigger value="postulacion" className="fdm-acc-tab">
@@ -360,13 +332,7 @@ export default function MiCuentaClient() {
           )}
 
           {/* Contenedor principal */}
-          <div
-            className="
-              bg-white border border-gray-100 rounded-2xl 
-              shadow-sm p-6 md:p-8
-              grid gap-8 md:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)]
-            "
-          >
+          <div className="fdm-acc-card">
             {/* Columna izquierda: Avatar + resumen */}
             <div className="space-y-6">
               <div className="flex flex-col items-center text-center gap-4">

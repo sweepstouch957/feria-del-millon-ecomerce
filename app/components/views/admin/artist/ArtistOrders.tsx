@@ -1,6 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  getMyApplications,
+  type ArtistApplication,
+} from "@services/applications.service";
+import ApplicationStatusCard from "@components/views/admin/artist/ApplicationStatusCard";
 import { useArtistOrders, useSetItemDelivery } from "@hooks/queries/useArtistOrders";
 import type { ArtistOrder, ArtistOrderAddress } from "@services/order.service";
 import Skeleton from "@components/ui/Skeleton";
@@ -48,7 +54,24 @@ function formatDate(iso?: string) {
 }
 
 export default function ArtistOrders() {
-  const { data: orders = [], isLoading, isError, error } = useArtistOrders();
+  // Las entregas solo existen si el artista ya está en la feria. Antes de eso
+  // lo útil no es un listado vacío (ni un error de red), sino en qué punto va
+  // su postulación y qué le toca hacer.
+  const { data: apps, isLoading: loadingApps } = useQuery<ArtistApplication[]>({
+    queryKey: ["my-applications"],
+    queryFn: getMyApplications,
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  const isAccepted = (apps ?? []).some((a) => a.status === "accepted");
+
+  const {
+    data: orders = [],
+    isLoading,
+    isError,
+    error,
+  } = useArtistOrders(isAccepted);
   const setDelivery = useSetItemDelivery();
   const [filter, setFilter] = useState<FilterKey>("pending");
   const [copied, setCopied] = useState<string | null>(null);
@@ -87,6 +110,28 @@ export default function ArtistOrders() {
     }
   };
 
+  if (loadingApps) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <Skeleton w="35%" h={11} />
+        <Skeleton w="60%" h={26} />
+        <Skeleton w="85%" h={14} />
+      </div>
+    );
+  }
+
+  if (!isAccepted) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <p style={{ margin: 0, maxWidth: "56ch", fontSize: 15, lineHeight: 1.6, color: mix(72) }}>
+          Todavía no hay entregas para gestionar: tus obras se ponen a la venta
+          cuando tu postulación queda aceptada. Este es el punto en el que va.
+        </p>
+        <ApplicationStatusCard />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -102,9 +147,15 @@ export default function ArtistOrders() {
   }
 
   if (isError) {
+    const status = (error as any)?.response?.status;
+    // 502/503/504 vienen del gateway cuando el servicio de pedidos no responde:
+    // no es culpa de quien mira la pantalla, y el código crudo no le sirve.
+    const unreachable = !status || [502, 503, 504].includes(status);
     return (
-      <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: mix(70) }}>
-        No pudimos cargar tus pedidos. {(error as any)?.message || ""}
+      <p style={{ margin: 0, maxWidth: "56ch", fontSize: 15, lineHeight: 1.6, color: mix(70) }}>
+        {unreachable
+          ? "El servicio de pedidos no está disponible en este momento. Volvé a intentar en un rato; si sigue igual, avisanos."
+          : `No pudimos cargar tus pedidos. ${(error as any)?.message || ""}`}
       </p>
     );
   }

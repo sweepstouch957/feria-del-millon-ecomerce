@@ -150,7 +150,9 @@ export default function CreateEditArtworkModal({
         stock: undefined,
         dimensions: "",
         technique: "",
-        pavilion: "",
+        // Si el artista tiene un solo pabellón asignado, no tiene sentido
+        // pedirle que lo elija: sus obras van ahí.
+        pavilion: pavilionOptions?.length === 1 ? pavilionOptions[0].value : "",
         tagId: "",
       });
       return;
@@ -176,7 +178,7 @@ export default function CreateEditArtworkModal({
     );
     setValue("tagId", (row as any)?.tagId || "");
     setValue("image", row.image || "");
-  }, [editingId, currentRows, reset, setValue]);
+  }, [editingId, currentRows, reset, setValue, pavilionOptions]);
 
   // ========================= Mutations =========================
   const mCreate = useMutation({

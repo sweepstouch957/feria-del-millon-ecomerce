@@ -1,12 +1,86 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { initiatePayment, getApplicationById, getMyApplications, mockPayment } from "@services/applications.service";
+import {
+  initiatePayment,
+  getApplicationById,
+  getMyApplications,
+  mockPayment,
+} from "@services/applications.service";
 import { useAuth } from "@provider/authProvider";
 import { clearAuth } from "@services/auth.service";
-import { AlertTriangle, Check, CreditCard, CheckCircle2, Wrench, Zap, ArrowRight, Lock } from "lucide-react";
+import Skeleton from "@components/ui/Skeleton";
 
-const STEPS = ["Crear cuenta", "Pagar inscripción", "Subir obras", "Resolución del curador"];
+/* ──────────────────────────────────────────────────────────────
+   Pago de inscripción — sistema editorial v2.
+   La lógica (carga de la postulación, redirecciones, MercadoPago
+   y el pago simulado de desarrollo) quedó intacta.
+   ────────────────────────────────────────────────────────────── */
+
+const STEPS = ["Crear cuenta", "Pagar inscripción", "Subir obras", "Resolución"];
+
+const mix = (pct: number) => `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
+
+const EYEBROW: React.CSSProperties = {
+  fontWeight: 500,
+  fontSize: 10,
+  letterSpacing: "0.18em",
+  textTransform: "uppercase",
+};
+
+const ROOT_VARS = {
+  "--bg": "var(--fdm-bg,#F7F6F2)",
+  "--fg": "var(--fdm-fg,#0B0B0A)",
+  "--acc": "var(--fdm-green,#3FA46E)",
+  "--panel": "var(--fdm-panel,#0B0B0A)",
+  background: "var(--bg)",
+  color: "var(--fg)",
+  fontFamily: "Jost, system-ui, sans-serif",
+  fontWeight: 400,
+  minHeight: "calc(100vh - 81px)",
+  width: "100%",
+  overflowX: "hidden",
+} as React.CSSProperties;
+
+const PAGE_CSS = `
+  .fdm-pay a { transition: color .3s ease, opacity .3s ease; }
+  .fdm-pay-cta:hover:not(:disabled) { background: var(--acc); border-color: var(--acc); color: #0B0B0A; }
+`;
+
+const CTA: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "100%",
+  height: 54,
+  borderRadius: 999,
+  border: "1px solid var(--fg)",
+  background: "var(--fg)",
+  color: "var(--bg)",
+  cursor: "pointer",
+  transition: "all .3s ease",
+  ...EYEBROW,
+  fontSize: 11,
+  letterSpacing: "0.16em",
+};
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={ROOT_VARS}>
+      <style>{PAGE_CSS}</style>
+      <div
+        className="fdm-pay"
+        style={{
+          maxWidth: 620,
+          margin: "0 auto",
+          padding: "clamp(28px,4vw,60px) clamp(20px,4vw,40px)",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function PagarClient() {
   const router = useRouter();
@@ -20,11 +94,11 @@ export default function PagarClient() {
   const [isNotArtist, setIsNotArtist] = useState(false);
 
   // Detect localhost / dev mode
-  const isMock = typeof window !== "undefined" && (
-    window.location.hostname === "localhost" ||
-    window.location.hostname === "127.0.0.1" ||
-    process.env.NEXT_PUBLIC_MOCK_PAYMENT === "true"
-  );
+  const isMock =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1" ||
+      process.env.NEXT_PUBLIC_MOCK_PAYMENT === "true");
 
   const loadApp = useCallback(async () => {
     setLoadingApp(true);
@@ -37,21 +111,23 @@ export default function PagarClient() {
           return;
         }
       } else {
-        // No appId: try to find user's existing pending app
         const apps = await getMyApplications();
         const pending = apps.find((a: any) => !a.isPaid && a.status === "pending_payment");
         if (pending) {
           router.replace(`/convocatoria/pagar?appId=${pending._id}`);
           return;
         }
-        // No app at all → redirect to picker
         router.replace("/convocatoria/aplicar");
         return;
       }
     } catch (e: unknown) {
       const err = e as { response?: { status?: number }; message?: string };
       if (err?.response?.status === 401) {
-        router.replace(`/login?redirect=${encodeURIComponent(`/convocatoria/pagar?appId=${appId || ""}`)}`);
+        router.replace(
+          `/login?role=artist&redirect=${encodeURIComponent(
+            `/convocatoria/pagar?appId=${appId || ""}`
+          )}`
+        );
         return;
       }
       setError(err?.message || "No se pudo cargar la postulación");
@@ -63,7 +139,11 @@ export default function PagarClient() {
   useEffect(() => {
     if (!isAuthLoading) {
       if (!isAuthenticated) {
-        router.replace(`/login?redirect=${encodeURIComponent(`/convocatoria/pagar?appId=${appId || ""}`)}`);
+        router.replace(
+          `/login?role=artist&redirect=${encodeURIComponent(
+            `/convocatoria/pagar?appId=${appId || ""}`
+          )}`
+        );
       } else if (user && user.roles?.artista !== true) {
         setIsNotArtist(true);
         setLoadingApp(false);
@@ -76,11 +156,16 @@ export default function PagarClient() {
   const handleSwitchToArtist = () => {
     localStorage.removeItem("auth_user");
     clearAuth();
-    window.location.href = `/login?redirect=${encodeURIComponent(`/convocatoria/pagar?appId=${appId || ""}`)}`;
+    window.location.href = `/login?role=artist&redirect=${encodeURIComponent(
+      `/convocatoria/pagar?appId=${appId || ""}`
+    )}`;
   };
 
   const handlePay = async () => {
-    if (!appId) { setError("appId requerido"); return; }
+    if (!appId) {
+      setError("appId requerido");
+      return;
+    }
     setPaying(true);
     setError("");
     try {
@@ -108,315 +193,253 @@ export default function PagarClient() {
     }
   };
 
+  /* ── Carga ─────────────────────────────────────────────── */
   if (isAuthLoading || (loadingApp && !isNotArtist)) {
     return (
-      <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white flex items-center justify-center">
-        <div style={{ textAlign: "center", color: "#888" }}>
-          <div className="pay-spinner" />
-          <p>Cargando tu postulación…</p>
+      <Shell>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Skeleton w="35%" h={11} />
+          <Skeleton w="70%" h={34} />
+          <Skeleton w="100%" h={90} />
+          <Skeleton w="100%" h={54} radius={999} />
         </div>
-        <style jsx>{`.pay-spinner { width:40px;height:40px;border:3px solid #222;border-top-color:#22c55e;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 16px; } @keyframes spin{to{transform:rotate(360deg);}}`}</style>
-      </div>
+      </Shell>
     );
   }
 
+  /* ── Cuenta que no es de artista ───────────────────────── */
   if (isNotArtist) {
     return (
-      <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white flex items-center justify-center">
-        <div className="pay-container">
-          <div className="pay-card">
-            <div className="pay-card__icon"><AlertTriangle size={48} /></div>
-            <h1 className="pay-card__title">Cuenta no autorizada</h1>
-            <p className="pay-card__subtitle">
-              El pago de inscripción y la postulación a convocatorias están reservados únicamente para cuentas de tipo <strong>Artista</strong>.
-            </p>
-            
-            <div className="pay-user-badge">
-              <div className="pay-user-badge__label">Sesión iniciada como:</div>
-              <div className="pay-user-badge__email">{user?.email || "Usuario"}</div>
-              <div className="pay-user-badge__role">Rol: Comprador</div>
-            </div>
+      <Shell>
+        <span style={{ ...EYEBROW, color: "#C9902B" }}>Cuenta no autorizada</span>
+        <h1
+          style={{
+            margin: "10px 0 8px",
+            fontWeight: 300,
+            fontSize: "clamp(28px,3.4vw,44px)",
+            lineHeight: 1.05,
+            letterSpacing: "0.02em",
+            textTransform: "uppercase",
+          }}
+        >
+          Necesitás una cuenta de artista
+        </h1>
+        <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: mix(72) }}>
+          El pago de inscripción y la postulación están reservados a cuentas de tipo artista.
+        </p>
 
-            <button className="pay-btn" onClick={handleSwitchToArtist}>
-              Cerrar sesión e iniciar como Artista
-            </button>
-            
-            <button className="pay-btn pay-btn--secondary" onClick={() => router.push("/")}>
-              Volver al inicio
-            </button>
-          </div>
+        <div
+          style={{
+            margin: "22px 0",
+            padding: "16px 18px",
+            border: `1px solid ${mix(16)}`,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}
+        >
+          <span style={{ ...EYEBROW, fontSize: 9, color: mix(50) }}>Sesión iniciada como</span>
+          <span style={{ fontSize: 15, fontWeight: 500 }}>{user?.email || "Usuario"}</span>
+          <span style={{ fontSize: 13.5, color: "#C9902B" }}>Rol: comprador</span>
         </div>
-        <style jsx>{`
-          .pay-container { max-width: 480px; margin: auto; padding: 20px; width: 100%; }
-          .pay-card {
-            background: #0a0a0a; border-radius: 24px; padding: 48px 40px; border: 1px solid #222;
-            box-shadow: 0 8px 32px rgba(255,255,255,0.02); text-align: center; color: #fff;
-          }
-          .pay-card__icon { font-size: 48px; margin-bottom: 16px; display: block; }
-          .pay-card__title { font-size: 28px; font-weight: 800; color: #fff; margin: 0 0 8px; letter-spacing: -1px; }
-          .pay-card__subtitle { color: #888; font-size: 15px; margin: 0 0 28px; line-height: 1.5; }
-          
-          .pay-user-badge {
-            background: rgba(255,255,255,0.03); border: 1px solid #222; border-radius: 16px;
-            padding: 20px; margin-bottom: 28px; text-align: left;
-          }
-          .pay-user-badge__label { font-size: 11px; text-transform: uppercase; color: #555; font-weight: 700; margin-bottom: 4px; }
-          .pay-user-badge__email { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 2px; }
-          .pay-user-badge__role { font-size: 13px; color: #fbbf24; font-weight: 600; }
 
-          .pay-btn {
-            width: 100%; background: #fff;
-            color: #000; border: none; border-radius: 12px; padding: 16px;
-            font-size: 16px; font-weight: 700; cursor: pointer; transition: all .2s;
-            margin-bottom: 12px;
-          }
-          .pay-btn:hover { transform: translateY(-1px); background: #eee; }
-          
-          .pay-btn--secondary {
-            background: transparent; color: #aaa; border: 1px solid #222;
-          }
-          .pay-btn--secondary:hover { background: rgba(255,255,255,0.02); color: #fff; }
-        `}</style>
-      </div>
+        <button type="button" className="fdm-pay-cta" style={CTA} onClick={handleSwitchToArtist}>
+          Entrar como artista
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          style={{
+            ...CTA,
+            marginTop: 12,
+            background: "transparent",
+            color: "inherit",
+            border: `1px solid ${mix(26)}`,
+          }}
+        >
+          Volver al inicio
+        </button>
+      </Shell>
     );
   }
 
+  /* ── Pago ──────────────────────────────────────────────── */
   return (
-    <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white" style={{overflowX: "hidden"}}>
-      <main className="pay-page max-w-4xl mx-auto">
-        {/* Progress stepper — step 2 of 4 */}
-      <div className="pay-progress">
-        {STEPS.map((label, i) => {
-          const isDone = i < 1;
-          const isActive = i === 1;
-          return (
-            <div key={i} className={`pay-step ${isActive ? "active" : isDone ? "done" : ""}`}>
-              <div className="pay-step__dot">{isDone ? <Check size={16} /> : i + 1}</div>
-              <span className="pay-step__label">{label}</span>
-              {i < STEPS.length - 1 && <div className="pay-step__line" />}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="pay-container">
-        <div className="pay-card">
-          <div className="pay-card__icon"><CreditCard size={48} /></div>
-          <h1 className="pay-card__title">Pago de inscripción</h1>
-          <p className="pay-card__subtitle">
-            Tu cuenta fue creada con éxito. El siguiente paso es completar el pago de inscripción
-            para desbloquear el formulario donde podrás subir tu proyecto y obras.
-          </p>
-
-          <div className="pay-amount">
-            <span className="pay-amount__label">Valor de inscripción</span>
-            <span className="pay-amount__value">$40.000 COP</span>
-          </div>
-
-          <div className="pay-info">
-            <div className="pay-info__item"><CheckCircle2 size={16} /> Pago seguro con MercadoPago</div>
-            <div className="pay-info__item"><CheckCircle2 size={16} /> Acepta tarjetas, PSE y efectivo</div>
-            <div className="pay-info__item"><CheckCircle2 size={16} /> Desbloquea el formulario de postulación</div>
-            <div className="pay-info__item"><CheckCircle2 size={16} /> Una sola inscripción por convocatoria</div>
-          </div>
-
-          {error && <div className="pay-error">{error}</div>}
-
-          {/* DEV MODE MOCK PAYMENT BANNER */}
-          {isMock && !app?.isPaid && (
-            <div className="pay-mock-banner">
-              <span className="pay-mock-banner__badge"><Wrench size={12} style={{ verticalAlign: "-2px" }} /> Entorno LOCAL</span>
-              <p>MercadoPago no funciona en localhost. Usa el pago simulado para continuar el flujo.</p>
-              <button className="pay-btn pay-btn--mock" onClick={handleMockPay} disabled={paying}>
-                {paying ? "Procesando…" : <><Zap size={16} style={{ verticalAlign: "-2px" }} /> Simular pago exitoso (solo dev)</>}
-              </button>
-            </div>
-          )}
-
-          {app?.isPaid ? (
-            <div className="pay-success">
-              <span><CheckCircle2 size={16} style={{ verticalAlign: "-2px" }} /> ¡Pago confirmado! Tu cuenta está activa.</span>
-              <button className="pay-btn" onClick={() => router.push(`/convocatoria/aplicar?appId=${appId}`)}>
-                Ir al formulario <ArrowRight size={16} style={{ verticalAlign: "-2px" }} />
-              </button>
-            </div>
-          ) : !isMock ? (
-            <button className="pay-btn" onClick={handlePay} disabled={paying}>
-              {paying ? "Redirigiendo a MercadoPago…" : <>Pagar con MercadoPago <ArrowRight size={16} style={{ verticalAlign: "-2px" }} /></>}
-            </button>
-          ) : (
-            <button className="pay-btn" onClick={handlePay} disabled={paying} style={{ background: "#333", color: "#aaa", cursor: "not-allowed" }}>
-              Pagar con MercadoPago (no disponible en localhost)
-            </button>
-          )}
-
-          <p className="pay-legal">
-            Al proceder con el pago aceptas los términos y condiciones de la Feria del Millón.
-            El pago no es reembolsable.
-          </p>
+    <Shell>
+      {/* Pasos */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: "clamp(24px,3vw,38px)" }}>
+        <div style={{ height: 2, background: mix(14) }}>
+          <div style={{ height: "100%", width: "25%", background: "var(--acc)" }} />
         </div>
-
-        <div className="pay-mp-badge">
-          <span>Procesado con</span>
-          <strong>MercadoPago</strong>
-          <span><Lock size={14} style={{ verticalAlign: "-2px" }} /> SSL seguro</span>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${STEPS.length}, 1fr)`, gap: 6 }}>
+          {STEPS.map((label, i) => (
+            <span
+              key={label}
+              style={{
+                ...EYEBROW,
+                fontSize: 8.5,
+                letterSpacing: "0.1em",
+                textAlign: "center",
+                lineHeight: 1.3,
+                color: i === 1 ? "var(--acc)" : i < 1 ? mix(65) : mix(38),
+              }}
+            >
+              {label}
+            </span>
+          ))}
         </div>
       </div>
 
-      <style jsx>{`
-        .pay-page {
-          padding: 40px 16px 60px;
-          font-family: 'Inter', sans-serif;
-          box-sizing: border-box;
-          width: 100%;
-        }
+      <span style={{ ...EYEBROW, color: "var(--acc)" }}>Paso 2</span>
+      <h1
+        style={{
+          margin: "10px 0 8px",
+          fontWeight: 300,
+          fontSize: "clamp(28px,3.4vw,44px)",
+          lineHeight: 1.05,
+          letterSpacing: "0.02em",
+          textTransform: "uppercase",
+        }}
+      >
+        Pago de inscripción
+      </h1>
+      <p style={{ margin: 0, maxWidth: "52ch", fontSize: 15, lineHeight: 1.6, color: mix(72) }}>
+        Tu cuenta ya está creada. Con el pago se desbloquea el formulario donde subís tu proyecto y
+        tus obras.
+      </p>
 
-        /* ── Progress stepper ── */
-        .pay-progress {
-          display: flex;
-          align-items: flex-start;
-          justify-content: center;
-          max-width: 560px;
-          margin: 0 auto 48px;
-          overflow: hidden;
-        }
-        .pay-step {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          position: relative;
-          flex: 1;
-          min-width: 0;
-        }
-        .pay-step__dot {
-          width: 32px; height: 32px; border-radius: 50%;
-          background: #111; border: 1px solid #333; color: #555;
-          display: flex; align-items: center; justify-content: center;
-          font-size: 12px; font-weight: 700; flex-shrink: 0;
-          transition: all .25s; position: relative; z-index: 2;
-        }
-        .pay-step.active .pay-step__dot { background: #f5f5f5; border-color: #f5f5f5; color: #000; box-shadow: 0 0 0 4px rgba(245,245,245,0.1); }
-        .pay-step.done .pay-step__dot { background: #1a1a1a; border-color: #555; color: #ccc; }
-        .pay-step__label {
-          font-size: 10px; font-weight: 600; color: #888;
-          margin-top: 8px; text-align: center;
-          word-break: break-word; hyphens: auto;
-          max-width: 72px; line-height: 1.3;
-        }
-        .pay-step.active .pay-step__label { color: #f5f5f5; font-weight: 700; }
-        .pay-step.done .pay-step__label { color: #999; }
-        .pay-step__line {
-          position: absolute;
-          top: 15px;
-          left: calc(50% + 18px);
-          width: calc(100% - 36px);
-          height: 1px;
-          background: #2a2a2a;
-          z-index: 1;
-        }
-        .pay-step.done .pay-step__line { background: #444; }
+      {/* Importe */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          gap: 16,
+          margin: "clamp(20px,2.4vw,30px) 0",
+          padding: "18px 0",
+          borderTop: `1px solid ${mix(20)}`,
+          borderBottom: `1px solid ${mix(20)}`,
+        }}
+      >
+        <span style={{ ...EYEBROW, fontSize: 10, color: mix(55) }}>Valor de inscripción</span>
+        <span style={{ fontWeight: 500, fontSize: "clamp(26px,3vw,38px)", lineHeight: 1 }}>
+          $40.000
+        </span>
+      </div>
 
-        /* ── Container & Card ── */
-        .pay-container { max-width: 480px; margin: 0 auto; }
-        .pay-card {
-          background: linear-gradient(180deg, #111 0%, #0d0d0d 100%);
-          border-radius: 24px; padding: 48px 40px;
-          border: 1px solid rgba(255,255,255,0.07);
-          box-shadow: 0 0 0 1px rgba(255,255,255,0.02), 0 24px 64px rgba(0,0,0,0.6),
-                      inset 0 1px 0 rgba(255,255,255,0.04);
-          text-align: center; color: #f5f5f5;
-          animation: pay-in .5s cubic-bezier(.16,1,.3,1);
-        }
-        @keyframes pay-in { from{opacity:0;transform:translateY(20px) scale(.97)} to{opacity:1;transform:none} }
-        .pay-card__icon { font-size: 48px; margin-bottom: 16px; display: block; }
-        .pay-card__title { font-size: 28px; font-weight: 800; color: #f5f5f5; margin: 0 0 8px; letter-spacing: -0.8px; }
-        .pay-card__subtitle { color: #999; font-size: 15px; margin: 0 0 32px; line-height: 1.6; }
+      <ul
+        style={{
+          margin: "0 0 clamp(20px,2.4vw,28px)",
+          padding: 0,
+          listStyle: "none",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
+        {[
+          "Pago seguro con MercadoPago",
+          "Acepta tarjetas, PSE y efectivo",
+          "Desbloquea el formulario de postulación",
+          "Una sola inscripción por convocatoria",
+        ].map((t) => (
+          <li key={t} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14.5, color: mix(75) }}>
+            <span style={{ width: 5, height: 5, borderRadius: 999, background: "var(--acc)", flex: "0 0 auto" }} />
+            {t}
+          </li>
+        ))}
+      </ul>
 
-        /* ── Amount ── */
-        .pay-amount {
-          background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 16px; padding: 24px; margin-bottom: 24px;
-        }
-        .pay-amount__label { display: block; font-size: 12px; color: #888; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .pay-amount__value { font-size: 40px; font-weight: 900; color: #f5f5f5; letter-spacing: -1px; }
+      {error && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 18,
+            padding: "12px 14px",
+            borderLeft: "2px solid #B4472A",
+            background: mix(4),
+            fontSize: 14,
+            lineHeight: 1.5,
+          }}
+        >
+          {error}
+        </div>
+      )}
 
-        /* ── Info list ── */
-        .pay-info { text-align: left; margin-bottom: 28px; display: flex; flex-direction: column; gap: 10px; }
-        .pay-info__item { font-size: 14px; color: #aaa; display: flex; align-items: center; gap: 8px; }
+      {/* Pago simulado, solo en local */}
+      {isMock && !app?.isPaid && (
+        <div
+          style={{
+            marginBottom: 18,
+            padding: "16px 18px",
+            border: `1px solid ${mix(16)}`,
+            background: mix(3),
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
+          <span style={{ ...EYEBROW, fontSize: 9, color: "#C9902B" }}>Entorno local</span>
+          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: mix(72) }}>
+            MercadoPago no funciona en localhost. Usá el pago simulado para seguir el flujo.
+          </p>
+          <button
+            type="button"
+            onClick={handleMockPay}
+            disabled={paying}
+            style={{
+              ...CTA,
+              height: 46,
+              background: "transparent",
+              color: "inherit",
+              border: `1px solid ${mix(26)}`,
+              opacity: paying ? 0.6 : 1,
+            }}
+          >
+            {paying ? "Procesando…" : "Simular pago exitoso"}
+          </button>
+        </div>
+      )}
 
-        /* ── States ── */
-        .pay-error {
-          background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); color: #f87171;
-          padding: 12px 14px; border-radius: 10px; font-size: 14px; margin-bottom: 16px; text-align: left;
-        }
-        .pay-success {
-          background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.2); color: #4ade80;
-          padding: 16px; border-radius: 12px; font-size: 14px; margin-bottom: 16px;
-          display: flex; flex-direction: column; gap: 12px;
-        }
+      {app?.isPaid ? (
+        <button
+          type="button"
+          className="fdm-pay-cta"
+          style={CTA}
+          onClick={() => router.push(`/convocatoria/aplicar?appId=${appId}`)}
+        >
+          Ir al formulario →
+        </button>
+      ) : !isMock ? (
+        <button
+          type="button"
+          className="fdm-pay-cta"
+          style={{ ...CTA, opacity: paying ? 0.6 : 1, cursor: paying ? "wait" : "pointer" }}
+          onClick={handlePay}
+          disabled={paying}
+        >
+          {paying ? "Redirigiendo…" : "Pagar con MercadoPago →"}
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled
+          style={{
+            ...CTA,
+            background: "transparent",
+            color: mix(45),
+            border: `1px solid ${mix(18)}`,
+            cursor: "not-allowed",
+          }}
+        >
+          MercadoPago no disponible en localhost
+        </button>
+      )}
 
-        /* ── Buttons ── */
-        .pay-btn {
-          width: 100%; background: #f5f5f5;
-          color: #0a0a0a; border: none; border-radius: 12px; padding: 16px;
-          font-size: 16px; font-weight: 700; cursor: pointer; transition: all .2s;
-          margin-bottom: 16px; box-sizing: border-box;
-        }
-        .pay-btn:hover:not(:disabled) { transform: translateY(-1px); background: #e5e5e5; box-shadow: 0 4px 20px rgba(255,255,255,0.1); }
-        .pay-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .pay-legal { font-size: 12px; color: #888; line-height: 1.6; }
-
-        /* ── MercadoPago badge ── */
-        .pay-mp-badge {
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-          margin-top: 16px; font-size: 13px; color: #888;
-        }
-        .pay-mp-badge strong { color: #009ee3; }
-
-        /* ── DEV mock banner ── */
-        .pay-mock-banner {
-          background: rgba(234,179,8,0.06); border: 1px dashed rgba(234,179,8,0.3);
-          border-radius: 14px; padding: 20px; margin-bottom: 20px; text-align: left;
-        }
-        .pay-mock-banner__badge {
-          display: inline-block; background: rgba(234,179,8,0.12); color: #fbbf24;
-          font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 100px;
-          margin-bottom: 8px; letter-spacing: 0.5px;
-        }
-        .pay-mock-banner p { font-size: 13px; color: #888; margin: 0 0 14px; line-height: 1.5; }
-        .pay-btn--mock {
-          background: rgba(234,179,8,0.12) !important; color: #fbbf24 !important;
-          border: 1px solid rgba(234,179,8,0.3) !important;
-        }
-        .pay-btn--mock:hover:not(:disabled) { background: rgba(234,179,8,0.2) !important; }
-
-        /* ── Mobile ── */
-        @media (max-width: 560px) {
-          .pay-page { padding: 28px 12px 48px; }
-          .pay-progress { margin-bottom: 36px; }
-          .pay-step__label { display: none; }
-          .pay-step.active .pay-step__label {
-            display: block;
-            position: absolute;
-            top: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            white-space: nowrap;
-            max-width: none;
-            font-size: 11px;
-            color: #f5f5f5;
-          }
-          .pay-progress { margin-bottom: 60px; }
-          .pay-step__dot { width: 28px; height: 28px; font-size: 11px; }
-          .pay-step__line { top: 13px; }
-          .pay-card { padding: 32px 20px; border-radius: 20px; }
-          .pay-card__title { font-size: 22px; }
-          .pay-card__subtitle { font-size: 14px; }
-          .pay-amount__value { font-size: 32px; }
-          .pay-btn { font-size: 15px; }
-        }
-      `}</style>
-      </main>
-    </div>
+      <p style={{ margin: "16px 0 0", fontSize: 12.5, lineHeight: 1.6, color: mix(55) }}>
+        Al pagar aceptás los términos y condiciones de la Feria del Millón. El pago no es
+        reembolsable.
+      </p>
+    </Shell>
   );
 }

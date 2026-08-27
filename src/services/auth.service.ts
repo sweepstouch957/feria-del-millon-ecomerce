@@ -69,9 +69,19 @@ export interface ResetPasswordResponse {
 
 // ------- Helpers -------
 
-const setAuthToken = (token: string | null) => {
+/** Días que dura la sesión cuando el usuario marca "Recordarme". */
+export const REMEMBER_DAYS = 30;
+
+const setAuthToken = (token: string | null, remember = false) => {
   if (token) {
-    Cookies.set(AUTH_TOKEN_KEY, token);
+    // Sin `expires` la cookie es de sesión y muere al cerrar el navegador.
+    // Con "Recordarme" le damos vigencia real. `sameSite: lax` evita que
+    // viaje en peticiones cross-site sin romper la navegación normal.
+    Cookies.set(AUTH_TOKEN_KEY, token, {
+      sameSite: "lax",
+      secure: typeof window !== "undefined" && window.location.protocol === "https:",
+      ...(remember ? { expires: REMEMBER_DAYS } : {}),
+    });
     apiClient.defaults.headers.common.Authorization = `Bearer ${token}`;
   } else {
     Cookies.remove(AUTH_TOKEN_KEY);
@@ -102,14 +112,18 @@ export const register = async (payload: RegisterPayload) => {
   return data;
 };
 
-export const login = async (email: string, password: string) => {
+export const login = async (
+  email: string,
+  password: string,
+  remember = false
+) => {
   const { data } = await apiClient.post<LoginResponse>(
     "/auth/login",
     { email, password },
     { withCredentials: true }
   );
   // Guarda token y header para siguientes requests
-  setAuthToken(data.token);
+  setAuthToken(data.token, remember);
   return data;
 };
 

@@ -1,23 +1,18 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useAuth } from "@provider/authProvider";
+import { useRouter, useSearchParams } from "next/navigation";
+import { register as registerApi } from "@services/auth.service";
 import ThemeToggle from "@components/views/home/v2/ThemeToggle";
 
 /* ──────────────────────────────────────────────────────────────
-   Acceso — port de Login.dc.html al sistema editorial v2.
-   Panel oscuro con el manifiesto a la izquierda, formulario a la
-   derecha. El rol sigue viajando en ?role= para que el enlace sea
-   compartible; las pestañas son <Link>, no estado local.
+   Alta de comprador — mismo layout que Login.dc.html.
+   El endpoint /auth/register ya existía; lo que faltaba era la
+   página (el login enlazaba a /registro y daba 404).
    ────────────────────────────────────────────────────────────── */
 
-type Role = "buyer" | "artist";
-
 const LOGO = "/assets/fdm/logo-fdm.jpg";
-const REMEMBER_KEY = "fdm-remember";
-const LAST_EMAIL_KEY = "fdm-last-email";
 
 const mix = (pct: number) => `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
 
@@ -38,8 +33,6 @@ const ROOT_VARS = {
   fontFamily: "Jost, system-ui, sans-serif",
   fontWeight: 400,
   letterSpacing: "0.005em",
-  // El navbar del layout ocupa la franja superior: descontarla evita que el
-  // split de pantalla completa genere scroll de más.
   minHeight: "calc(100vh - 76px)",
   display: "flex",
   flexWrap: "wrap",
@@ -49,113 +42,68 @@ const ROOT_VARS = {
 } as React.CSSProperties;
 
 const PAGE_CSS = `
-  .fdm-log a { transition: color .3s ease, border-color .3s ease, opacity .3s ease; }
-  .fdm-log-link:hover { color: var(--acc); }
-  .fdm-log-dark a:hover { color: var(--acc); }
-  .fdm-log-field {
+  .fdm-reg a { transition: color .3s ease, border-color .3s ease, opacity .3s ease; }
+  .fdm-reg-link:hover { color: var(--acc); }
+  .fdm-reg-dark a:hover { color: var(--acc); }
+  .fdm-reg-field {
     margin-top: 8px; width: 100%; padding: 11px 0;
     background: transparent; color: inherit;
     border: 0; border-bottom: 1px solid color-mix(in srgb, var(--fg) 30%, transparent);
     font-size: 17px; font-weight: 400; outline: none;
     transition: border-color .3s ease;
   }
-  .fdm-log-field:focus { border-color: var(--acc); }
-  .fdm-log-field::placeholder { color: color-mix(in srgb, var(--fg) 38%, transparent); }
-  .fdm-log-submit:hover:not(:disabled) { background: var(--acc); border-color: var(--acc); color: #0B0B0A; }
+  .fdm-reg-field:focus { border-color: var(--acc); }
+  .fdm-reg-field::placeholder { color: color-mix(in srgb, var(--fg) 38%, transparent); }
+  .fdm-reg-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 18px; }
+  .fdm-reg-submit:hover:not(:disabled) { background: var(--acc); border-color: var(--acc); color: #0B0B0A; }
 `;
 
-const ARTIST_POINTS = [
-  "Gestioná tus obras, precios y ventas",
-  "Seguí el estado de tu postulación",
-  "Descargá los certificados de tus piezas",
-];
-
-const BUYER_POINTS = [
+const POINTS = [
   "Guardá obras y seguí a tus artistas",
   "Comprá con reserva en feria o envío",
   "Certificado de autenticidad del artista",
 ];
 
-export default function GenericLoginPageClient() {
+/** Fuerza de contraseña por longitud y variedad, no por reglas arbitrarias. */
+function strengthOf(pwd: string) {
+  if (!pwd) return { score: 0, label: "", color: "" };
+  let score = 0;
+  if (pwd.length >= 8) score++;
+  if (pwd.length >= 12) score++;
+  if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) score++;
+  if (/\d/.test(pwd)) score++;
+  if (/[^\w\s]/.test(pwd)) score++;
+
+  if (score <= 2) return { score: 1, label: "Débil", color: "#B4472A" };
+  if (score === 3) return { score: 2, label: "Aceptable", color: "#C9902B" };
+  if (score === 4) return { score: 3, label: "Buena", color: "var(--acc)" };
+  return { score: 4, label: "Fuerte", color: "var(--acc)" };
+}
+
+export default function RegisterPageClient() {
+  const router = useRouter();
   const search = useSearchParams();
-  const { login } = useAuth();
+  const redirect = search.get("redirect") || "";
 
-  const roleParam = (search.get("role") || "buyer").toLowerCase() as Role;
-  const [role, setRole] = useState<Role>(
-    (["artist", "buyer"] as const).includes(roleParam) ? roleParam : "buyer"
-  );
-
-  useEffect(() => {
-    setRole((["artist", "buyer"] as const).includes(roleParam) ? roleParam : "buyer");
-  }, [roleParam]);
-
-  const isArtist = role === "artist";
-
-  const ui = useMemo(() => {
-    if (isArtist) {
-      return {
-        manifesto: ["Tu arte", "en el", "millón."],
-        points: ARTIST_POINTS,
-        heading: "Entrá a tu perfil",
-        subheading: "Gestioná tus obras, precios y ventas de la edición 2026.",
-        submitText: "Ingresar como artista",
-        next: "/artist",
-        registerHref: "/convocatoria/register",
-        registerText: "Crear cuenta →",
-      };
-    }
-    return {
-      manifesto: ["Comprá obra", "de artistas", "emergentes"],
-      points: BUYER_POINTS,
-      heading: "Entrá y comprá",
-      subheading: "Tu carrito, favoritos y pedidos de la edición 2026 en un solo lugar.",
-      submitText: "Ingresar",
-      next: "/",
-      registerHref: "/registro",
-      registerText: "Crear cuenta →",
-    };
-  }, [isArtist]);
-
-  // /convocatoria/register redirige acá con ?msg=cuenta_creada, pero nadie lo
-  // mostraba: el que acababa de registrarse no recibía confirmación alguna.
-  const justRegistered = search.get("msg") === "cuenta_creada";
-
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
+  const [capsOn, setCapsOn] = useState(false);
+  const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [capsOn, setCapsOn] = useState(false);
-  const [remember, setRemember] = useState(true);
 
-  const emailRef = useRef<HTMLInputElement | null>(null);
-  const passRef = useRef<HTMLInputElement | null>(null);
+  const firstRef = useRef<HTMLInputElement | null>(null);
 
-  // La preferencia de "Recordarme" se recuerda a sí misma, y el correo del
-  // último ingreso vuelve precargado: en un login compartido esto es lo que
-  // separa "entrar" de "volver a escribir todo".
   useEffect(() => {
-    try {
-      const savedRemember = window.localStorage.getItem(REMEMBER_KEY);
-      if (savedRemember !== null) setRemember(savedRemember === "1");
-      const savedEmail = window.localStorage.getItem(LAST_EMAIL_KEY);
-      if (savedEmail) setEmail(savedEmail);
-    } catch {}
-  }, []);
-
-  // Foco en el primer campo vacío: si el correo vino precargado, el cursor
-  // arranca en la contraseña.
-  useEffect(() => {
-    const t = window.setTimeout(() => {
-      const target = email ? passRef.current : emailRef.current;
-      target?.focus({ preventScroll: true });
-    }, 60);
+    const t = window.setTimeout(() => firstRef.current?.focus({ preventScroll: true }), 60);
     return () => window.clearTimeout(t);
-    // Solo al montar: reenfocar en cada tecleo sería insoportable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Bloq Mayús es la causa nº1 de "mi contraseña no funciona".
+  const strength = useMemo(() => strengthOf(password), [password]);
+
   const onPassKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const on = e.getModifierState?.("CapsLock");
     if (typeof on === "boolean" && on !== capsOn) setCapsOn(on);
@@ -164,48 +112,48 @@ export default function GenericLoginPageClient() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      setErrorMsg("Ingresa un correo electrónico válido.");
-      return;
-    }
-    if (!password || password.length < 6) {
-      setErrorMsg("La contraseña debe tener al menos 6 caracteres.");
-      return;
-    }
+
+    if (!firstName.trim()) return setErrorMsg("Escribí tu nombre.");
+    if (!email || !/\S+@\S+\.\S+/.test(email))
+      return setErrorMsg("Ingresá un correo electrónico válido.");
+    if (password.length < 8)
+      return setErrorMsg("La contraseña debe tener al menos 8 caracteres.");
+    if (!accepted)
+      return setErrorMsg("Necesitamos que aceptes los términos para continuar.");
+
     try {
       setSubmitting(true);
-      try {
-        const customRedirect = search.get("redirect");
-        window.sessionStorage.setItem("LOGIN_NEXT", customRedirect || ui.next);
-        window.localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
-        // El correo solo se recuerda si el usuario pidió ser recordado.
-        if (remember) window.localStorage.setItem(LAST_EMAIL_KEY, email.trim());
-        else window.localStorage.removeItem(LAST_EMAIL_KEY);
-      } catch {}
-      await login(email.trim(), password, remember);
+      await registerApi({
+        email: email.trim().toLowerCase(),
+        password,
+        firstName: firstName.trim(),
+        lastName: lastName.trim() || undefined,
+      });
+      // El alta no deja sesión iniciada: mandamos al login con el aviso, que ya
+      // sabe mostrarlo, y conservando el destino original si venía uno.
+      const qs = new URLSearchParams({ role: "buyer", msg: "cuenta_creada" });
+      if (redirect) qs.set("redirect", redirect);
+      router.replace(`/login?${qs.toString()}`);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } }; message?: string };
       setErrorMsg(
-        e?.response?.data?.error || e?.message || "Credenciales incorrectas. Intenta de nuevo."
+        e?.response?.data?.error ||
+          e?.message ||
+          "No pudimos crear la cuenta. Revisá los datos e intentá de nuevo."
       );
       setSubmitting(false);
     }
   };
 
-  // Conserva ?redirect= al cambiar de pestaña: si llegaste acá desde el
-  // checkout, cambiar de rol no debería tirar a la basura tu destino.
-  const tabHref = (r: Role) => {
-    const redirect = search.get("redirect");
-    return `/login?role=${r}${redirect ? `&redirect=${encodeURIComponent(redirect)}` : ""}`;
-  };
+  const loginHref = `/login?role=buyer${redirect ? `&redirect=${encodeURIComponent(redirect)}` : ""}`;
 
   return (
-    <div className="fdm-log" style={ROOT_VARS}>
+    <div className="fdm-reg" style={ROOT_VARS}>
       <style>{PAGE_CSS}</style>
 
       {/* ══ Panel oscuro ═══════════════════════════════════ */}
       <div
-        className="fdm-log-dark"
+        className="fdm-reg-dark"
         style={{
           flex: "1 1 400px",
           minWidth: "min(100%,320px)",
@@ -250,14 +198,7 @@ export default function GenericLoginPageClient() {
             }}
           />
           <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}>
-            <span
-              style={{
-                fontWeight: 500,
-                fontSize: 15,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
+            <span style={{ fontWeight: 500, fontSize: 15, letterSpacing: "0.08em", textTransform: "uppercase" }}>
               Feria del Millón
             </span>
             <span
@@ -286,15 +227,13 @@ export default function GenericLoginPageClient() {
               textTransform: "uppercase",
             }}
           >
-            {ui.manifesto.map((line, i) => (
-              <span key={line} style={{ display: "block", color: i === 2 ? "var(--acc)" : undefined }}>
-                {line}
-              </span>
-            ))}
+            <span style={{ display: "block" }}>Creá tu</span>
+            <span style={{ display: "block" }}>cuenta y</span>
+            <span style={{ display: "block", color: "var(--acc)" }}>coleccioná</span>
           </h1>
 
           <div style={{ display: "flex", flexDirection: "column" }}>
-            {ui.points.map((p, i) => (
+            {POINTS.map((p, i) => (
               <span
                 key={p}
                 style={{
@@ -303,8 +242,7 @@ export default function GenericLoginPageClient() {
                   gap: 12,
                   padding: "9px 0",
                   borderTop: "1px solid rgba(245,244,239,0.16)",
-                  borderBottom:
-                    i === ui.points.length - 1 ? "1px solid rgba(245,244,239,0.16)" : undefined,
+                  borderBottom: i === POINTS.length - 1 ? "1px solid rgba(245,244,239,0.16)" : undefined,
                   fontSize: 14.5,
                   color: "rgba(245,244,239,0.88)",
                 }}
@@ -354,7 +292,7 @@ export default function GenericLoginPageClient() {
             borderBottom: `1px solid ${mix(14)}`,
           }}
         >
-          <span style={{ ...EYEBROW, color: mix(62) }}>Acceso a tu cuenta</span>
+          <span style={{ ...EYEBROW, color: mix(62) }}>Crear cuenta</span>
           <ThemeToggle />
         </div>
 
@@ -371,64 +309,58 @@ export default function GenericLoginPageClient() {
             onSubmit={handleSubmit}
             style={{ width: "100%", maxWidth: 440, display: "flex", flexDirection: "column" }}
           >
-            {/* Pestañas de rol */}
-            <div
-              style={{
-                display: "flex",
-                gap: 26,
-                paddingBottom: 14,
-                borderBottom: `1px solid ${mix(20)}`,
-              }}
-            >
-              {(
-                [
-                  ["buyer", "Comprador"],
-                  ["artist", "Artista"],
-                ] as [Role, string][]
-              ).map(([r, label]) => {
-                const on = role === r;
-                return (
-                  <Link
-                    key={r}
-                    href={tabHref(r)}
-                    style={{
-                      padding: "2px 0",
-                      fontWeight: 500,
-                      fontSize: 11.5,
-                      letterSpacing: "0.16em",
-                      textTransform: "uppercase",
-                      color: on ? "var(--acc)" : mix(55),
-                      borderBottom: `1px solid ${on ? "var(--acc)" : "transparent"}`,
-                    }}
-                  >
-                    {label}
-                  </Link>
-                );
-              })}
-            </div>
-
             <h2
               style={{
-                margin: "20px 0 6px",
+                margin: "0 0 6px",
                 fontWeight: 300,
                 fontSize: "clamp(26px,2.6vw,36px)",
                 lineHeight: 1.1,
                 letterSpacing: "0.02em",
               }}
             >
-              {ui.heading}
+              Empezá acá
             </h2>
             <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: mix(72) }}>
-              {ui.subheading}
+              Con tu cuenta guardás obras, seguís tus pedidos y comprás sin volver a cargar datos.
             </p>
 
-            <label htmlFor="lg-mail" style={{ ...EYEBROW, marginTop: 22, fontSize: 9.5, color: mix(66) }}>
+            <div className="fdm-reg-row" style={{ marginTop: 22 }}>
+              <span style={{ display: "flex", flexDirection: "column" }}>
+                <label htmlFor="rg-first" style={{ ...EYEBROW, fontSize: 9.5, color: mix(66) }}>
+                  Nombre
+                </label>
+                <input
+                  id="rg-first"
+                  ref={firstRef}
+                  className="fdm-reg-field"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  autoComplete="given-name"
+                  placeholder="Ana"
+                  required
+                />
+              </span>
+              <span style={{ display: "flex", flexDirection: "column" }}>
+                <label htmlFor="rg-last" style={{ ...EYEBROW, fontSize: 9.5, color: mix(66) }}>
+                  Apellido
+                </label>
+                <input
+                  id="rg-last"
+                  className="fdm-reg-field"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  autoComplete="family-name"
+                  placeholder="Gómez"
+                />
+              </span>
+            </div>
+
+            <label htmlFor="rg-mail" style={{ ...EYEBROW, marginTop: 18, fontSize: 9.5, color: mix(66) }}>
               Correo
             </label>
             <input
-              id="lg-mail"
-              ref={emailRef}
-              className="fdm-log-field"
+              id="rg-mail"
+              className="fdm-reg-field"
               type="email"
               inputMode="email"
               autoCapitalize="none"
@@ -437,7 +369,6 @@ export default function GenericLoginPageClient() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="tu@correo.com"
               autoComplete="email"
-              aria-invalid={!!errorMsg}
               required
             />
 
@@ -450,13 +381,13 @@ export default function GenericLoginPageClient() {
                 marginTop: 18,
               }}
             >
-              <label htmlFor="lg-pass" style={{ ...EYEBROW, fontSize: 9.5, color: mix(66) }}>
+              <label htmlFor="rg-pass" style={{ ...EYEBROW, fontSize: 9.5, color: mix(66) }}>
                 Contraseña
               </label>
               <button
                 type="button"
                 onClick={() => setShowPwd((v) => !v)}
-                className="fdm-log-link"
+                className="fdm-reg-link"
                 style={{
                   background: "transparent",
                   border: 0,
@@ -472,20 +403,48 @@ export default function GenericLoginPageClient() {
               </button>
             </div>
             <input
-              id="lg-pass"
-              ref={passRef}
-              className="fdm-log-field"
+              id="rg-pass"
+              className="fdm-reg-field"
               type={showPwd ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyUp={onPassKey}
               onKeyDown={onPassKey}
               onBlur={() => setCapsOn(false)}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              aria-invalid={!!errorMsg}
+              placeholder="Mínimo 8 caracteres"
+              autoComplete="new-password"
               required
             />
+
+            {/* Medidor de fuerza */}
+            {password && (
+              <span style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10 }}>
+                <span style={{ display: "flex", gap: 4, flex: 1 }}>
+                  {[1, 2, 3, 4].map((n) => (
+                    <span
+                      key={n}
+                      style={{
+                        flex: 1,
+                        height: 2,
+                        background: n <= strength.score ? strength.color : mix(14),
+                        transition: "background .3s ease",
+                      }}
+                    />
+                  ))}
+                </span>
+                <span
+                  style={{
+                    ...EYEBROW,
+                    fontSize: 9.5,
+                    letterSpacing: "0.14em",
+                    color: strength.color,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {strength.label}
+                </span>
+              </span>
+            )}
 
             {capsOn && (
               <span
@@ -502,73 +461,44 @@ export default function GenericLoginPageClient() {
               </span>
             )}
 
-            <div
+            <button
+              type="button"
+              role="switch"
+              aria-checked={accepted}
+              onClick={() => setAccepted((v) => !v)}
+              className="fdm-reg-link"
               style={{
                 display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-                marginTop: 16,
+                alignItems: "flex-start",
+                gap: 11,
+                marginTop: 20,
+                background: "transparent",
+                border: 0,
+                padding: 0,
+                cursor: "pointer",
+                color: "inherit",
+                fontSize: 13.5,
+                lineHeight: 1.5,
+                textAlign: "left",
               }}
             >
-              <button
-                type="button"
-                role="switch"
-                aria-checked={remember}
-                onClick={() => setRemember((v) => !v)}
-                className="fdm-log-link"
+              <span
+                aria-hidden
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 11,
-                  background: "transparent",
-                  border: 0,
-                  padding: 0,
-                  cursor: "pointer",
-                  color: "inherit",
-                  fontSize: 13.5,
+                  flex: "0 0 auto",
+                  display: "block",
+                  width: 11,
+                  height: 11,
+                  marginTop: 5,
+                  transition: "all .25s ease",
+                  border: `1px solid ${accepted ? "var(--acc)" : mix(26)}`,
+                  background: accepted ? "var(--acc)" : "transparent",
                 }}
-              >
-                <span
-                  aria-hidden
-                  style={{
-                    flex: "0 0 auto",
-                    display: "block",
-                    width: 11,
-                    height: 11,
-                    transition: "all .25s ease",
-                    border: `1px solid ${remember ? "var(--acc)" : mix(26)}`,
-                    background: remember ? "var(--acc)" : "transparent",
-                  }}
-                />
-                Recordarme
-              </button>
-
-              <Link
-                href="/convocatoria/recuperar"
-                className="fdm-log-link"
-                style={{ fontSize: 13.5, color: mix(72) }}
-              >
-                ¿Olvidaste la contraseña?
-              </Link>
-            </div>
-
-            {justRegistered && !errorMsg && (
-              <div
-                role="status"
-                style={{
-                  marginTop: 18,
-                  padding: "12px 14px",
-                  borderLeft: "2px solid var(--acc)",
-                  background: "color-mix(in srgb, var(--acc) 10%, transparent)",
-                  fontSize: 14,
-                  lineHeight: 1.5,
-                }}
-              >
-                Cuenta creada. Ingresá con tu correo y contraseña para continuar.
-              </div>
-            )}
+              />
+              <span>
+                Acepto los términos y la política de privacidad de la Feria del Millón.
+              </span>
+            </button>
 
             {errorMsg && (
               <div
@@ -589,7 +519,7 @@ export default function GenericLoginPageClient() {
             <button
               type="submit"
               disabled={submitting}
-              className="fdm-log-submit"
+              className="fdm-reg-submit"
               style={{
                 marginTop: 22,
                 width: "100%",
@@ -607,33 +537,42 @@ export default function GenericLoginPageClient() {
                 color: "var(--bg)",
               }}
             >
-              {submitting ? "Ingresando…" : ui.submitText}
+              {submitting ? "Creando cuenta…" : "Crear cuenta"}
             </button>
 
-            {ui.registerHref && (
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  gap: 8,
-                  marginTop: 22,
-                  paddingTop: 16,
-                  borderTop: `1px solid ${mix(14)}`,
-                  fontSize: 14,
-                  color: mix(72),
-                }}
-              >
-                <span>¿No tenés cuenta?</span>
-                <Link
-                  href={ui.registerHref}
-                  className="fdm-log-link"
-                  style={{ color: "var(--acc)", ...EYEBROW, fontSize: 10 }}
-                >
-                  {ui.registerText}
-                </Link>
-              </div>
-            )}
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 22,
+                paddingTop: 16,
+                borderTop: `1px solid ${mix(14)}`,
+                fontSize: 14,
+                color: mix(72),
+              }}
+            >
+              <span>¿Ya tenés cuenta?</span>
+              <Link href={loginHref} className="fdm-reg-link" style={{ color: "var(--acc)", ...EYEBROW, fontSize: 10 }}>
+                Ingresar →
+              </Link>
+            </div>
+
+            <div
+              style={{
+                marginTop: 14,
+                fontSize: 13.5,
+                lineHeight: 1.5,
+                color: mix(60),
+              }}
+            >
+              ¿Sos artista y querés postular obra?{" "}
+              <Link href="/convocatoria" className="fdm-reg-link" style={{ color: "var(--acc)" }}>
+                Andá a la convocatoria
+              </Link>
+              .
+            </div>
           </form>
         </div>
 
@@ -653,10 +592,10 @@ export default function GenericLoginPageClient() {
         >
           <span>© Feria del Millón · Oficina para la Cultura SAS</span>
           <span style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-            <Link href="/legal" className="fdm-log-link">
+            <Link href="/legal" className="fdm-reg-link">
               Privacidad
             </Link>
-            <Link href="/legal" className="fdm-log-link">
+            <Link href="/legal" className="fdm-reg-link">
               Términos
             </Link>
           </span>

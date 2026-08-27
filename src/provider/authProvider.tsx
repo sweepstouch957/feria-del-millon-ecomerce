@@ -29,7 +29,7 @@ type AuthContextType = {
   user: AuthUser | null;
   isAuthLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, remember?: boolean) => Promise<void>;
   register: (payload: any) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -180,11 +180,13 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
     mutationFn: async ({
       email,
       password,
+      remember,
     }: {
       email: string;
       password: string;
+      remember?: boolean;
     }) => {
-      await loginApi(email, password);
+      await loginApi(email, password, remember);
       const me = await meApi();
       setUser(me);
       try {
@@ -241,8 +243,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
       user,
       isAuthLoading,
       isAuthenticated,
-      login: async (email: string, password: string) => {
-        await loginMutation.mutateAsync({ email, password });
+      login: async (email: string, password: string, remember = false) => {
+        await loginMutation.mutateAsync({ email, password, remember });
       },
       register: async (payload: any) => {
         await registerMutation.mutateAsync(payload);

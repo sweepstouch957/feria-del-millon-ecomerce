@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@components/ui/SmartImage";
 import { useRouter } from "next/navigation";
 import { Button } from "@components/ui/button";
 import {
@@ -118,11 +118,14 @@ export default function CatalogCard({
         tabIndex={0}
       >
         <div className="w-full md:w-48">
-          <Image
+          <SmartImage
             src={imgs[0]}
             alt={artwork?.title}
+            fill={false}
             width={320}
             height={320}
+            sizes="320px"
+            fit="cover"
             className="w-full h-48 object-cover rounded-lg"
           />
         </div>
@@ -175,13 +178,15 @@ export default function CatalogCard({
         onTouchEnd={hasCarousel ? onTouchEnd : undefined}
       >
         {imgs.map((src, idx) => (
-          <img
+          <SmartImage
             key={`${src}-${idx}`}
             src={src}
             alt={artwork?.title}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${idx === current ? "opacity-100" : "opacity-0"
+            fit="cover"
+            priority={idx === 0}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className={`object-cover transition-opacity duration-700 ${idx === current ? "opacity-100" : "opacity-0"
               }`}
-            draggable={false}
           />
         ))}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@components/ui/SmartImage";
 import { Button } from "@components/ui/button";
 import { Trash2, Plus, Minus, ArrowLeft, ShoppingBag } from "lucide-react";
 import useCart from "@store/useCart";
@@ -91,11 +91,13 @@ export default function CartPage() {
                 <div className="flex flex-col md:flex-row gap-6">
                   {/* Imagen */}
                   <div className="flex-shrink-0 w-full md:w-32">
-                    <Image
+                    <SmartImage
                       src={getFirstImage(item.image)}
                       alt={item.title}
+                      fill={false}
                       width={256}
                       height={256}
+                      sizes="256px"
                       className="w-full h-32 object-contain rounded-lg"
                     />
                   </div>

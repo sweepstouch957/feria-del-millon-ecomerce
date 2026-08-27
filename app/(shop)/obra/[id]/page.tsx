@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import useCart from "@store/useCart";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
 import { mergeImages, pickSrc } from "@lib/utils";
 import { formatCOP } from "@lib/money";
+import Skeleton from "@components/ui/Skeleton";
+import SmartImage from "@components/ui/SmartImage";
+import { motion, useReducedMotion } from "framer-motion";
+import ArtworkViewer from "./ArtworkViewer";
 
 /* ──────────────────────────────────────────────────────────────
    Detalle de obra — diseño editorial v2 (port de Obra.dc.html).
@@ -113,31 +117,78 @@ export default function Page() {
     [doc?.image, doc?.images]
   );
 
-  const [active, setActive] = useState(0);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-
-  const next = useCallback(() => setActive((i) => (i + 1) % images.length), [images.length]);
-  const prev = useCallback(
-    () => setActive((i) => (i - 1 + images.length) % images.length),
-    [images.length]
-  );
-
-  useEffect(() => {
-    if (!lightboxOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setLightboxOpen(false);
-      if (e.key === "ArrowRight") next();
-      if (e.key === "ArrowLeft") prev();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [lightboxOpen, next, prev]);
-
   if (isLoading) {
     return (
-      <Shell>
-        <span style={{ ...EYEBROW, color: mix(50) }}>Cargando obra…</span>
-      </Shell>
+      <div style={ROOT_VARS}>
+        <style>{PAGE_CSS}</style>
+        <div
+          className="fdm-obra"
+          style={{ maxWidth: 1600, margin: "0 auto", padding: "0 clamp(20px,4vw,56px)" }}
+        >
+          {/* Mismas alturas que la vista real: al llegar los datos nada se mueve. */}
+          <div style={{ padding: "12px 0", borderBottom: `1px solid ${mix(12)}` }}>
+            <Skeleton w={320} h={11} />
+          </div>
+
+          <section className="fdm-obra-shell">
+            <div className="fdm-obra-media">
+              <Skeleton aspect="1/1" />
+              <div className="fdm-obra-thumbs">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} aspect="1" />
+                ))}
+              </div>
+            </div>
+
+            <div className="fdm-obra-info">
+              <Skeleton w="55%" h={11} />
+              <div style={{ marginTop: 8 }}>
+                <Skeleton w="85%" h={46} />
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <Skeleton w="45%" h={17} />
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  marginTop: 16,
+                  padding: "12px 0",
+                  borderTop: `1px solid ${mix(20)}`,
+                  borderBottom: `1px solid ${mix(12)}`,
+                }}
+              >
+                <Skeleton w={160} h={34} />
+                <span style={{ flex: 1 }} />
+                <Skeleton w={92} h={11} />
+              </div>
+
+              <div style={{ display: "flex", gap: 8, padding: "12px 0", borderBottom: `1px solid ${mix(12)}` }}>
+                <Skeleton w={190} h={48} radius={999} />
+                <Skeleton w={150} h={48} radius={999} />
+              </div>
+
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 16,
+                    padding: "8px 0",
+                    borderBottom: `1px solid ${mix(9)}`,
+                  }}
+                >
+                  <Skeleton w="38%" h={10} />
+                  <Skeleton w="50%" h={14} />
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      </div>
     );
   }
 
@@ -162,6 +213,15 @@ export default function Page() {
     );
   }
 
+  const reduce = useReducedMotion();
+  const rise = reduce
+    ? {}
+    : {
+        initial: { opacity: 0, y: 14 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
+      };
+
   const currency = doc.currency || "COP";
   const stock = Number(doc.stock ?? (copies.length ? 1 : 0));
   const availableCopy = copies.find((c: any) => c.status === "available");
@@ -170,6 +230,8 @@ export default function Page() {
   const artistFullName =
     [doc.artistInfo?.firstName, doc.artistInfo?.lastName].filter(Boolean).join(" ") ||
     "Artista";
+
+  const artistPhoto = pickSrc(doc.artistInfo?.image);
 
   const pavilionId = doc.pavilionInfo?._id ? String(doc.pavilionInfo._id) : "";
   const techniqueId = doc.techniqueInfo?._id ? String(doc.techniqueInfo._id) : "";
@@ -278,101 +340,18 @@ export default function Page() {
 
         {/* ── Obra ───────────────────────────────────────────── */}
         <section className="fdm-obra-shell">
-          {/* Galería */}
-          <div className="fdm-obra-media">
-            <div
-              style={{
-                position: "relative",
-                aspectRatio: "1/1",
-                padding: "clamp(20px,3vw,52px)",
-                background: mix(4),
-                border: `1px solid ${mix(12)}`,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setLightboxOpen(true)}
-                aria-label="Ampliar imagen"
-                style={{
-                  display: "block",
-                  width: "100%",
-                  height: "100%",
-                  padding: 0,
-                  border: 0,
-                  background: "transparent",
-                  cursor: "zoom-in",
-                }}
-              >
-                <span
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    height: "100%",
-                    backgroundImage: `url('${images[active]}')`,
-                    backgroundSize: "contain",
-                    backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
-                    filter: `drop-shadow(0 16px 40px ${mix(20)})`,
-                  }}
-                />
-              </button>
-              <span
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  bottom: 0,
-                  padding: "7px 13px",
-                  background: "var(--panel)",
-                  color: "#F5F4EF",
-                  ...EYEBROW,
-                  fontSize: 10,
-                  letterSpacing: "0.16em",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {availableCopy && Number(availableCopy.total) > 1
-                  ? `Copia ${availableCopy.number}/${availableCopy.total}`
-                  : "Pieza única"}
-              </span>
-            </div>
-
-            {images.length > 1 && (
-              <div className="fdm-obra-thumbs">
-                {images.map((src, i) => (
-                  <button
-                    key={src + i}
-                    type="button"
-                    onClick={() => setActive(i)}
-                    aria-label={`Ver imagen ${i + 1}`}
-                    aria-current={i === active}
-                    style={{
-                      aspectRatio: "1",
-                      padding: 7,
-                      cursor: "pointer",
-                      background: mix(4),
-                      transition: "border-color .3s ease",
-                      border: `1px solid ${i === active ? "var(--acc)" : mix(12)}`,
-                    }}
-                  >
-                    <span
-                      style={{
-                        display: "block",
-                        width: "100%",
-                        height: "100%",
-                        backgroundImage: `url('${src}')`,
-                        backgroundSize: "contain",
-                        backgroundPosition: "center",
-                        backgroundRepeat: "no-repeat",
-                      }}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <ArtworkViewer
+            images={images}
+            title={doc.title}
+            badge={
+              availableCopy && Number(availableCopy.total) > 1
+                ? `Copia ${availableCopy.number}/${availableCopy.total}`
+                : "Pieza única"
+            }
+          />
 
           {/* Ficha */}
-          <div className="fdm-obra-info">
+          <motion.div className="fdm-obra-info" {...rise}>
             <span style={{ ...EYEBROW, fontSize: 10.5, color: "var(--acc)" }}>
               {[doc.techniqueInfo?.name, doc.pavilionInfo?.name].filter(Boolean).join(" · ") ||
                 "Obra original"}
@@ -596,6 +575,8 @@ export default function Page() {
             >
               <span
                 style={{
+                  position: "relative",
+                  overflow: "hidden",
                   flex: "0 0 auto",
                   width: 50,
                   height: 50,
@@ -607,7 +588,12 @@ export default function Page() {
                   fontSize: 17,
                 }}
               >
-                {artistFullName.charAt(0)}
+                {/* User.image existe pero puede estar vacío: iniciales de respaldo. */}
+                {artistPhoto ? (
+                  <SmartImage src={artistPhoto} alt={artistFullName} fit="cover" sizes="50px" />
+                ) : (
+                  artistFullName.charAt(0)
+                )}
               </span>
               <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
                 <span style={{ fontWeight: 500, fontSize: 16 }}>{artistFullName}</span>
@@ -625,7 +611,7 @@ export default function Page() {
                 </Link>
               )}
             </div>
-          </div>
+          </motion.div>
         </section>
 
         {/* ── Más obras ──────────────────────────────────────── */}
@@ -662,9 +648,16 @@ export default function Page() {
             </div>
 
             <div className="fdm-obra-related">
-              {related.map((ra: any) => (
-                <Link
+              {related.map((ra: any, i: number) => (
+                <motion.div
                   key={String(ra._id)}
+                  initial={reduce ? undefined : { opacity: 0, y: 12 }}
+                  whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-60px" }}
+                  transition={{ duration: 0.45, delay: reduce ? 0 : i * 0.05 }}
+                  whileHover={reduce ? undefined : { y: -4 }}
+                >
+                <Link
                   href={`/obra/${encodeURIComponent(String(ra._id))}`}
                   className="fdm-obra-card"
                   style={{ display: "flex", flexDirection: "column", gap: 10 }}
@@ -672,6 +665,7 @@ export default function Page() {
                   <span
                     className="fdm-obra-frame"
                     style={{
+                      position: "relative",
                       display: "block",
                       aspectRatio: "4/5",
                       padding: "clamp(12px,1.4vw,20px)",
@@ -682,25 +676,22 @@ export default function Page() {
                   >
                     <span
                       style={{
+                        position: "absolute",
+                        inset: "clamp(12px,1.4vw,20px)",
                         display: "block",
-                        width: "100%",
-                        height: "100%",
-                        backgroundImage: `url('${
-                          pickSrc(ra.image) || pickSrc(ra.images?.[0]) || "/placeholder.png"
-                        }')`,
-                        backgroundSize: "contain",
-                        backgroundPosition: "center",
-                        backgroundRepeat: "no-repeat",
                         filter: `drop-shadow(0 10px 24px ${mix(16)})`,
                       }}
-                    />
+                    >
+                      <SmartImage
+                        src={
+                          pickSrc(ra.image) || pickSrc(ra.images?.[0]) || "/placeholder.png"
+                        }
+                        alt={ra.title}
+                        sizes="(max-width: 640px) 50vw, 220px"
+                      />
+                    </span>
                   </span>
                   <span style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    {ra.techniqueInfo?.name && (
-                      <span style={{ ...EYEBROW, fontSize: 10, color: "var(--acc)" }}>
-                        {ra.techniqueInfo.name}
-                      </span>
-                    )}
                     <span style={{ fontWeight: 500, fontSize: 16, lineHeight: 1.25 }}>
                       {ra.title}
                     </span>
@@ -709,90 +700,13 @@ export default function Page() {
                     </span>
                   </span>
                 </Link>
+                </motion.div>
               ))}
             </div>
           </section>
         )}
       </div>
 
-      {/* ── Lightbox ─────────────────────────────────────────── */}
-      {lightboxOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${doc.title} ampliada`}
-          onClick={() => setLightboxOpen(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 100,
-            background: "rgba(11,11,10,0.92)",
-            display: "grid",
-            placeItems: "center",
-            padding: "clamp(16px,4vw,48px)",
-          }}
-        >
-          <img
-            src={images[active]}
-            alt={`${doc.title} ampliada`}
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxHeight: "86vh", maxWidth: "92vw", objectFit: "contain" }}
-          />
-          <button
-            type="button"
-            onClick={() => setLightboxOpen(false)}
-            aria-label="Cerrar"
-            style={{
-              position: "absolute",
-              top: "clamp(14px,2vw,26px)",
-              right: "clamp(14px,2vw,26px)",
-              height: 42,
-              padding: "0 22px",
-              background: "transparent",
-              color: "#F5F4EF",
-              border: "1px solid rgba(245,244,239,0.34)",
-              borderRadius: 999,
-              cursor: "pointer",
-              ...EYEBROW,
-              fontSize: 10.5,
-              letterSpacing: "0.14em",
-            }}
-          >
-            Cerrar
-          </button>
-          {images.length > 1 && (
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                position: "absolute",
-                bottom: "clamp(16px,3vw,34px)",
-                left: "50%",
-                transform: "translateX(-50%)",
-                display: "flex",
-                gap: 8,
-              }}
-            >
-              {images.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setActive(i)}
-                  aria-label={`Imagen ${i + 1}`}
-                  style={{
-                    width: 9,
-                    height: 9,
-                    padding: 0,
-                    borderRadius: 999,
-                    border: 0,
-                    cursor: "pointer",
-                    background: i === active ? "#F5F4EF" : "rgba(245,244,239,0.4)",
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

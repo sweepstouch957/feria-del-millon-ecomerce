@@ -17,6 +17,8 @@ import { useEventArtists } from "@hooks/queries/useEventArtists";
 import { useEdition } from "@provider/editionProvider";
 import { formatCOP } from "@lib/money";
 import { pickSrc } from "@lib/utils";
+import Skeleton from "@components/ui/Skeleton";
+import SmartImage from "@components/ui/SmartImage";
 
 /* ──────────────────────────────────────────────────────────────
    Catálogo — diseño editorial v2 (port de Catalogo.dc.html).
@@ -53,11 +55,11 @@ const FIELD: React.CSSProperties = {
 };
 
 const SECTION: React.CSSProperties = {
-  padding: "clamp(14px,1.4vw,18px) 0",
+  padding: "clamp(11px,1.1vw,14px) 0",
   borderBottom: `1px solid ${mix(12)}`,
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: 8,
 };
 
 function artistOf(a: any) {
@@ -274,8 +276,7 @@ export default function CatalogPageClient() {
         .fdm-cat input[type="range"] { accent-color: var(--acc); }
         .fdm-cat input::placeholder { color: color-mix(in srgb, var(--fg) 34%, transparent); }
         .fdm-cat-shell { display:flex; flex-wrap:wrap; align-items:flex-start; gap:clamp(22px,2.4vw,38px); }
-        .fdm-cat-aside { flex:1 1 220px; max-width:268px; min-width:min(100%,220px); position:sticky; top:88px; max-height:calc(100vh - 104px); overflow-y:auto; display:flex; flex-direction:column; scrollbar-width:thin; }
-        .fdm-cat-scroll { max-height:236px; overflow-y:auto; scrollbar-width:thin; }
+        .fdm-cat-aside { flex:1 1 224px; max-width:260px; min-width:min(100%,224px); position:sticky; top:84px; align-self:flex-start; display:flex; flex-direction:column; }
         .fdm-cat-main { flex:999 1 62%; min-width:min(100%,280px); display:flex; flex-direction:column; gap:clamp(22px,2.2vw,32px); }
         .fdm-cat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%,240px), 1fr)); gap:clamp(20px,2vw,30px) clamp(16px,1.6vw,24px); }
         .fdm-cat-art:hover .fdm-cat-frame { border-color: var(--acc); }
@@ -371,7 +372,7 @@ export default function CatalogPageClient() {
                 }}
               >
                 <div style={{ fontWeight: 300, fontSize: "clamp(30px,3vw,46px)", lineHeight: 1 }}>
-                  {rows.length}
+                  {isLoading ? "—" : rows.length}
                   <span style={{ fontSize: "0.3em", letterSpacing: "0.2em", color: mix(42), marginLeft: 12 }}>
                     de {totalLabel}
                   </span>
@@ -446,7 +447,7 @@ export default function CatalogPageClient() {
                 alignItems: "baseline",
                 justifyContent: "space-between",
                 gap: 12,
-                paddingBottom: 12,
+                paddingBottom: 10,
                 borderBottom: `1px solid ${mix(22)}`,
               }}
             >
@@ -492,8 +493,8 @@ export default function CatalogPageClient() {
 
             {/* Pabellón — filtrable y compartible por URL (?pavilion=<id>) */}
             <div style={{ ...SECTION, gap: 2 }}>
-              <span style={{ ...LABEL, marginBottom: 8 }}>Pabellón</span>
-              <div className="fdm-cat-scroll">
+              <span style={{ ...LABEL, marginBottom: 4 }}>Pabellón</span>
+              <div>
                 <FilterRow
                   active={!pavilion}
                   label="Todos los pabellones"
@@ -533,8 +534,8 @@ export default function CatalogPageClient() {
 
             {/* Técnica */}
             <div style={{ ...SECTION, gap: 2 }}>
-              <span style={{ ...LABEL, marginBottom: 8 }}>Técnica</span>
-              <div className="fdm-cat-scroll">
+              <span style={{ ...LABEL, marginBottom: 4 }}>Técnica</span>
+              <div>
                 {techniquesData.map((t: any) => {
                   const id = String(t.id ?? t._id);
                   const facet = techFacets.find((f) => f.name === t.name);
@@ -647,6 +648,25 @@ export default function CatalogPageClient() {
                 >
                   Limpiar filtros
                 </button>
+              </div>
+            )}
+
+            {isLoading && (
+              <div className="fdm-cat-grid">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <Skeleton aspect="4/5" />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <Skeleton w="45%" h={10} />
+                      <Skeleton w="80%" h={19} />
+                      <Skeleton w="55%" h={14} />
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 4, paddingTop: 10, borderTop: `1px solid ${mix(14)}` }}>
+                        <Skeleton w={92} h={17} />
+                        <Skeleton w={96} h={36} radius={999} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -956,16 +976,18 @@ function ArtCard({
         >
           <span
             style={{
+              position: "absolute",
+              inset: "clamp(12px,1.4vw,18px)",
               display: "block",
-              width: "100%",
-              height: "100%",
-              backgroundImage: `url('${artImg(art)}')`,
-              backgroundSize: "contain",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
               filter: `drop-shadow(0 10px 26px ${mix(16)})`,
             }}
-          />
+          >
+            <SmartImage
+              src={artImg(art)}
+              alt={art.title || "Obra"}
+              sizes="(max-width: 640px) 100vw, (max-width: 1280px) 33vw, 240px"
+            />
+          </span>
         </div>
       </Link>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -1051,18 +1073,19 @@ function ArtRow({
       <Link href={href} style={{ flex: "0 0 auto" }}>
         <span
           style={{
+            position: "relative",
             display: "block",
             width: "clamp(60px,6vw,88px)",
             aspectRatio: "1",
             padding: 8,
             backgroundColor: mix(4),
             border: `1px solid ${mix(10)}`,
-            backgroundImage: `url('${artImg(art)}')`,
-            backgroundSize: "calc(100% - 16px)",
-            backgroundPosition: "center",
-            backgroundRepeat: "no-repeat",
           }}
-        />
+        >
+          <span style={{ position: "absolute", inset: 8, display: "block" }}>
+            <SmartImage src={artImg(art)} alt={art.title || "Obra"} sizes="90px" />
+          </span>
+        </span>
       </Link>
       <span style={{ flex: "1 1 200px", display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
         <Link

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useArtworksCursor } from "@hooks/queries/useArtworksCursor";
 import { formatCOP } from "@lib/money";
+import SmartImage from "@components/ui/SmartImage";
 import { pickSrc } from "@lib/utils";
 
 const ON_DARK = "var(--fdm-on-dark,#F5F4EF)";
@@ -60,6 +61,7 @@ export default function FeaturedGrid({
             <div style={{ padding: "clamp(12px,1.4vw,22px)", background: "#F5F4EF" }}>
               <div
                 style={{
+                  position: "relative",
                   aspectRatio: "4/5",
                   display: "flex",
                   alignItems: "center",
@@ -70,13 +72,14 @@ export default function FeaturedGrid({
                 }}
               >
                 {img ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={img}
-                    alt={a.title || "Obra"}
-                    loading="lazy"
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                  />
+                  <span style={{ position: "absolute", inset: 0, display: "block" }}>
+                    <SmartImage
+                      src={img}
+                      alt={a.title || "Obra"}
+                      fit="cover"
+                      sizes="(max-width: 640px) 100vw, 25vw"
+                    />
+                  </span>
                 ) : (
                   <span
                     className="fdm-mono"

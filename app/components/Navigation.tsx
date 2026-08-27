@@ -34,7 +34,10 @@ export default function Navigation() {
     const handler = () => {
       const top = window.scrollY || 0;
       const max = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
-      setCompact(top > 40);
+      // Histeresis: al cambiar de alto el header cambia el alto de pagina, lo
+      // que puede devolver el scroll debajo del umbral y hacerlo oscilar.
+      // Encender y apagar en puntos distintos rompe ese bucle.
+      setCompact((was) => (was ? top > 24 : top > 72));
       setProgress(Math.min(100, Math.max(0, (top / max) * 100)));
     };
     handler();

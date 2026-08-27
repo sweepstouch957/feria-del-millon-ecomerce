@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SmartImage from "@components/ui/SmartImage";
 import {
   Search,
   Landmark,
@@ -250,13 +250,15 @@ export default function ArtistsPage() {
                 >
                   {/* Cover */}
                   <div className="relative">
-                    <Image
+                    <SmartImage
                       src={sampleCover}
                       alt={artist.name}
+                      fill={false}
                       width={1200}
                       height={800}
+                      sizes="(max-width: 768px) 100vw, 380px"
+                      fit="cover"
                       className="w-full h-64 object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                      priority={false}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                     <div className="absolute bottom-4 left-4 text-white">

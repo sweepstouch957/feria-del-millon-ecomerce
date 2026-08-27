@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import SmartImage from "@components/ui/SmartImage";
 import { Shield, Truck, CheckCircle } from "lucide-react";
 import { formatCOP } from "@lib/money";
 
@@ -58,11 +58,13 @@ export function CheckoutOrderSummary({
         <div className="space-y-4 mb-6">
           {items.map((item) => (
             <div key={item.id} className="flex gap-3">
-              <Image
+              <SmartImage
                 src={getFirstImage(item.image)}
                 alt={item.title}
+                fill={false}
                 width={64}
                 height={64}
+                sizes="64px"
                 className="w-16 h-16 object-contain rounded-md border shadow-sm"
               />
               <div className="flex-1 min-w-0">

@@ -1,3 +1,21 @@
+.fdm-skel {
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--fdm-fg,#0B0B0A) 7%, transparent) 25%,
+    color-mix(in srgb, var(--fdm-fg,#0B0B0A) 12%, transparent) 50%,
+    color-mix(in srgb, var(--fdm-fg,#0B0B0A) 7%, transparent) 75%);
+  background-size: 200% 100%;
+  animation: fdm-skel 1.4s ease-in-out infinite;
+}
+@keyframes fdm-skel { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .fdm-skel { animation: none; } }
+
+/* Reserva el canal de la barra de scroll: sin esto, al pasar de una pagina
+   corta a una larga cambia el ancho del viewport y el navbar centrado salta. */
+html { scrollbar-gutter: stable; }
+
+.fdm-foot-link { transition: color .3s ease; }
+.fdm-foot-link:hover { color: var(--fdm-green,#3FA46E); }
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

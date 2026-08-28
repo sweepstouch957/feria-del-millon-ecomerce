@@ -66,11 +66,17 @@
       staleTime: 10_000,
     });
 
-    const pages =
-      (query.data as any)
-        ?.pages ?? [];
+    const pages = useMemo(
+      () => ((query.data as any)?.pages ?? []) as any[],
+      [query.data]
+    );
 
-    const rows: ArtworkRow[] = pages.flatMap((p) => p.docs) ?? [];
+    // Memoizado a propósito: sin esto es un arreglo nuevo por render y
+    // cualquier efecto que dependa de él entra en bucle.
+    const rows: ArtworkRow[] = useMemo(
+      () => pages.flatMap((p: any) => p.docs) ?? [],
+      [pages]
+    );
     const totalFromApi = pages[0]?.pageInfo?.total as number | undefined;
     const totalLabel =
       typeof totalFromApi === "number"

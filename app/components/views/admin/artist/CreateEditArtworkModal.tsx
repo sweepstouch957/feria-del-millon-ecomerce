@@ -137,6 +137,12 @@ export default function CreateEditArtworkModal({
 
   const imageUrl = watch("image");
 
+  // Valor primitivo en vez del arreglo: si el padre re-renderiza, esto sigue
+  // siendo el mismo string y el efecto de abajo no vuelve a resetear el
+  // formulario a medio llenar.
+  const soloPavilion =
+    pavilionOptions?.length === 1 ? pavilionOptions[0].value : "";
+
   // Cargar datos si estamos editando
   useEffect(() => {
     if (!editingId) {
@@ -152,7 +158,7 @@ export default function CreateEditArtworkModal({
         technique: "",
         // Si el artista tiene un solo pabellón asignado, no tiene sentido
         // pedirle que lo elija: sus obras van ahí.
-        pavilion: pavilionOptions?.length === 1 ? pavilionOptions[0].value : "",
+        pavilion: soloPavilion,
         tagId: "",
       });
       return;
@@ -178,7 +184,7 @@ export default function CreateEditArtworkModal({
     );
     setValue("tagId", (row as any)?.tagId || "");
     setValue("image", row.image || "");
-  }, [editingId, currentRows, reset, setValue, pavilionOptions]);
+  }, [editingId, currentRows, reset, setValue, soloPavilion]);
 
   // ========================= Mutations =========================
   const mCreate = useMutation({

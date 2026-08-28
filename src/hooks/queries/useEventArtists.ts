@@ -33,6 +33,19 @@ export type UseEventArtistsParams = {
  * - Memoiza por (eventId, filtros) en la queryKey.
  * - Maneja 404 sin reintentos.
  */
+/* Fuera del hook a propósito: un `select` en línea cambia de identidad en
+   cada render, react-query lo vuelve a ejecutar y devuelve un objeto nuevo
+   aunque los datos no hayan cambiado. Eso obliga a recalcular a todo lo que
+   dependa de él. */
+function selectEventArtists(data: any) {
+  const totalPages =
+    data?.limit && data?.limit > 0
+      ? Math.max(1, Math.ceil((data.total ?? 0) / data.limit))
+      : 1;
+
+  return { ...data, totalPages };
+}
+
 export function useEventArtists(
   eventId?: string,
   params: UseEventArtistsParams = {},
@@ -85,17 +98,6 @@ export function useEventArtists(
       // eventId garantizado por `enabled`
       return listEventArtists(eventId as string, safeParams);
     },
-    select: (data) => {
-      // Derivados útiles para UI (páginas, totales)
-      const totalPages =
-        data?.limit && data?.limit > 0
-          ? Math.max(1, Math.ceil((data.total ?? 0) / data.limit))
-          : 1;
-
-      return {
-        ...data,
-        totalPages,
-      };
-    },
+    select: selectEventArtists,
   });
 }

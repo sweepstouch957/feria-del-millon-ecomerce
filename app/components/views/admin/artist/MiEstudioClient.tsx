@@ -41,8 +41,17 @@ export default function MiEstudioClient() {
     enabled: !!artistId && isAuthenticated,
   });
 
+  // Invitado = asignado a un pabellón por el admin, aunque no se haya postulado.
+  const { data: pavsByUser, isLoading: pavsLoading } = usePavilionsByUser(
+    DEFAULT_EVENT_ID,
+    artistId as string,
+    true
+  );
+  const isInvited = (pavsByUser?.rows?.length ?? 0) > 0;
+
   useEffect(() => {
-    if (!isAuthLoading && !appsLoading && isAuthenticated) {
+    if (!isAuthLoading && !appsLoading && !pavsLoading && isAuthenticated) {
+      if (isInvited) return;
       if (apps.length === 0) {
         toast.error("Debes iniciar una postulación primero.");
         router.push("/convocatoria/pagar");
@@ -54,7 +63,7 @@ export default function MiEstudioClient() {
         router.push("/convocatoria/mi-solicitud");
       }
     }
-  }, [isAuthLoading, appsLoading, isAuthenticated, apps, router]);
+  }, [isAuthLoading, appsLoading, pavsLoading, isInvited, isAuthenticated, apps, router]);
 
   const [q, setQ] = useState("");
   const [tech, setTech] = useState<string | "all">("all");
@@ -70,11 +79,6 @@ export default function MiEstudioClient() {
   const [qrForId, setQrForId] = useState<string | null>(null);
 
   const { data: techniques = [] } = useTechniques();
-  const { data: pavsByUser } = usePavilionsByUser(
-    DEFAULT_EVENT_ID,
-    artistId as string,
-    true
-  );
 
   const filters = useMemo(
     () => ({
@@ -115,7 +119,7 @@ export default function MiEstudioClient() {
     [techniques]
   );
 
-  if (isAuthLoading || appsLoading) {
+  if (isAuthLoading || appsLoading || pavsLoading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-gray-600">
         <Loader2 className="w-6 h-6 mb-2 animate-spin" />
@@ -134,7 +138,7 @@ export default function MiEstudioClient() {
   // Sin resolución aceptada no hay catálogo que cargar. En vez de un
   // "redirigiendo" que no explica nada, se muestra en qué punto va y qué le
   // toca hacer — el mismo panel que usa /admin/account.
-  const isApproved = apps.some((app) => app.status === "accepted");
+  const isApproved = isInvited || apps.some((app) => app.status === "accepted");
   if (!isApproved && !appsLoading) {
     return (
       <div

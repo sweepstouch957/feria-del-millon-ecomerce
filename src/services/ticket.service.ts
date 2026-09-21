@@ -9,7 +9,12 @@ export type TicketChannel = "online" | "presale" | "onsite";
 export interface TicketBuyer {
   name: string;
   email: string;
+  phone?: string;
+  company?: string;
+  nit?: string;
 }
+
+export type TicketType = "general" | "allpass" | "preview" | "empresa" | "2x1" | "estudiante";
 
 export interface Ticket {
   id: string;
@@ -69,14 +74,17 @@ export interface TicketDaySummary {
 /** ────────── DTO específico para pago con Mercado Pago ────────── */
 export interface PayWithMercadoPagoPayload {
   eventId: string;
-  date: string;       // "YYYY-MM-DD"
+  type?: TicketType;
+  date?: string;      // "YYYY-MM-DD" (tipos de un día)
+  studentIdUrl?: string; // foto del carné (estudiantes)
   quantity: number;
   channel?: TicketChannel;
   presale?: boolean;
   /** Clave estable por intento de cobro — evita cobro doble en reintentos. */
   idempotencyKey?: string;
   buyer: TicketBuyer; // { name, email }
-  card: {
+  /** Omitir en entradas gratis (estudiantes). */
+  card?: {
     token: string;
     installments: number;
     paymentMethodId: string;
@@ -136,4 +144,33 @@ export const getTodayTicketDay = async (eventId: string) => {
     ...data,
     ticketDay: data.ticketDay ? normalizeId(data.ticketDay) : null,
   };
+};
+
+/** ────────── Invitaciones (enlace del correo) ────────── */
+export interface InvitationView {
+  name: string;
+  eventName?: string;
+  eventDay: string;
+  allDays: boolean;
+  admits: number;
+  status: "pending" | "confirmed" | "canceled";
+  companionName?: string;
+  shortCode?: string;
+  qrDataUrl?: string;
+}
+
+export const getInvitation = async (token: string) => {
+  const { data } = await apiClient.get<InvitationView>(`/ticket/tickets/invitations/${encodeURIComponent(token)}`);
+  return data;
+};
+
+export const confirmInvitation = async (
+  token: string,
+  body: { phone: string; documentNumber?: string; companionName?: string },
+) => {
+  const { data } = await apiClient.post<InvitationView>(
+    `/ticket/tickets/invitations/${encodeURIComponent(token)}/confirm`,
+    body,
+  );
+  return data;
 };

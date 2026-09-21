@@ -5,14 +5,15 @@ import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, CreditCard, Mail, QrCode, Sparkles, Ticket as TicketIcon, User } from "lucide-react";
 import toast from "react-hot-toast";
 
-import { TicketDay, TicketsUIProps, classNames } from "./ticketTypes";
+import { TicketDay, TicketsUIProps, classNames, TICKET_TYPE_OPTIONS } from "./ticketTypes";
 import { Pill, QtyStepper, LabeledInput } from "./TicketAtoms";
 import { DayCard } from "./DayCard";
 import { TicketsPreviewModal } from "./TicketsPreviewModal";
 
 import { formatMoney } from "@lib/utils";
 import type { Ticket } from "@services/ticket.service";
-import { payTicketsWithMercadoPago } from "@services/ticket.service";
+import { payTicketsWithMercadoPago, type PayWithMercadoPagoPayload } from "@services/ticket.service";
+import { uploadImage } from "@services/upload.service";
 import { useEdition } from "@provider/editionProvider";
 import { ColombianPhoneInput } from "@components/ColombianInput";
 
@@ -48,6 +49,12 @@ export default function TicketsUI({
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerPhone, setBuyerPhone] = useState(""); // nuevo estado teléfono
+  const [ticketType, setTicketType] = useState<(typeof TICKET_TYPE_OPTIONS)[number]["key"]>("general");
+  const spec = TICKET_TYPE_OPTIONS.find((t) => t.key === ticketType)!;
+  const [company, setCompany] = useState("");
+  const [nit, setNit] = useState("");
+  const [studentIdUrl, setStudentIdUrl] = useState("");
+  const [uploadingId, setUploadingId] = useState(false);
 
   const submittingRef = React.useRef(false);
   // Clave de idempotencia ESTABLE por intento de compra: se genera al abrir el
@@ -61,39 +68,110 @@ export default function TicketsUI({
   // Por ahora sólo tenemos un método: Mercado Pago
   const [method] = useState<"mercadopago">("mercadopago");
 
-  const total = useMemo(
-    () => (!selectedDay ? 0 : selectedDay.price * qty),
-    [selectedDay, qty],
-  );
+  const unitPrice = spec.price ?? selectedDay?.price ?? 0;
+  const total = unitPrice * qty;
+
+  useEffect(() => {
+    setQty(spec.quantities ? spec.quantities[0] : 1);
+    setReadyToPay(false);
+  }, [ticketType]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const onStudentId = async (file?: File) => {
+    if (!file) return;
+    setUploadingId(true);
+    try {
+      const { url } = await uploadImage(file, "carnets");
+      setStudentIdUrl(url);
+    } catch {
+      toast.error("No se pudo subir la foto del carné.");
+    } finally {
+      setUploadingId(false);
+    }
+  };
 
   const emailValid = /\S+@\S+\.\S+/.test(buyerEmail);
   const isPhoneValid =
     buyerPhone === "" || /^3\d{9}$/.test(buyerPhone); // 10 dígitos, empieza en 3
 
+  // Pases multi-día / preview no consumen cupo de un día concreto.
   const remaining = useMemo(() => {
+    if (!spec.pickDay) return Infinity;
     if (!selectedDay) return 0;
     return Math.max(0, selectedDay.cap - selectedDay.sold);
-  }, [selectedDay]);
+  }, [selectedDay, spec.pickDay]);
 
   const canBuy = Boolean(
-    selectedDay &&
+    (selectedDay || !spec.pickDay) &&
     qty > 0 &&
     buyerName.trim().length > 1 &&
     emailValid &&
-    remaining > 0,
+    remaining > 0 &&
+    (ticketType !== "estudiante" || studentIdUrl) &&
+    (ticketType !== "empresa" || company.trim()),
   );
+
+  /** Compra (con tarjeta del Brick, o sin tarjeta si es gratis). */
+  const purchase = async (card?: PayWithMercadoPagoPayload["card"]) => {
+    const idempotencyKey =
+      idemKeyRef.current ||
+      (typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    const loadingId = toast.loading("Procesando y generando tus boletos...");
+    try {
+      const res = await payTicketsWithMercadoPago({
+        eventId: eventId!,
+        type: ticketType,
+        date: spec.pickDay ? selectedDay?.date : undefined,
+        quantity: qty,
+        channel: "online",
+        presale: false,
+        idempotencyKey,
+        studentIdUrl: ticketType === "estudiante" ? studentIdUrl : undefined,
+        buyer: {
+          // estos vienen de tu propio formulario (NO confiamos en el Brick)
+          name: buyerName.trim(),
+          email: buyerEmail.trim(),
+          phone: buyerPhone || undefined,
+          company: ticketType === "empresa" ? company.trim() : undefined,
+          nit: ticketType === "empresa" ? nit.trim() || undefined : undefined,
+        },
+        card,
+      });
+      toast.dismiss(loadingId);
+      if (res.ok && res.tickets?.length) {
+        setGeneratedTickets(res.tickets);
+        setShowPreview(true);
+        toast.success(<span>Boletos generados <TicketIcon size={16} style={{ verticalAlign: "-2px" }} /></span>);
+      } else {
+        toast.error("No se pudieron generar los boletos. Intenta de nuevo o cambia de día.");
+      }
+    } catch (err: any) {
+      toast.dismiss(loadingId);
+      const code = err?.response?.data?.error;
+      toast.error(
+        code === "capacity_reached" ? "No quedan cupos para esta entrada."
+          : code === "student_ticket_already_issued" ? "Este correo ya tiene una entrada de estudiante."
+            : code === "student_id_required" ? "Sube la foto de tu carné."
+              : err?.response?.data?.message || "Ocurrió un error procesando el pago. Intenta de nuevo.",
+      );
+    }
+  };
   const resetState = () => {
     setSelectedDay(days[0] ?? null);
     setQty(initialQty);
     setBuyerName("");
     setBuyerEmail("");
+    setStudentIdUrl("");
+    setCompany("");
+    setNit("");
     setGeneratedTickets([]);
     setShowPreview(false);
     setReadyToPay(false); // esto desmonta el Brick de MP
     idemKeyRef.current = ""; // nuevo intento → nueva key la próxima vez
   };
   const handleBuy = () => {
-    if (!selectedDay || !canBuy) return;
+    if (!canBuy) return;
 
     if (!eventId) {
       toast.error("No se encontró el evento para esta compra.");
@@ -105,6 +183,16 @@ export default function TicketsUI({
       typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    // Gratis (estudiantes): sin pasarela.
+    if (total === 0) {
+      if (submittingRef.current) return;
+      submittingRef.current = true;
+      purchase().finally(() => {
+        submittingRef.current = false;
+      });
+      return;
+    }
 
     // callback opcional (por si el parent quiere loggear algo)
     onBuyClick?.({
@@ -133,8 +221,7 @@ export default function TicketsUI({
     if (method !== "mercadopago") return;
     if (!readyToPay) return;
     if (typeof window === "undefined") return;
-    if (!selectedDay) return;
-    if (!canBuy) return;
+    if (!canBuy || total === 0) return;
 
     // @ts-expect-error: MercadoPago viene del script global
     const MP = window.MercadoPago as any;
@@ -187,65 +274,14 @@ export default function TicketsUI({
                 payer,
               } = cardFormData;
 
-              // Key ESTABLE del intento (generada en handleBuy). Se reusa en
-              // reintentos → nunca doble cobro. Fallback por si faltara.
-              const idempotencyKey =
-                idemKeyRef.current ||
-                (typeof crypto !== "undefined" && crypto.randomUUID
-                  ? crypto.randomUUID()
-                  : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
-
-              const loadingId = toast.loading(
-                "Procesando pago y generando tus boletos...",
-              );
-
               try {
-                const res = await payTicketsWithMercadoPago({
-                  eventId: eventId!,
-                  date: selectedDay.date, // "YYYY-MM-DD"
-                  quantity: qty,
-                  channel: "online",
-                  presale: false,
-                  idempotencyKey,
-                  buyer: {
-                    // estos vienen de tu propio formulario (NO confiamos en el Brick)
-                    name: buyerName.trim(),
-                    email: buyerEmail.trim(),
-                  },
-                  card: {
-                    token,
-                    installments: Number(installments) || 1,
-                    paymentMethodId: payment_method_id,
-                    issuerId: issuer_id,
-                    identification: payer?.identification,
-                  },
+                await purchase({
+                  token,
+                  installments: Number(installments) || 1,
+                  paymentMethodId: payment_method_id,
+                  issuerId: issuer_id,
+                  identification: payer?.identification,
                 });
-
-                toast.dismiss(loadingId);
-
-                if (res.ok && res.tickets?.length) {
-                  setGeneratedTickets(res.tickets);
-                  setShowPreview(true);
-                  toast.success(<span>Pago registrado y boletos generados <TicketIcon size={16} style={{ verticalAlign: "-2px" }} /></span>);
-                } else {
-                  console.error("Respuesta de payTicketsWithMercadoPago:", res);
-                  toast.error(
-                    "No se pudieron generar los boletos. Intenta de nuevo o cambia de día.",
-                  );
-                }
-              } catch (err: any) {
-                console.error("Error en payTicketsWithMercadoPago:", err);
-                toast.dismiss(loadingId);
-
-                if (err?.response?.data?.error === "capacity_reached") {
-                  toast.error("Capacidad alcanzada para este día.");
-                } else if (err?.response?.data?.message) {
-                  toast.error(err.response.data.message);
-                } else {
-                  toast.error(
-                    "Ocurrió un error procesando el pago. Intenta de nuevo.",
-                  );
-                }
               } finally {
                 submittingRef.current = false;
               }
@@ -279,6 +315,10 @@ export default function TicketsUI({
     buyerName,
     buyerEmail,
     canBuy,
+    ticketType,
+    studentIdUrl,
+    company,
+    nit,
   ]);
 
   return (
@@ -303,10 +343,37 @@ export default function TicketsUI({
         </div>
       </div>
 
+      {/* Tipo de entrada */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-slate-800 sm:text-base">Tipo de entrada</h3>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {TICKET_TYPE_OPTIONS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTicketType(t.key)}
+              className={classNames(
+                "rounded-2xl border p-4 text-left transition-all",
+                ticketType === t.key ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white hover:border-slate-400",
+              )}
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-semibold">{t.label}</span>
+                <span className="text-sm">
+                  {t.price === undefined ? "según el día" : t.price === 0 ? "Gratis" : formatMoney(t.price, currency)}
+                </span>
+              </div>
+              <p className={classNames("mt-1 text-xs", ticketType === t.key ? "text-white/70" : "text-slate-500")}>{t.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Days */}
+      {spec.pickDay && (
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-800 sm:text-base">
-          Tickets disponibles este día
+          Elige el día
         </h3>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -321,6 +388,7 @@ export default function TicketsUI({
           ))}
         </div>
       </div>
+      )}
 
       {/* Order + Summary */}
       <div className="grid gap-5 md:gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -367,20 +435,52 @@ export default function TicketsUI({
             </p>
           )}
 
+          {ticketType === "empresa" && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <LabeledInput label="Empresa" placeholder="Razón social" value={company} onChange={setCompany} />
+              <LabeledInput label="NIT" placeholder="900123456-7" value={nit} onChange={setNit} />
+            </div>
+          )}
+
+          {ticketType === "estudiante" && (
+            <div className="space-y-1">
+              <div className="text-xs text-slate-500">Foto del carné estudiantil vigente 2026</div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => onStudentId(e.target.files?.[0])}
+                className="block w-full text-sm file:mr-3 file:rounded-xl file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-white"
+              />
+              <p className="text-[11px] text-slate-500">
+                {uploadingId ? "Subiendo…" : studentIdUrl ? "Carné cargado ✓. Preséntalo también en la entrada." : "Obligatorio. Lo verificamos en la entrada."}
+              </p>
+            </div>
+          )}
+
           {/* Qty + total */}
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="text-xs text-slate-500">Cantidad</div>
               <div className="mt-1">
-                <QtyStepper
-                  value={qty}
-                  min={1}
-                  max={Math.min(10, Math.max(1, remaining))}
-                  onChange={setQty}
-                />
+                {spec.quantities ? (
+                  <select
+                    value={qty}
+                    onChange={(e) => setQty(Number(e.target.value))}
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    {spec.quantities.map((q) => <option key={q} value={q}>{q} entradas</option>)}
+                  </select>
+                ) : (
+                  <QtyStepper
+                    value={qty}
+                    min={1}
+                    max={Math.min(spec.maxQty ?? 10, Math.max(1, remaining))}
+                    onChange={setQty}
+                  />
+                )}
               </div>
 
-              {!!selectedDay && (
+              {!!selectedDay && spec.pickDay && (
                 <p className="mt-1 text-[11px] text-slate-500 sm:text-xs">
                   {remaining > 0
                     ? `Disponibles para este día: ${remaining}`
@@ -399,7 +499,7 @@ export default function TicketsUI({
 
           <button
             type="button"
-            disabled={!canBuy || !selectedDay || qty > remaining}
+            disabled={!canBuy || qty > remaining}
             onClick={handleBuy}
             className={classNames(
               "mt-1 w-full rounded-2xl py-3 text-sm font-semibold text-white transition-all sm:text-base",
@@ -408,7 +508,7 @@ export default function TicketsUI({
                 : "cursor-not-allowed bg-slate-300",
             )}
           >
-            Continuar al pago
+            {total === 0 ? "Obtener mi entrada" : "Continuar al pago"}
           </button>
 
           {/* Contenedor del Brick de Mercado Pago */}
@@ -449,12 +549,12 @@ export default function TicketsUI({
 
                 <div className="min-w-[8rem] flex-1">
                   <div className="text-sm font-semibold">
-                    {selectedDay ? selectedDay.display : "Selecciona un día"}
+                    {spec.label}{spec.pickDay ? ` · ${selectedDay ? selectedDay.display : "Selecciona un día"}` : ""}
                   </div>
                   <div className="text-xs text-slate-600">
-                    {selectedDay
-                      ? `${formatMoney(selectedDay.price, currency)} por boleto`
-                      : "Elige un día para ver el detalle"}
+                    {spec.pickDay && !selectedDay
+                      ? "Elige un día para ver el detalle"
+                      : `${formatMoney(unitPrice, currency)} por boleto`}
                   </div>
                 </div>
 

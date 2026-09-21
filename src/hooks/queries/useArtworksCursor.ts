@@ -30,6 +30,7 @@
     technique?: string;
     limit?: number;
     artist?: string;
+    reproducible?: boolean;
   };
 
   export function useArtworksCursor(filters: ArtworksCursorFilters = {}) {
@@ -41,6 +42,7 @@
         technique: filters.technique || undefined,
         limit: filters.limit ?? 24,
         artist: filters.artist || undefined,
+        reproducible: filters.reproducible,
       }),
       [
         filters.q,
@@ -49,6 +51,7 @@
         filters.technique,
         filters.limit,
         filters.artist,
+        filters.reproducible,
       ]
     );
 

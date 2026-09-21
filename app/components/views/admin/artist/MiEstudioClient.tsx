@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@components/ui/tabs";
 import { Input } from "@components/ui/input";
-import { Loader2, Plus, Brush, Receipt, Filter } from "lucide-react";
+import { Loader2, Plus, Brush, Receipt, Filter, QrCode } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTechniques } from "@hooks/queries/useTechniques";
@@ -27,6 +27,7 @@ import { useEventId } from "@provider/editionProvider";
 // Modales extra
 import CreateEditArtworkModal from "./CreateEditArtworkModal";
 import QRModal from "./QrModal";
+import ArtistQrModal from "./ArtistQrModal";
 import ApplicationStatusCard from "@components/views/admin/artist/ApplicationStatusCard";
 
 export default function MiEstudioClient() {
@@ -77,6 +78,7 @@ export default function MiEstudioClient() {
 
   // Modal de QR
   const [qrForId, setQrForId] = useState<string | null>(null);
+  const [artistQrOpen, setArtistQrOpen] = useState(false);
 
   const { data: techniques = [] } = useTechniques();
 
@@ -209,16 +211,22 @@ export default function MiEstudioClient() {
               Crea, edita, comparte y administra tus obras
             </p>
           </div>
-          <Button
-            onClick={() => {
-              setEditingId(null); // modo crear
-              setModalOpen(true);
-            }}
-            className="h-10"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nueva obra
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setArtistQrOpen(true)} className="h-10">
+              <QrCode className="w-4 h-4 mr-2" />
+              Mi QR
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingId(null); // modo crear
+                setModalOpen(true);
+              }}
+              className="h-10"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva obra
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="artworks" className="space-y-6">
@@ -367,6 +375,12 @@ export default function MiEstudioClient() {
         artworkId={qrForId}
         open={!!qrForId}
         onClose={() => setQrForId(null)}
+      />
+
+      <ArtistQrModal
+        artistId={String(artistId)}
+        open={artistQrOpen}
+        onClose={() => setArtistQrOpen(false)}
       />
     </div>
   );

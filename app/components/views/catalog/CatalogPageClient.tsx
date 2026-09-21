@@ -105,9 +105,12 @@ export default function CatalogPageClient() {
   // Orden: claves propias del catálogo editorial (el hook compartido usa otras).
   type SortKey = "recientes" | "precio-asc" | "precio-desc" | "titulo";
   const [sortBy, setSortBy] = useState<SortKey>("recientes");
+  // Tipo de obra: única vs. reproducción (serigrafía, grabado…).
+  const [kind, setKind] = useState<"" | "unica" | "reproduccion">("");
 
   const clearAll = () => {
     setPriceTouched(false);
+    setKind("");
     clearFilters();
   };
 
@@ -151,6 +154,7 @@ export default function CatalogPageClient() {
     technique: techniqueCsv,
     limit: 24,
     artist: artistId || undefined,
+    reproducible: kind ? kind === "reproduccion" : undefined,
   } as ArtworksCursorFilters);
 
   const { techniques: techFacets } = useFacetCounts(rawRows);
@@ -530,6 +534,16 @@ export default function CatalogPageClient() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Tipo de obra */}
+            <div style={{ ...SECTION, gap: 2 }}>
+              <span style={{ ...LABEL, marginBottom: 4 }}>Tipo de obra</span>
+              <div>
+                <FilterRow active={!kind} label="Todas" onClick={() => setKind("")} />
+                <FilterRow active={kind === "unica"} label="Obra única" onClick={() => setKind(kind === "unica" ? "" : "unica")} />
+                <FilterRow active={kind === "reproduccion"} label="Reproducciones" onClick={() => setKind(kind === "reproduccion" ? "" : "reproduccion")} />
+              </div>
             </div>
 
             {/* Técnica */}

@@ -68,6 +68,8 @@ const FormSchema = z.object({
 
   dimensions: z.string().optional(),
 
+  reproducible: z.boolean().optional(),
+
   technique: z.string().min(1, "Selecciona una técnica"),
 
   pavilion: z.string().optional(),
@@ -130,6 +132,7 @@ export default function CreateEditArtworkModal({
       image: "",
       description: "",
       dimensions: "",
+      reproducible: false,
       pavilion: "",
       tagId: "",
     } as Partial<FormValues>,
@@ -155,6 +158,7 @@ export default function CreateEditArtworkModal({
         year: undefined,
         stock: undefined,
         dimensions: "",
+        reproducible: false,
         technique: "",
         // Si el artista tiene un solo pabellón asignado, no tiene sentido
         // pedirle que lo elija: sus obras van ahí.
@@ -174,6 +178,7 @@ export default function CreateEditArtworkModal({
     setValue("year", (row.year as any) ?? undefined);
     setValue("stock", (row.stock as any) ?? undefined);
     setValue("dimensions", (row as any)?.dimensionsText || "");
+    setValue("reproducible", Boolean((row as any)?.reproducible));
     setValue(
       "technique",
       ((row as any)?.techniqueInfo?._id || (row as any)?.technique || "") as any
@@ -230,6 +235,8 @@ export default function CreateEditArtworkModal({
         price: form.price,
         currency: form.currency || "COP",
         stock: form.stock,
+        reproducible: Boolean(form.reproducible),
+        dimensionsText: form.dimensions || "",
         image: form.image,
         event: eventId,
         pavilion: form.pavilion || null,
@@ -253,6 +260,8 @@ export default function CreateEditArtworkModal({
       price: form.price,
       currency: form.currency || "COP",
       stock: form.stock,
+      reproducible: Boolean(form.reproducible),
+      dimensionsText: form.dimensions || undefined,
       image: form.image,
       tags: form.tagId ? [form.tagId] : undefined,
       status: "published",
@@ -380,9 +389,14 @@ export default function CreateEditArtworkModal({
               </div>
 
               <div>
-                <label className="text-sm text-gray-600">Stock</label>
+                <label className="text-sm text-gray-600">Cantidad disponible</label>
                 <Input type="number" {...register("stock")} placeholder="1" />
               </div>
+
+              <label className="flex items-center gap-2 text-sm text-gray-700 md:col-span-2">
+                <input type="checkbox" {...register("reproducible")} className="h-4 w-4" />
+                Es una reproducción (serigrafía, grabado, impresión…). La cantidad es el número de copias.
+              </label>
 
               <div className="md:col-span-2">
                 <label className="text-sm text-gray-600">Descripción</label>

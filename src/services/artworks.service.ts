@@ -19,6 +19,8 @@ export interface ArtworkDoc {
   price?: number;
   currency?: string; // "COP" por defecto si lo define backend
   stock?: number; // si viene, backend siembra copias
+  reproducible?: boolean;
+  dimensionsText?: string;
   image?: string;
   /** Backend devuelve objetos ImageSchema; strings solo por compat. Usar pickSrc(). */
   images?: Array<string | { src: string; alt?: string; role?: string; order?: number; meta?: Record<string, any> }>;
@@ -48,6 +50,8 @@ export interface CreateArtworkInput {
   price?: number;
   currency?: string; // default "COP"
   stock?: number; // si se envía, siembra copias internas
+  reproducible?: boolean;
+  dimensionsText?: string;
   images?: string[];
   image?: string;
   tags?: string[];
@@ -76,6 +80,7 @@ export interface CursorListParams {
   tags?: string | string[]; // csv
   q?: string; // text search
   inStock?: boolean; // true/false
+  reproducible?: boolean; // true = solo reproducciones, false = solo obra única
   channel?: "event" | "online";
   allowOnlineAfterEvent?: boolean; // true/false
   minPrice?: number;
@@ -140,6 +145,7 @@ export type PatchArtworkDto = Partial<{
   price: number;
   currency: string;
   stock: number;
+  reproducible: boolean;
   image: string;
   images: string[];
   imageMeta: Record<string, any>;

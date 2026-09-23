@@ -139,6 +139,7 @@ export default function CreateEditArtworkModal({
   });
 
   const imageUrl = watch("image");
+  const isReproducible = watch("reproducible");
 
   // Valor primitivo en vez del arreglo: si el padre re-renderiza, esto sigue
   // siendo el mismo string y el efecto de abajo no vuelve a resetear el
@@ -389,8 +390,15 @@ export default function CreateEditArtworkModal({
               </div>
 
               <div>
-                <label className="text-sm text-gray-600">Cantidad disponible</label>
+                <label className="text-sm text-gray-600">
+                  {isReproducible ? "N.º de reproducciones" : "Cantidad disponible"}
+                </label>
                 <Input type="number" {...register("stock")} placeholder="1" />
+                <p className="mt-1 text-[11px] text-gray-500">
+                  {isReproducible
+                    ? "Copias a la venta de esta obra (máximo 10 por serie). Cada compra, en feria o por QR, descuenta una."
+                    : "Obra única: deja 1. Cada venta la saca del inventario."}
+                </p>
               </div>
 
               <label className="flex items-center gap-2 text-sm text-gray-700 md:col-span-2">

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuth } from "@provider/authProvider";
+import ArtistInventoryBanner from "@components/views/convocatoria/ArtistInventoryBanner";
 import { useSiteLanding } from "@provider/siteConfigProvider";
 import { useEdition } from "@provider/editionProvider";
 
@@ -52,6 +53,9 @@ export default function ConvocatoriaPage() {
 
   return (
     <div className="fdm-v2" id="top" style={{ width: "100%", overflowX: "hidden" }}>
+      {/* Artista ya seleccionado: lo suyo es cargar inventario, no postular. */}
+      <ArtistInventoryBanner />
+
       {/* Banner de cerrada */}
       {!open && (
         <div style={{ background: DEEP, color: ON_DARK, padding: "clamp(14px,2vw,20px) clamp(20px,4vw,56px)", textAlign: "center", fontWeight: 300, fontSize: 13, letterSpacing: "0.04em" }}>

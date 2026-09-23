@@ -20,7 +20,7 @@ import { getMyApplications } from "@services/applications.service";
 
 import ArtworksTable from "./ArtworksTable";
 import ArtworkDetailModal from "./ArtworkDetailModal";
-import OrdersPlaceholder from "./OrdersPlaceholder";
+import ArtistOrders from "./ArtistOrders";
 import { useAuth } from "@provider/authProvider";
 import { useEventId } from "@provider/editionProvider";
 
@@ -337,9 +337,7 @@ export default function MiEstudioClient() {
 
           {/* TAB ÓRDENES */}
           <TabsContent value="orders" className="space-y-6">
-            <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-              <OrdersPlaceholder />
-            </div>
+            <ArtistOrders />
           </TabsContent>
         </Tabs>
       </div>

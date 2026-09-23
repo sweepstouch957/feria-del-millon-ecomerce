@@ -206,3 +206,7 @@ export const getCurrentConvocatoria = async (): Promise<any | null> => {
     (a, b) => new Date(b?.startDate || 0).getTime() - new Date(a?.startDate || 0).getTime()
   )[0] || null;
 };
+/** POST /event/newsletter/subscribe — alta en el boletín (público). */
+export const subscribeToNewsletter = async (email: string, source = "landing") => {
+  await apiClient.post("/event/newsletter/subscribe", { email, source });
+};

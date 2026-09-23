@@ -10,6 +10,7 @@ import {
   useSiteSections,
 } from "@provider/siteConfigProvider";
 import type { SectionKey } from "@lib/siteDefaults";
+import { subscribeToNewsletter } from "@services/events.service";
 
 const GREEN = "var(--fdm-green,#3FA46E)";
 const PANEL = "var(--fdm-panel,#0B0B0A)";
@@ -139,6 +140,7 @@ export default function HomePage() {
   const landing = useSiteLanding();
   const sections = useSiteSections();
   const [subscribed, setSubscribed] = useState(false);
+  const [subscribeError, setSubscribeError] = useState("");
 
   const eventId = useEventId();
   const { hero, featured, techniques, contact, social } = content;
@@ -489,11 +491,22 @@ export default function HomePage() {
           </div>
           <div>
             <form
-              onSubmit={(e) => { e.preventDefault(); setSubscribed(true); }}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const email = String(new FormData(e.currentTarget).get("email") || "").trim();
+                setSubscribeError("");
+                try {
+                  await subscribeToNewsletter(email);
+                  setSubscribed(true);
+                } catch {
+                  setSubscribeError("No pudimos guardar tu correo. Intenta de nuevo.");
+                }
+              }}
               style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "stretch" }}
             >
               <input
                 type="email"
+                name="email"
                 required
                 aria-label="Correo electrónico"
                 placeholder="tu@correo.com"
@@ -514,6 +527,11 @@ export default function HomePage() {
                 Suscribirme
               </button>
             </form>
+            {subscribeError && (
+              <p style={{ margin: "16px 0 0", fontSize: 11.5, letterSpacing: "0.2em", textTransform: "uppercase", color: "#b4472a" }}>
+                {subscribeError}
+              </p>
+            )}
             {subscribed && (
               <p style={{ margin: "16px 0 0", fontSize: 11.5, letterSpacing: "0.2em", textTransform: "uppercase", color: GREEN }}>
                 Listo. Te escribiremos a ese correo.

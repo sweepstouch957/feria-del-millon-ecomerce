@@ -146,6 +146,52 @@ export const getTodayTicketDay = async (eventId: string) => {
   };
 };
 
+/** ────────── Preventa: tipos de entrada del evento ──────────
+ * El backend decide qué se vende, a qué precio, con qué cupo y en qué ventana.
+ * Aquí solo se muestra: nunca se confía en precios del cliente.
+ */
+export type TicketTypeKey = "general" | "allpass" | "preview" | "empresa" | "2x1" | "estudiante";
+
+export interface TicketTypeOption {
+  key: TicketTypeKey;
+  label: string;
+  desc?: string;
+  /** null = lo pone el día elegido. */
+  price: number | null;
+  pickDay: boolean;
+  allDays: boolean;
+  quantities: number[] | null;
+  maxQty: number | null;
+  cap: number | null;
+  sold: number;
+  remaining: number | null;
+  enabled: boolean;
+  salesFrom: string | null;
+  salesTo: string | null;
+  open: boolean;
+  closedReason: "disabled" | "not_started" | "ended" | "sold_out" | null;
+  requiresStudentId: boolean;
+  bonus?: { weekday: number; from: string; to: string } | null;
+  sortOrder: number;
+}
+
+export interface TicketTypesResponse {
+  eventId: string;
+  eventName: string;
+  validFrom: string;
+  validTo: string;
+  currency: string;
+  types: TicketTypeOption[];
+}
+
+/** GET /ticket/tickets/events/:eventId/ticket-types (público) */
+export const getTicketTypes = async (eventId: string) => {
+  const { data } = await apiClient.get<TicketTypesResponse>(
+    `/ticket/tickets/events/${encodeURIComponent(eventId)}/ticket-types`,
+  );
+  return data;
+};
+
 /** ────────── Invitaciones (enlace del correo) ────────── */
 export interface InvitationView {
   name: string;

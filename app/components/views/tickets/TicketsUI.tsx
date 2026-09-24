@@ -12,10 +12,43 @@ import { TicketsPreviewModal } from "./TicketsPreviewModal";
 
 import { formatMoney } from "@lib/utils";
 import type { Ticket } from "@services/ticket.service";
-import { payTicketsWithMercadoPago, type PayWithMercadoPagoPayload } from "@services/ticket.service";
+import { payTicketsWithMercadoPago, getTicketTypes, type PayWithMercadoPagoPayload, type TicketTypeKey, type TicketTypeOption } from "@services/ticket.service";
+import { useQuery } from "@tanstack/react-query";
 import { uploadImage } from "@services/upload.service";
 import { useEdition } from "@provider/editionProvider";
 import { ColombianPhoneInput } from "@components/ColombianInput";
+
+/** Si la config del evento no carga, se muestran los tipos del documento. */
+const FALLBACK_TYPES: TicketTypeOption[] = TICKET_TYPE_OPTIONS.map((t, i) => ({
+  key: t.key as TicketTypeKey,
+  label: t.label,
+  desc: t.desc,
+  price: t.price ?? null,
+  pickDay: !!t.pickDay,
+  allDays: !t.pickDay,
+  quantities: t.quantities ?? null,
+  maxQty: t.maxQty ?? null,
+  cap: null,
+  sold: 0,
+  remaining: null,
+  enabled: true,
+  salesFrom: null,
+  salesTo: null,
+  open: true,
+  closedReason: null,
+  requiresStudentId: t.key === "estudiante",
+  sortOrder: i,
+}));
+
+const CLOSED_LABEL: Record<string, string> = {
+  disabled: "No disponible",
+  not_started: "Aún no abre",
+  ended: "Preventa cerrada",
+  sold_out: "Agotado",
+};
+
+const fmtDate = (iso: string) =>
+  new Date(iso).toLocaleDateString("es-CO", { day: "numeric", month: "long" });
 
 type MercadoPagoCardFormData = {
   token: string;
@@ -49,8 +82,17 @@ export default function TicketsUI({
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerPhone, setBuyerPhone] = useState(""); // nuevo estado teléfono
-  const [ticketType, setTicketType] = useState<(typeof TICKET_TYPE_OPTIONS)[number]["key"]>("general");
-  const spec = TICKET_TYPE_OPTIONS.find((t) => t.key === ticketType)!;
+  const [ticketType, setTicketType] = useState<TicketTypeKey>("general");
+
+  // Preventa: el backend manda precio, cupo y ventana de venta de cada tipo.
+  const { data: config } = useQuery({
+    queryKey: ["ticketTypes", eventId],
+    queryFn: () => getTicketTypes(eventId!),
+    enabled: !!eventId,
+    staleTime: 60_000,
+  });
+  const typeOptions = config?.types?.length ? config.types : FALLBACK_TYPES;
+  const spec = typeOptions.find((t) => t.key === ticketType) ?? typeOptions[0];
   const [company, setCompany] = useState("");
   const [nit, setNit] = useState("");
   const [studentIdUrl, setStudentIdUrl] = useState("");
@@ -67,6 +109,13 @@ export default function TicketsUI({
 
   // Por ahora sólo tenemos un método: Mercado Pago
   const [method] = useState<"mercadopago">("mercadopago");
+
+  // Si el tipo elegido deja de estar en venta, saltamos al primero disponible.
+  useEffect(() => {
+    if (spec?.open) return;
+    const next = typeOptions.find((t) => t.open);
+    if (next && next.key !== ticketType) setTicketType(next.key);
+  }, [spec?.open, typeOptions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const unitPrice = spec.price ?? selectedDay?.price ?? 0;
   const total = unitPrice * qty;
@@ -93,14 +142,15 @@ export default function TicketsUI({
   const isPhoneValid =
     buyerPhone === "" || /^3\d{9}$/.test(buyerPhone); // 10 dígitos, empieza en 3
 
-  // Pases multi-día / preview no consumen cupo de un día concreto.
+  // Pases multi-día / preview no consumen cupo de un día: tienen su propio cupo.
   const remaining = useMemo(() => {
-    if (!spec.pickDay) return Infinity;
+    if (!spec.pickDay) return spec.remaining ?? Infinity;
     if (!selectedDay) return 0;
     return Math.max(0, selectedDay.cap - selectedDay.sold);
-  }, [selectedDay, spec.pickDay]);
+  }, [selectedDay, spec.pickDay, spec.remaining]);
 
   const canBuy = Boolean(
+    spec.open &&
     (selectedDay || !spec.pickDay) &&
     qty > 0 &&
     buyerName.trim().length > 1 &&
@@ -347,23 +397,47 @@ export default function TicketsUI({
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-800 sm:text-base">Tipo de entrada</h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {TICKET_TYPE_OPTIONS.map((t) => (
+          {typeOptions.map((t) => (
             <button
               key={t.key}
               type="button"
+              disabled={!t.open}
               onClick={() => setTicketType(t.key)}
               className={classNames(
                 "rounded-2xl border p-4 text-left transition-all",
-                ticketType === t.key ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white hover:border-slate-400",
+                !t.open
+                  ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400"
+                  : ticketType === t.key
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white hover:border-slate-400",
               )}
             >
               <div className="flex items-baseline justify-between gap-2">
                 <span className="font-semibold">{t.label}</span>
                 <span className="text-sm">
-                  {t.price === undefined ? "según el día" : t.price === 0 ? "Gratis" : formatMoney(t.price, currency)}
+                  {t.price === null ? "según el día" : t.price === 0 ? "Gratis" : formatMoney(t.price, currency)}
                 </span>
               </div>
-              <p className={classNames("mt-1 text-xs", ticketType === t.key ? "text-white/70" : "text-slate-500")}>{t.desc}</p>
+              <p className={classNames("mt-1 text-xs", ticketType === t.key && t.open ? "text-white/70" : "text-slate-500")}>{t.desc}</p>
+              {!t.open ? (
+                <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+                  {CLOSED_LABEL[t.closedReason || ""] || "No disponible"}
+                  {t.closedReason === "not_started" && t.salesFrom ? ` · abre el ${fmtDate(t.salesFrom)}` : ""}
+                </p>
+              ) : (
+                <>
+                  {t.remaining !== null && t.remaining <= 20 && (
+                    <p className={classNames("mt-2 text-[11px] font-medium", ticketType === t.key ? "text-white/80" : "text-amber-600")}>
+                      Quedan {t.remaining} cupos
+                    </p>
+                  )}
+                  {t.salesTo && (
+                    <p className={classNames("mt-1 text-[11px]", ticketType === t.key ? "text-white/60" : "text-slate-400")}>
+                      Preventa hasta el {fmtDate(t.salesTo)}
+                    </p>
+                  )}
+                </>
+              )}
             </button>
           ))}
         </div>

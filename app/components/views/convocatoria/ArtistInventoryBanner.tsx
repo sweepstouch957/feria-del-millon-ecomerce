@@ -8,8 +8,8 @@ import { usePavilionsByUser } from "@hooks/queries/usePavilionsByUser";
 import { getMyApplications, type ArtistApplication } from "@services/applications.service";
 
 /* Aviso para el artista ya seleccionado: aquí no tiene que volver a postular,
-   tiene que cargar su inventario en el pabellón que le asignaron. Antes esa
-   ruta solo se encontraba entrando a "Mi estudio" por su cuenta. */
+   tiene que cargar su inventario en el pabellón que le asignaron. Es donde cae
+   el botón del correo de resolución, que abre la página con su sesión puesta. */
 
 const GREEN = "var(--fdm-green,#3FA46E)";
 
@@ -18,7 +18,11 @@ export default function ArtistInventoryBanner() {
   const { eventId } = useEdition();
   const userId = (user as any)?.id || (user as any)?._id;
 
-  const { rows = [] } = usePavilionsByUser(eventId, isAuthenticated ? userId : undefined) as any;
+  // El hook devuelve el resultado de useQuery: los pabellones están en data.rows.
+  const { data: pavilionData } = usePavilionsByUser(
+    eventId,
+    isAuthenticated ? userId : undefined,
+  );
   const { data: apps = [] } = useQuery<ArtistApplication[]>({
     queryKey: ["my-applications"],
     queryFn: getMyApplications,
@@ -28,7 +32,7 @@ export default function ArtistInventoryBanner() {
 
   if (!isAuthenticated) return null;
   const accepted = apps.some((a) => a.status === "accepted");
-  const pavilion = rows[0];
+  const pavilion = (pavilionData?.rows ?? [])[0] as any;
   if (!accepted && !pavilion) return null;
 
   return (
@@ -40,20 +44,41 @@ export default function ArtistInventoryBanner() {
           </div>
           <p style={{ margin: "10px 0 0", fontSize: "clamp(15px,1.3vw,19px)", lineHeight: 1.6 }}>
             {user?.firstName ? `${user.firstName}, ` : ""}
-            {pavilion
-              ? <>ya estás en el <strong style={{ fontWeight: 500 }}>{pavilion.name}</strong>. Carga ahí tu inventario final: obras, precios, dimensiones y número de reproducciones.</>
-              : <>tu postulación fue aceptada. Carga tu inventario final; en cuanto te asignen pabellón lo verás en tu estudio.</>}
+            {pavilion ? (
+              <>
+                ya estás en el <strong style={{ fontWeight: 500 }}>{pavilion.name}</strong>. Carga ahí tu
+                inventario final: obras, precios, dimensiones y número de reproducciones.
+              </>
+            ) : (
+              <>
+                tu postulación fue seleccionada. Todavía no tienes una convocatoria asignada: estamos
+                organizando los pabellones y te escribiremos en cuanto quede la tuya. Ahí mismo podrás
+                cargar tu inventario final.
+              </>
+            )}
           </p>
         </div>
-        <Link
-          href="/admin/artist"
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 10, background: GREEN, color: "#0B0B0A",
-            padding: "14px 26px", borderRadius: 999, textDecoration: "none", fontWeight: 500, fontSize: 14,
-          }}
-        >
-          Cargar mi inventario →
-        </Link>
+        {pavilion ? (
+          <Link
+            href="/admin/artist"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 10, background: GREEN, color: "#0B0B0A",
+              padding: "14px 26px", borderRadius: 999, textDecoration: "none", fontWeight: 500, fontSize: 14,
+            }}
+          >
+            Cargar mi inventario →
+          </Link>
+        ) : (
+          <Link
+            href="/convocatoria/mi-solicitud"
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 10, border: `1px solid ${GREEN}`, color: GREEN,
+              padding: "13px 24px", borderRadius: 999, textDecoration: "none", fontWeight: 500, fontSize: 14,
+            }}
+          >
+            Ver mi postulación
+          </Link>
+        )}
       </div>
     </section>
   );

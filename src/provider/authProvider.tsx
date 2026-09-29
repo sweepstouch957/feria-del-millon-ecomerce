@@ -22,6 +22,7 @@ import {
   AuthUser,
   setAuthHeaderFromCookie,
   clearAuth,
+  adoptAuthToken,
 } from "@services/auth.service";
 import { AUTH_TOKEN_KEY } from "@core/constants";
 
@@ -56,6 +57,21 @@ function getRedirectParam() {
   if (typeof window === "undefined") return null;
   const url = new URL(window.location.href);
   return url.searchParams.get("redirect");
+}
+
+/** Acceso por enlace de correo: `?t=<token>` abre la página con la sesión ya
+ *  cargada (el artista se postuló hace meses y no recuerda su contraseña).
+ *  El token se guarda como sesión y se borra de la URL; si no sirve, el /me
+ *  de abajo lo descarta y la página queda como visitante. */
+function consumeLinkToken() {
+  if (typeof window === "undefined") return false;
+  const url = new URL(window.location.href);
+  const token = url.searchParams.get("t");
+  if (!token) return false;
+  adoptAuthToken(token);
+  url.searchParams.delete("t");
+  window.history.replaceState({}, "", url.toString());
+  return true;
 }
 
 function rememberLastPublicPath(pathname?: string | null) {
@@ -121,6 +137,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
 
       const onProtected = isProtectedPath(pathname);
       const onAuthPages = pathname === "/login" || pathname === "/register";
+
+      consumeLinkToken();
 
       // Sin token
       if (!hasToken()) {

@@ -104,6 +104,10 @@ export const setAuthHeaderFromCookie = () => {
 
 export const clearAuth = () => setAuthToken(null);
 
+/** Adopta un token que llegó por enlace de correo (?t=…) como sesión.
+ *  Lo valida quien lo use, llamando a /auth/me: si está vencido, se limpia. */
+export const adoptAuthToken = (token: string) => setAuthToken(token, true);
+
 // ------- Auth básico: register + login -------
 
 export const register = async (payload: RegisterPayload) => {

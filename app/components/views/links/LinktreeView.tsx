@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useSiteContent, useSiteLanding } from "@provider/siteConfigProvider";
-import { pdfFirstPage } from "@lib/pdfPreview";
 
 /* Página de enlaces (/links) — la que se imprime en el QR.
    Misma línea del sitio: panel de tinta, versalitas espaciadas, filetes de 1px
@@ -106,7 +105,6 @@ export default function LinktreeView() {
   const content = useSiteContent();
   const lt = landing.linktree;
   const links = (lt.links || []).filter((l) => l.visible && l.href);
-  const cover = pdfFirstPage(lt.doc.url, 1000);
 
   return (
     <div
@@ -231,41 +229,6 @@ export default function LinktreeView() {
         </div>
       </section>
 
-      {/* ── Portada del PDF ───────────────────────────────────────────────── */}
-      {cover ? (
-        <section style={{ padding: "clamp(28px,3.5vw,44px) clamp(20px,5vw,64px) 0" }}>
-          <div style={{ maxWidth: 820, margin: "0 auto", border: `1px solid ${HAIR}` }}>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "baseline",
-                justifyContent: "space-between",
-                gap: 10,
-                padding: "14px 20px",
-                borderBottom: `1px solid ${HAIR}`,
-              }}
-            >
-              <span style={{ ...eyebrow, fontSize: 9.5, opacity: 0.6 }}>{lt.doc.title}</span>
-              <span style={{ ...eyebrow, fontSize: 9.5, opacity: 0.45 }}>Primera página</span>
-            </div>
-            <a
-              href={lt.doc.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: "block" }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={cover}
-                alt={`Portada de ${lt.doc.title}`}
-                loading="lazy"
-                style={{ display: "block", width: "100%", height: "auto", background: "#fff" }}
-              />
-            </a>
-          </div>
-        </section>
-      ) : null}
 
       {/* ── Pie ───────────────────────────────────────────────────────────── */}
       <section style={{ padding: "clamp(36px,4vw,64px) clamp(20px,5vw,64px) clamp(48px,6vw,88px)" }}>

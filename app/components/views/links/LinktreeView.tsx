@@ -192,7 +192,7 @@ export default function LinktreeView() {
         </div>
       </section>
 
-      {/* ── Enlaces ───────────────────────────────────────────────────────── */}
+      {/* ── Botones: los enlaces y, con el mismo peso, el PDF ─────────────── */}
       <section style={{ padding: "clamp(32px,4vw,56px) clamp(20px,5vw,64px) 0" }}>
         <div
           style={{
@@ -203,27 +203,37 @@ export default function LinktreeView() {
             gap: 12,
           }}
         >
-          {links.length ? (
-            links.map((l) => (
-              <LinkRow
-                key={`${l.label}-${l.href}`}
-                label={l.label}
-                description={l.description}
-                href={l.href}
-                highlight={l.highlight}
-              />
-            ))
-          ) : (
+          {links.map((l) => (
+            <LinkRow
+              key={`${l.label}-${l.href}`}
+              label={l.label}
+              description={l.description}
+              href={l.href}
+              highlight={l.highlight}
+            />
+          ))}
+
+          {/* El documento es otro botón de la lista, no una tarjeta aparte:
+              quien llega por el QR tiene dos acciones y se ven igual. */}
+          {lt.doc.url ? (
+            <LinkRow
+              label={lt.doc.buttonLabel || lt.doc.title || "Abrir el PDF"}
+              description={lt.doc.subtitle || lt.doc.title}
+              href={lt.doc.url}
+            />
+          ) : null}
+
+          {!links.length && !lt.doc.url ? (
             <p style={{ margin: 0, fontSize: 15, opacity: 0.65 }}>
               Todavía no hay enlaces publicados.
             </p>
-          )}
+          ) : null}
         </div>
       </section>
 
-      {/* ── Documento (bases / términos) ──────────────────────────────────── */}
-      {lt.doc.url ? (
-        <section style={{ padding: "clamp(32px,4vw,56px) clamp(20px,5vw,64px) 0" }}>
+      {/* ── Portada del PDF ───────────────────────────────────────────────── */}
+      {cover ? (
+        <section style={{ padding: "clamp(28px,3.5vw,44px) clamp(20px,5vw,64px) 0" }}>
           <div style={{ maxWidth: 820, margin: "0 auto", border: `1px solid ${HAIR}` }}>
             <div
               style={{
@@ -231,70 +241,28 @@ export default function LinktreeView() {
                 flexWrap: "wrap",
                 alignItems: "baseline",
                 justifyContent: "space-between",
-                gap: 12,
-                padding: "18px 24px",
+                gap: 10,
+                padding: "14px 20px",
                 borderBottom: `1px solid ${HAIR}`,
               }}
             >
-              <div style={{ minWidth: 0 }}>
-                <div style={{ ...eyebrow, fontSize: 9.5, opacity: 0.6 }}>Documento</div>
-                <div style={{ marginTop: 6, fontSize: "clamp(17px,1.8vw,21px)", fontWeight: 400 }}>
-                  {lt.doc.title}
-                </div>
-                {lt.doc.subtitle ? (
-                  <div style={{ marginTop: 4, fontSize: 13.5, opacity: 0.6 }}>
-                    {lt.doc.subtitle}
-                  </div>
-                ) : null}
-              </div>
-              <a
-                className="fdm-docbtn"
-                href={lt.doc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  height: 46,
-                  padding: "0 28px",
-                  borderRadius: 999,
-                  border: `1px solid ${FG}`,
-                  background: FG,
-                  color: BG,
-                  textDecoration: "none",
-                  ...eyebrow,
-                  fontSize: 10.5,
-                  letterSpacing: "0.18em",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {lt.doc.buttonLabel || "Abrir el PDF"}
-              </a>
+              <span style={{ ...eyebrow, fontSize: 9.5, opacity: 0.6 }}>{lt.doc.title}</span>
+              <span style={{ ...eyebrow, fontSize: 9.5, opacity: 0.45 }}>Primera página</span>
             </div>
-
-            {/* Portada: la primera página del PDF. Si el archivo no está en
-                Cloudinary no hay portada posible y queda sólo el botón. */}
-            {cover ? (
-              <a
-                href={lt.doc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: "block" }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={cover}
-                  alt={`Portada de ${lt.doc.title}`}
-                  loading="lazy"
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    height: "auto",
-                    background: "#fff",
-                  }}
-                />
-              </a>
-            ) : null}
+            <a
+              href={lt.doc.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "block" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={cover}
+                alt={`Portada de ${lt.doc.title}`}
+                loading="lazy"
+                style={{ display: "block", width: "100%", height: "auto", background: "#fff" }}
+              />
+            </a>
           </div>
         </section>
       ) : null}

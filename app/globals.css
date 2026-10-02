@@ -798,6 +798,12 @@ html {
 /* hover del navbar / links con acento verde */
 .fdm-link { border-bottom: 1px solid transparent; }
 .fdm-link:hover { color: var(--fdm-green, #3FA46E); border-color: var(--fdm-green, #3FA46E); }
+
+/* Página de enlaces (/links): la fila entera es el botón. */
+.fdm-linkrow:hover { border-color: var(--fdm-green, #3FA46E) !important; }
+.fdm-linkrow:hover > span:last-child { transform: translateX(4px); }
+.fdm-linkrow > span:last-child { transition: transform .25s ease; }
+.fdm-docbtn:hover { background: var(--fdm-green, #3FA46E) !important; border-color: var(--fdm-green, #3FA46E) !important; color: #0B0B0A !important; }
 /* tarjeta técnica: grayscale → color en hover */
 .fdm-tech { filter: grayscale(1) contrast(1.05); outline: 1px solid transparent; outline-offset: -1px; transition: filter .45s ease, outline-color .3s ease; }
 .fdm-tech:hover { filter: none; outline-color: var(--fdm-green, #3FA46E); }

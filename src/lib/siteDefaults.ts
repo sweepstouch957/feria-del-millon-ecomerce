@@ -65,7 +65,76 @@ export interface LandingConfig {
   showPrices: boolean;
   priceLabel: string;
   convocatoriaPage: ConvocatoriaPage;
+  linktree: LinktreeConfig;
 }
+
+// ── Página de enlaces (/links) — la que se imprime en un QR ────────────────
+export interface LinkItem {
+  label: string;
+  description?: string;
+  href: string;
+  /** Relleno en verde: la acción principal de la página. */
+  highlight?: boolean;
+  visible: boolean;
+}
+export interface LinktreeStat { label: string; value: string }
+
+export interface LinktreeConfig {
+  /** En false la página responde 404: nada a medio publicar. */
+  enabled: boolean;
+  badge: string;
+  title: string;
+  titleStrong: string;
+  paragraph: string;
+  stats: LinktreeStat[];
+  /** Documento (bases, términos): se muestra su primera página como portada. */
+  doc: { url: string; title: string; subtitle: string; buttonLabel: string };
+  links: LinkItem[];
+  note: string;
+}
+
+export const LINKTREE_DEFAULTS: LinktreeConfig = {
+  enabled: true,
+  badge: "Convocatoria abierta",
+  title: "Young Creative",
+  titleStrong: "Chevrolet",
+  paragraph:
+    "Convocatoria abierta al público en alianza con la Feria del Millón 2026. Lee las bases y postula tu propuesta desde el formulario oficial.",
+  stats: [
+    { label: "Convocatoria", value: "Abierta al público" },
+    { label: "Edad", value: "18 a 40 años" },
+    { label: "Ganador", value: "1 propuesta" },
+    { label: "Premio", value: "$5.000.000 COP" },
+  ],
+  doc: {
+    url: "",
+    title: "Términos y condiciones",
+    subtitle: "Bases completas de la convocatoria",
+    buttonLabel: "Abrir el PDF",
+  },
+  links: [
+    {
+      label: "Postular mi propuesta",
+      description: "Formulario oficial · se envía una sola vez",
+      href: "https://forms.gle/43f6rhdrgEj45hFh9",
+      highlight: true,
+      visible: true,
+    },
+    {
+      label: "Convocatoria Feria del Millón 2026",
+      description: "Bases, fechas y requisitos de la feria",
+      href: "/convocatoria",
+      visible: true,
+    },
+    {
+      label: "Ver el catálogo",
+      description: "Obras de artistas emergentes desde $1.000.000",
+      href: "/catalogo",
+      visible: true,
+    },
+  ],
+  note: "La propuesta debe ser original: no se admite obra hecha con IA generativa.",
+};
 
 // ── Página de convocatoria (bases) ─────────────────────────────────────────
 export interface ConvStat { value: string; label: string; accent?: boolean }
@@ -521,6 +590,7 @@ export const SITE_DEFAULTS: SiteConfig = {
     showPrices: true,
     priceLabel: "$1.000.000",
     convocatoriaPage: CONVOCATORIA_PAGE_DEFAULTS,
+    linktree: LINKTREE_DEFAULTS,
   },
   nav: { items: [...DEFAULT_NAV] },
   sections: {
@@ -627,6 +697,15 @@ export function mergeSiteConfig(raw: any): SiteConfig {
       showPrices: l.showPrices ?? DL.showPrices,
       priceLabel: l.priceLabel || DL.priceLabel,
       convocatoriaPage: mergeConvPage(l.convocatoriaPage),
+      linktree: {
+        ...LINKTREE_DEFAULTS,
+        ...(l.linktree || {}),
+        doc: { ...LINKTREE_DEFAULTS.doc, ...(l.linktree?.doc || {}) },
+        stats: arr(l.linktree?.stats, LINKTREE_DEFAULTS.stats),
+        // Los enlaces se reemplazan completos: una lista vacía en el admin
+        // significa "ninguno", no "vuelve a los de fábrica".
+        links: Array.isArray(l.linktree?.links) ? l.linktree.links : LINKTREE_DEFAULTS.links,
+      },
     },
     nav: {
       items: arr<NavItem>(

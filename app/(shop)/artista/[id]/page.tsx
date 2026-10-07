@@ -320,11 +320,25 @@ export default function ArtistPage() {
               </>
             )}
 
-            {profile?.projectReview && (
+            {(profile?.projectTitle || profile?.projectReview) && (
               <>
                 <span style={{ ...EYEBROW, fontSize: 10, color: mix(50), marginTop: 6 }}>
                   El proyecto
                 </span>
+                {/* El título que escribió el artista al cargar su inventario. */}
+                {profile?.projectTitle && (
+                  <p
+                    style={{
+                      margin: 0,
+                      fontWeight: 300,
+                      fontSize: "clamp(19px,1.6vw,26px)",
+                      lineHeight: 1.25,
+                      letterSpacing: "0.01em",
+                    }}
+                  >
+                    {profile.projectTitle}
+                  </p>
+                )}
                 <p
                   style={{
                     margin: 0,
@@ -335,7 +349,7 @@ export default function ArtistPage() {
                     whiteSpace: "pre-line",
                   }}
                 >
-                  {profile.projectReview}
+                  {profile?.projectReview}
                 </p>
               </>
             )}

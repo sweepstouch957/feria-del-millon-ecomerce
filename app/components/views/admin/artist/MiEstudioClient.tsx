@@ -274,6 +274,7 @@ export default function MiEstudioClient() {
           <TabsContent value="artworks" className="space-y-6">
             {/* El proyecto: lo que agrupa las obras y el aviso a la feria */}
             <ProjectCard
+              artistId={String(artistId)}
               artworkCount={rows.length}
               pavilionName={pavilionOptions[0]?.label}
             />

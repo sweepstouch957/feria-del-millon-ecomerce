@@ -12,6 +12,7 @@ import {
   sendMyInventory,
   updateMyProject,
 } from "@services/applications.service";
+import InventoryQrCards from "./InventoryQrCards";
 
 /* El proyecto con el que el artista expone: título y descripción.
    Va arriba de las obras porque es lo que las agrupa — las obras son las piezas
@@ -21,9 +22,11 @@ const MAX_WORDS = 250;
 const countWords = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0);
 
 export default function ProjectCard({
+  artistId,
   artworkCount,
   pavilionName,
 }: {
+  artistId: string;
   artworkCount: number;
   pavilionName?: string;
 }) {
@@ -63,9 +66,18 @@ export default function ProjectCard({
     mutationFn: () => sendMyInventory({ artworkCount, pavilionName }),
     onSuccess: (r) => {
       qc.setQueryData(["my-project"], { ...(data ?? {}), inventorySentAt: r.inventorySentAt });
-      toast.success("Listo: la feria ya tiene tu inventario");
+      toast.success("Inventario enviado. Ya tienes tus QR.");
     },
-    onError: () => toast.error("No se pudo avisar a la feria"),
+    onError: (e: any) => {
+      // Enviar es de una sola vez: si ya estaba enviado, el servidor lo dice.
+      const sent = e?.response?.data?.inventorySentAt;
+      if (sent) {
+        qc.setQueryData(["my-project"], { ...(data ?? {}), inventorySentAt: sent });
+        toast.error("Ya habías enviado tu inventario");
+        return;
+      }
+      toast.error("No se pudo avisar a la feria");
+    },
   });
 
   const sentAt = data?.inventorySentAt;
@@ -137,30 +149,56 @@ export default function ProjectCard({
               Guardar proyecto
             </Button>
 
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (!artworkCount) {
-                  toast.error("Carga al menos una obra antes de enviar.");
-                  return;
-                }
-                send.mutate();
-              }}
-              disabled={send.isPending}
-            >
-              {send.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4 mr-2" />
-              )}
-              {sentAt ? "Volver a avisar a la feria" : "Enviar mi inventario"}
-            </Button>
+            {/* Enviar es de una sola vez: es el catálogo con el que la feria
+                arma el stand. Después del envío el botón ya no está. */}
+            {!sentAt && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (!artworkCount) {
+                    toast.error("Carga al menos una obra antes de enviar.");
+                    return;
+                  }
+                  if (
+                    !window.confirm(
+                      `Vas a enviar ${artworkCount} ${artworkCount === 1 ? "obra" : "obras"} a la Feria. Se envía una sola vez: después no podrás cambiarlo por tu cuenta. ¿Seguimos?`
+                    )
+                  )
+                    return;
+                  send.mutate();
+                }}
+                disabled={send.isPending}
+              >
+                {send.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 mr-2" />
+                )}
+                Enviar mi inventario
+              </Button>
+            )}
 
             <span className="text-xs text-gray-500">
-              {artworkCount} {artworkCount === 1 ? "obra cargada" : "obras cargadas"} · nada se
-              publica hasta que la Feria publique el catálogo.
+              {artworkCount} {artworkCount === 1 ? "obra cargada" : "obras cargadas"} ·{" "}
+              {sentAt
+                ? "ya enviado. Si necesitas cambiar algo, escríbele a la feria."
+                : "nada se publica hasta que la Feria publique el catálogo."}
             </span>
           </div>
+
+          {/* Entregado: sus dos QR para el stand */}
+          {sentAt && (
+            <div className="pt-2 border-t border-gray-100 space-y-3">
+              <div>
+                <p className="text-sm font-semibold">Tus códigos QR</p>
+                <p className="text-xs text-gray-500">
+                  Descárgalos e imprímelos para tu stand: quien los escanee ve tu obra y puede
+                  comprarla.
+                </p>
+              </div>
+              <InventoryQrCards artistId={artistId} />
+            </div>
+          )}
         </>
       )}
     </div>

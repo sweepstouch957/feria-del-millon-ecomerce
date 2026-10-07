@@ -117,6 +117,8 @@ export const checkPaymentStatusPublic = async (id: string) => {
  *  Sin auth — el backend filtra qué campos salen. */
 export interface PublicArtistProfile {
   bio: string;
+  /** Título del proyecto con el que expone (lo escribe al cargar inventario). */
+  projectTitle?: string;
   projectReview: string;
   photoUrl: string;
 }

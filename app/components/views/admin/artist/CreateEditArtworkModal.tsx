@@ -243,7 +243,8 @@ export default function CreateEditArtworkModal({
         pavilion: form.pavilion || null,
         technique: form.technique,
         tags: form.tagId ? [form.tagId] : undefined,
-        status: "published",
+        // El estado y la visibilidad son del equipo de la feria: lo que carga
+        // el artista espera a que se publique el catálogo.
       };
       await mPatch.mutateAsync({ id: editingId, payload });
       return;
@@ -265,14 +266,22 @@ export default function CreateEditArtworkModal({
       dimensionsText: form.dimensions || undefined,
       image: form.image,
       tags: form.tagId ? [form.tagId] : undefined,
-      status: "published",
     };
     await mCreate.mutateAsync(createPayload);
   });
 
   // ========================= Upload =========================
+  /** Tope de la feria para la imagen de una obra. */
+  const MAX_IMAGE_MB = 5;
+
   const onUploadFile = async (file?: File | null) => {
     if (!file) return;
+    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+      toast.error(
+        `La imagen pesa ${(file.size / 1024 / 1024).toFixed(1)} MB: el máximo son ${MAX_IMAGE_MB} MB.`
+      );
+      return;
+    }
     try {
       const form = new FormData();
       form.append("image", file);
@@ -313,8 +322,9 @@ export default function CreateEditArtworkModal({
             {editingId ? "Editar obra" : "Crear obra"}
           </DialogTitle>
           <DialogDescription className="text-gray-600">
-            Completa los campos para {editingId ? "actualizar" : "publicar"} tu
-            obra.
+            Imagen, título, dimensiones, técnica, precio y número de
+            reproducciones. Tus obras no salen al catálogo hasta que la Feria
+            publique el catálogo.
           </DialogDescription>
         </DialogHeader>
 
@@ -465,6 +475,9 @@ export default function CreateEditArtworkModal({
                   <Upload className="w-4 h-4" />
                   Subir imagen
                 </label>
+                <p className="mt-1 text-[11px] text-gray-500">
+                  JPG o PNG, máximo {MAX_IMAGE_MB} MB.
+                </p>
               </div>
 
               <Button

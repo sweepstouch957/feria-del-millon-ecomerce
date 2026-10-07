@@ -31,6 +31,9 @@
     limit?: number;
     artist?: string;
     reproducible?: boolean;
+    /** Trae también las obras que esperan a que se publique el catálogo.
+     *  Lo usa el artista en su estudio: son sus propias obras. */
+    includeHidden?: boolean | number | string;
   };
 
   export function useArtworksCursor(filters: ArtworksCursorFilters = {}) {
@@ -43,6 +46,7 @@
         limit: filters.limit ?? 24,
         artist: filters.artist || undefined,
         reproducible: filters.reproducible,
+        includeHidden: filters.includeHidden || undefined,
       }),
       [
         filters.q,
@@ -52,6 +56,7 @@
         filters.limit,
         filters.artist,
         filters.reproducible,
+        filters.includeHidden,
       ]
     );
 

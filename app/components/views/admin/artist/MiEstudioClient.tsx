@@ -29,6 +29,7 @@ import CreateEditArtworkModal from "./CreateEditArtworkModal";
 import QRModal from "./QrModal";
 import ArtistQrModal from "./ArtistQrModal";
 import ApplicationStatusCard from "@components/views/admin/artist/ApplicationStatusCard";
+import ProjectCard from "./ProjectCard";
 
 export default function MiEstudioClient() {
   const router = useRouter();
@@ -89,7 +90,10 @@ export default function MiEstudioClient() {
       pavilion: pavilion === "all" ? undefined : pavilion,
       technique: tech === "all" ? undefined : tech,
       limit: 24,
-      artist: artistId 
+      artist: artistId,
+      // Sus obras esperan a que la feria publique el catálogo; en su propio
+      // estudio el artista tiene que verlas igual.
+      includeHidden: 1,
     }),
     [q, pavilion, tech, artistId]
   );
@@ -268,6 +272,12 @@ export default function MiEstudioClient() {
 
           {/* TAB OBRAS */}
           <TabsContent value="artworks" className="space-y-6">
+            {/* El proyecto: lo que agrupa las obras y el aviso a la feria */}
+            <ProjectCard
+              artworkCount={rows.length}
+              pavilionName={pavilionOptions[0]?.label}
+            />
+
             {/* Filtros (sticky) */}
             <div className="sticky top-3 z-10">
               <div className="bg-white/90 backdrop-blur border border-gray-100 rounded-2xl p-4 shadow-sm">

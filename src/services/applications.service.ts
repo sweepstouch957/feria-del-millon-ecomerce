@@ -37,6 +37,32 @@ export interface ArtworkImageEntry {
   role?: "project" | "detail" | "montage";
 }
 
+/* ── El proyecto con el que expone y su inventario ─────────────────────────
+   Una postulación aceptada ya no se edita, pero el proyecto se escribe después:
+   es lo que acompaña a las obras. Por eso tiene su propia ruta. */
+
+export interface MyProject {
+  projectTitle: string;
+  projectReview: string;
+  inventorySentAt?: string | null;
+}
+
+export const getMyProject = async (): Promise<MyProject> => {
+  const { data } = await apiClient.get("/applications/applications/my/project");
+  return data.project;
+};
+
+export const updateMyProject = async (payload: Partial<MyProject>): Promise<MyProject> => {
+  const { data } = await apiClient.patch("/applications/applications/my/project", payload);
+  return data.project;
+};
+
+/** Avisa al equipo de la feria que el artista terminó de cargar. */
+export const sendMyInventory = async (payload: { artworkCount: number; pavilionName?: string }) => {
+  const { data } = await apiClient.post("/applications/applications/my/inventory-sent", payload);
+  return data as { ok: boolean; inventorySentAt: string; notified: number };
+};
+
 export const createApplication = async (convocatoriaId: string) => {
   const { data } = await apiClient.post("/applications/applications", { convocatoriaId });
   return data.doc as ArtistApplication;

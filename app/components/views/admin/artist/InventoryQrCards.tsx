@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Download, ExternalLink } from "lucide-react";
 
+import { EYEBROW, btnGhost, btnSolid, mix } from "./studioTheme";
+
 /* Los dos QR que le quedan al artista cuando entrega su inventario:
    · su página de artista (quién es, su pabellón y su obra)
    · el catálogo de la feria filtrado por él
@@ -34,42 +36,73 @@ function QrCard({ card }: { card: Card }) {
 
   useEffect(() => {
     if (!url) return;
-    // Margen 2 y 1024 px: tamaño cómodo para imprimir en el stand.
     QRCode.toDataURL(url, { width: 1024, margin: 2 }).then(setPng).catch(() => setPng(""));
   }, [url]);
 
   return (
-    <div className="flex-1 min-w-[240px] rounded-2xl border border-gray-200 p-4">
-      <p className="font-semibold text-sm">{card.title}</p>
-      <p className="mt-0.5 text-xs text-gray-500">{card.hint}</p>
+    <div
+      style={{
+        flex: "1 1 260px",
+        minWidth: "min(100%,240px)",
+        border: `1px solid ${mix(14)}`,
+        padding: "clamp(16px,1.8vw,22px)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+      }}
+    >
+      <div>
+        <span style={{ ...EYEBROW, fontSize: 9, color: mix(44), display: "block", marginBottom: 6 }}>
+          {card.key === "gallery" ? "Página propia" : "Catálogo filtrado"}
+        </span>
+        <p style={{ margin: 0, fontSize: 16, lineHeight: 1.25 }}>{card.title}</p>
+        <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.55, color: mix(62) }}>{card.hint}</p>
+      </div>
 
-      <div className="mt-3 aspect-square w-full bg-gray-50 rounded-xl ring-1 ring-gray-200 grid place-items-center">
+      <div
+        style={{
+          display: "grid",
+          placeItems: "center",
+          width: "100%",
+          aspectRatio: "1",
+          background: "#FFFFFF",
+          border: `1px solid ${mix(12)}`,
+        }}
+      >
         {png ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={png} alt={card.title} className="w-full h-full object-contain p-3" />
+          <img
+            src={png}
+            alt={`Código QR: ${card.title}`}
+            style={{ width: "100%", height: "100%", objectFit: "contain", padding: 14 }}
+          />
         ) : (
-          <span className="text-xs text-gray-400">Generando…</span>
+          <div className="fdm-skel" style={{ width: "70%", aspectRatio: "1" }} />
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: "auto" }}>
         <a
-          href={png || "#"}
+          href={png || undefined}
           download={card.file}
-          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium ${
-            png ? "border-gray-300 hover:bg-gray-50" : "border-gray-200 text-gray-400 pointer-events-none"
-          }`}
+          style={{
+            ...btnSolid,
+            height: 36,
+            padding: "0 18px",
+            opacity: png ? 1 : 0.45,
+            pointerEvents: png ? "auto" : "none",
+          }}
         >
-          <Download className="w-3.5 h-3.5" />
+          <Download size={13} strokeWidth={1.8} />
           Descargar
         </a>
         <a
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"
+          style={{ ...btnGhost, height: 36, padding: "0 18px" }}
         >
-          <ExternalLink className="w-3.5 h-3.5" />
+          <ExternalLink size={13} strokeWidth={1.6} />
           Abrir
         </a>
       </div>
@@ -80,7 +113,7 @@ function QrCard({ card }: { card: Card }) {
 export default function InventoryQrCards({ artistId }: { artistId: string }) {
   if (!artistId) return null;
   return (
-    <div className="flex flex-wrap gap-3">
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "clamp(14px,1.8vw,20px)" }}>
       {CARDS(artistId).map((c) => (
         <QrCard key={c.key} card={c} />
       ))}

@@ -2,53 +2,54 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Button } from "@components/ui/button";
-import { X, Share2, QrCode, Plus, Minus, RefreshCw } from "lucide-react";
+import { Share2, QrCode, Pencil, Plus, Minus, RefreshCw, X, Expand } from "lucide-react";
 import type { ArtworkDetailResponse } from "@services/artworks.service";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { formatCOP } from "@lib/money";
+
+import StudioSheet from "./StudioSheet";
+import { EYEBROW, btnGhost, btnSolid, hair, mix } from "./studioTheme";
+
+/* La ficha de una obra, como la ve su autor.
+   La imagen ocupa media hoja y se amplía: es lo que el artista quiere revisar
+   antes de entregar —si la foto está torcida o recortada, se ve acá. */
+
+const money = (n?: number, currency = "COP") =>
+  typeof n === "number" ? formatCOP(n, { currency }) : "—";
 
 export default function ArtworkDetailModal({
   id,
   data,
   open,
   loading,
+  locked,
   onClose,
+  onEdit,
   onOpenQr,
 }: {
   id: string | null;
   data?: ArtworkDetailResponse;
   open: boolean;
   loading: boolean;
+  locked?: boolean;
   onClose: () => void;
+  onEdit?: (id: string) => void;
   onOpenQr?: (id: string) => void;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
-
-  // Bloquea el scroll del body cuando el modal está abierto
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  if (!open) return null;
-
-  const formatMoney = (n?: number, currency: string = "COP") =>
-    typeof n === "number" ? formatCOP(n, { currency }) : "—";
 
   const share = async () => {
     if (!id) return;
     const url = `${window.location.origin}/obra/${encodeURIComponent(id)}`;
     try {
-      if (navigator.share)
-        await navigator.share({ title: data?.doc.title || "Obra", url });
+      if (navigator.share) await navigator.share({ title: data?.doc.title || "Obra", url });
       else await navigator.clipboard.writeText(url);
     } catch {
-      await navigator.clipboard.writeText(url);
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        /* sin portapapeles */
+      }
     }
   };
 
@@ -63,169 +64,162 @@ export default function ArtworkDetailModal({
     }
   };
 
+  const doc = data?.doc;
+  const hidden = (doc as any)?.hiddenUntilEvent;
+
+  const facts: Array<[string, React.ReactNode]> = doc
+    ? [
+        ["Técnica", doc.techniqueInfo?.name || doc.technique || "—"],
+        ["Dimensiones", (doc as any)?.dimensionsText || "—"],
+        ["Año", doc.year || "—"],
+        ["Precio", <span style={{ fontVariantNumeric: "tabular-nums" }}>{money(doc.price, doc.currency)}</span>],
+        [(doc as any)?.reproducible ? "Copias" : "Cantidad", typeof doc.stock === "number" ? doc.stock : "—"],
+        ["Pabellón", doc.pavilionInfo?.name || "—"],
+        ["Tag del sistema", (doc as any)?.tagId || "Se asigna con el QR"],
+      ]
+    : [];
+
   return (
     <>
-      <div
-        className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-        onClick={onClose}
-      >
-        <div
-          className="bg-white rounded-2xl w-full max-w-5xl overflow-hidden shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3 border-b">
-            <h3 className="font-semibold">Detalle de la obra</h3>
-            <button
-              className="p-1 rounded hover:bg-gray-100"
-              onClick={onClose}
-              aria-label="Cerrar"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Body */}
-          <div className="p-5">
-            {loading ? (
-              <div className="py-12 text-center text-gray-500">Cargando…</div>
-            ) : data ? (
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Imagen: object-contain + overlay con ojito */}
-                <button
-                  type="button"
-                  className="relative w-full bg-gray-50 rounded-xl overflow-hidden ring-1 ring-gray-200 group"
-                  style={{ aspectRatio: "4 / 3" }}
-                  onClick={() => setPreviewOpen(true)}
-                  title="Ver imagen en grande"
-                >
-                  {data.doc.image ? (
-                    <Image
-                      src={data.doc.image}
-                      alt={data.doc.title}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                      quality={90}
-                      className="object-contain"
-                      priority={false}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 grid place-items-center text-gray-400 text-sm">
-                      Sin imagen
-                    </div>
-                  )}
-
-                  {/* Overlay intuitivo */}
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition">
-                    <div className="inline-flex items-center gap-2 text-white text-xs bg-black/50 px-2 py-1 rounded">
-                      {/* ojito simple en SVG para evitar dependencias */}
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        className="opacity-90"
-                      >
-                        <path
-                          d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12Z"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        />
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="3"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        />
-                      </svg>
-                      Click para ampliar
-                    </div>
-                  </div>
-                </button>
-
-                {/* Info */}
-                <div className="min-w-0">
-                  <h4 className="text-xl font-bold break-words">
-                    {data.doc.title}
-                  </h4>
-                  <p className="text-gray-600 mt-2 whitespace-pre-line break-words">
-                    {data.doc.description || "—"}
-                  </p>
-
-                  <dl className="mt-4 text-sm text-gray-700 space-y-1">
-                    <div className="flex gap-2">
-                      <dt className="font-semibold shrink-0">Técnica:</dt>
-                      <dd className="truncate">
-                        {data.doc.techniqueInfo?.name ||
-                          data.doc.technique ||
-                          "—"}
-                      </dd>
-                    </div>
-                    <div className="flex gap-2">
-                      <dt className="font-semibold shrink-0">Pabellón:</dt>
-                      <dd className="truncate">
-                        {data.doc.pavilionInfo?.name || "—"}
-                      </dd>
-                    </div>
-                    <div className="flex gap-2">
-                      <dt className="font-semibold shrink-0">Precio:</dt>
-                      <dd>{formatMoney(data.doc.price, data.doc.currency)}</dd>
-                    </div>
-                    <div className="flex gap-2">
-                      <dt className="font-semibold shrink-0">Año:</dt>
-                      <dd>{data.doc.year || "—"}</dd>
-                    </div>
-                    <div className="flex gap-2">
-                      <dt className="font-semibold shrink-0">Stock:</dt>
-                      <dd>
-                        {typeof data.doc.stock === "number"
-                          ? data.doc.stock
-                          : "—"}
-                      </dd>
-                    </div>
-                    <div className="flex gap-2">
-                      <dt className="font-semibold shrink-0">TagId:</dt>
-                      <dd>{(data as any)?.doc?.tagId || "—"}</dd>
-                    </div>
-                  </dl>
-
-                  <div className="mt-5 flex flex-wrap items-center gap-2">
-                    <Button variant="outline" onClick={share}>
-                      <Share2 className="w-4 h-4 mr-1" />
-                      Compartir
-                    </Button>
-                    <Button variant="outline" onClick={openQr}>
-                      <QrCode className="w-4 h-4 mr-1" />
-                      Ver QR
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="py-12 text-center text-gray-500">
-                No se encontró la obra.
-              </div>
+      <StudioSheet
+        open={open}
+        onClose={onClose}
+        eyebrow={hidden ? "Sin publicar" : "En el catálogo"}
+        title={doc?.title || "Obra"}
+        maxWidth={920}
+        footer={
+          <>
+            {!locked && id && onEdit && (
+              <button type="button" style={btnSolid} onClick={() => onEdit(id)}>
+                <Pencil size={14} strokeWidth={1.8} />
+                Editar
+              </button>
             )}
+            <button type="button" style={btnGhost} onClick={openQr}>
+              <QrCode size={14} strokeWidth={1.6} />
+              Ver QR
+            </button>
+            <button type="button" style={btnGhost} onClick={share}>
+              <Share2 size={14} strokeWidth={1.6} />
+              Compartir
+            </button>
+          </>
+        }
+      >
+        {loading ? (
+          <div style={{ display: "grid", gap: 20, gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,260px),1fr))" }}>
+            <div className="fdm-skel" style={{ width: "100%", aspectRatio: "4/5" }} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="fdm-skel" style={{ width: "60%", height: 16 }} />
+              <div className="fdm-skel" style={{ width: "90%", height: 12 }} />
+              <div className="fdm-skel" style={{ width: "80%", height: 12 }} />
+              <div className="fdm-skel" style={{ width: "40%", height: 12 }} />
+            </div>
           </div>
-        </div>
-      </div>
+        ) : !doc ? (
+          <p style={{ margin: 0, fontSize: 14.5, color: mix(70) }}>No encontramos esta obra.</p>
+        ) : (
+          <div style={{ display: "grid", gap: "clamp(22px,3vw,36px)", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,270px),1fr))" }}>
+            {/* Imagen */}
+            <button
+              type="button"
+              className="fdm-studio-plain"
+              onClick={() => doc.image && setPreviewOpen(true)}
+              title={doc.image ? "Ver la imagen en grande" : undefined}
+              style={{
+                position: "relative",
+                width: "100%",
+                aspectRatio: "4 / 5",
+                background: mix(6),
+                border: `1px solid ${mix(12)}`,
+                padding: 0,
+                cursor: doc.image ? "zoom-in" : "default",
+                overflow: "hidden",
+              }}
+            >
+              {doc.image ? (
+                <>
+                  <Image
+                    src={doc.image}
+                    alt={doc.title}
+                    fill
+                    sizes="(max-width: 768px) 92vw, 420px"
+                    quality={90}
+                    style={{ objectFit: "contain" }}
+                  />
+                  <span
+                    style={{
+                      position: "absolute",
+                      bottom: 10,
+                      right: 10,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "6px 10px",
+                      background: "color-mix(in srgb, var(--bg) 88%, transparent)",
+                      border: `1px solid ${mix(16)}`,
+                      ...EYEBROW,
+                      fontSize: 8.5,
+                      color: mix(66),
+                    }}
+                  >
+                    <Expand size={11} strokeWidth={1.6} />
+                    Ampliar
+                  </span>
+                </>
+              ) : (
+                <span style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", ...EYEBROW, fontSize: 9.5, color: mix(40) }}>
+                  Sin imagen
+                </span>
+              )}
+            </button>
 
-      {/* Vista previa con zoom/pan en alta calidad */}
-      {previewOpen && data?.doc.image && (
-        <ImagePreviewModal
-          src={data.doc.image}
-          alt={data.doc.title}
-          onClose={() => setPreviewOpen(false)}
-        />
+            {/* Datos */}
+            <div style={{ minWidth: 0 }}>
+              {doc.description && (
+                <p style={{ margin: "0 0 22px", fontSize: 14.5, lineHeight: 1.7, color: mix(76), whiteSpace: "pre-line" }}>
+                  {doc.description}
+                </p>
+              )}
+
+              <dl style={{ margin: 0, display: "grid", gap: 0, borderTop: hair(14) }}>
+                {facts.map(([k, v]) => (
+                  <div
+                    key={k}
+                    style={{
+                      display: "flex",
+                      gap: 16,
+                      justifyContent: "space-between",
+                      alignItems: "baseline",
+                      padding: "11px 0",
+                      borderBottom: hair(10),
+                    }}
+                  >
+                    <dt style={{ ...EYEBROW, fontSize: 9, color: mix(46) }}>{k}</dt>
+                    <dd style={{ margin: 0, fontSize: 14, color: mix(84), textAlign: "right", minWidth: 0 }}>{v}</dd>
+                  </div>
+                ))}
+              </dl>
+
+              {hidden && (
+                <p style={{ margin: "18px 0 0", fontSize: 13, lineHeight: 1.6, color: mix(60) }}>
+                  Esta obra ya está cargada, pero no se ve en el catálogo público hasta que la
+                  feria lo publique.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </StudioSheet>
+
+      {previewOpen && doc?.image && (
+        <ImagePreviewModal src={doc.image} alt={doc.title} onClose={() => setPreviewOpen(false)} />
       )}
     </>
   );
 }
 
-/** Modal de vista previa con zoom/pan (robusto a versiones de la lib) */
+/** Vista grande con zoom y arrastre: fondo negro, los controles mínimos. */
 function ImagePreviewModal({
   src,
   alt,
@@ -235,26 +229,48 @@ function ImagePreviewModal({
   alt?: string;
   onClose: () => void;
 }) {
-  const [previewScale, setPreviewScale] = useState(1);
+  const [scale, setScale] = useState(1);
 
-  // Bloquea el scroll mientras la preview está abierta
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [onClose]);
+
+  const ctrl: React.CSSProperties = {
+    width: 42,
+    height: 42,
+    display: "grid",
+    placeItems: "center",
+    background: "transparent",
+    border: 0,
+    cursor: "pointer",
+    color: "#F7F6F2",
+  };
 
   return (
     <div
-      className="fixed inset-0 z-[60] bg-black/80 p-4 flex items-center justify-center"
+      className="fdm-fade-anim"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 60,
+        background: "#0B0B0A",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={alt ? `Imagen de ${alt}` : "Imagen"}
     >
-      <div
-        className="relative w-full max-w-6xl max-h-[88vh] bg-black rounded-2xl overflow-hidden shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div style={{ position: "relative", width: "100%", height: "100%" }} onClick={(e) => e.stopPropagation()}>
         <TransformWrapper
           initialScale={1}
           minScale={0.5}
@@ -262,65 +278,60 @@ function ImagePreviewModal({
           wheel={{ step: 0.12 }}
           doubleClick={{ disabled: false, step: 0.6 }}
           pinch={{ step: 0.2 }}
-          // robusto entre versiones: lee el scale desde ref/state
           onTransformed={(ref: any) => {
-            const s =
-              ref?.state?.scale ?? // v4
-              ref?.instance?.transformState?.scale ?? // v3
-              1;
-            setPreviewScale(s);
+            setScale(ref?.state?.scale ?? ref?.instance?.transformState?.scale ?? 1);
           }}
         >
           {({ zoomIn, zoomOut, resetTransform }) => (
             <>
-              {/* Controles */}
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-white/95 rounded-full shadow flex items-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    zoomOut();
+              <div
+                style={{
+                  position: "absolute",
+                  top: 16,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  zIndex: 20,
+                  display: "flex",
+                  alignItems: "center",
+                  border: "1px solid rgba(247,246,242,.22)",
+                  borderRadius: 999,
+                  background: "rgba(11,11,10,.6)",
+                  backdropFilter: "blur(6px)",
+                }}
+              >
+                <button type="button" style={ctrl} onClick={() => zoomOut()} aria-label="Reducir">
+                  <Minus size={16} strokeWidth={1.6} />
+                </button>
+                <span
+                  style={{
+                    width: 52,
+                    textAlign: "center",
+                    color: "#F7F6F2",
+                    fontFamily: "Jost, system-ui, sans-serif",
+                    fontSize: 11,
+                    fontVariantNumeric: "tabular-nums",
+                    userSelect: "none",
                   }}
-                  aria-label="Reducir"
                 >
-                  <Minus className="w-4 h-4" />
-                </Button>
-                <span className="text-xs w-12 text-center select-none">
-                  {Math.round((previewScale || 1) * 100)}%
+                  {Math.round((scale || 1) * 100)}%
                 </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={
-                    () => {
-                      zoomIn();
-                    }
-                  }
-                  aria-label="Ampliar"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button type="button" style={ctrl} onClick={() => zoomIn()} aria-label="Ampliar">
+                  <Plus size={16} strokeWidth={1.6} />
+                </button>
+                <button
+                  type="button"
+                  style={ctrl}
                   onClick={() => {
                     resetTransform();
-                    setPreviewScale(1);
+                    setScale(1);
                   }}
-                  aria-label="Reset"
+                  aria-label="Volver al tamaño original"
                 >
-                  <RefreshCw className="w-4 h-4" />
-                </Button>
+                  <RefreshCw size={15} strokeWidth={1.6} />
+                </button>
               </div>
 
-              {/* Tip de uso */}
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 text-[11px] text-white/90 bg-white/10 backdrop-blur px-3 py-1 rounded-full">
-                Rueda para hacer zoom • Arrastra para mover • Doble clic para
-                ampliar
-              </div>
-
-              {/* Lienzo */}
-              <div className="w-full h-[88vh] max-h-[88vh] overflow-auto cursor-grab active:cursor-grabbing">
+              <div style={{ width: "100%", height: "100%", cursor: "grab" }}>
                 <TransformComponent
                   wrapperStyle={{ width: "100%", height: "100%" }}
                   contentStyle={{
@@ -331,35 +342,46 @@ function ImagePreviewModal({
                     height: "100%",
                   }}
                 >
-                  <div className="relative w-full h-full">
+                  <div style={{ position: "relative", width: "100vw", height: "100vh" }}>
                     <Image
                       src={src}
-                      alt={alt ?? "preview"}
+                      alt={alt ?? "Obra"}
                       fill
                       sizes="100vw"
                       quality={95}
-                      className="object-contain select-none"
-                      style={{
-                        imageRendering: "auto",
-                        backfaceVisibility: "hidden",
-                        transform: "translateZ(0)",
-                        willChange: "transform",
-                      }}
+                      style={{ objectFit: "contain", userSelect: "none" }}
                       priority
                     />
                   </div>
                 </TransformComponent>
               </div>
+
+              <span
+                style={{
+                  position: "absolute",
+                  bottom: 18,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  zIndex: 20,
+                  ...EYEBROW,
+                  fontSize: 9,
+                  color: "rgba(247,246,242,.6)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Rueda o pinza para el zoom · arrastra para mover
+              </span>
             </>
           )}
         </TransformWrapper>
 
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-3 right-3 bg-white/90 hover:bg-white rounded-full p-2 z-20"
           aria-label="Cerrar"
+          style={{ ...ctrl, position: "absolute", top: 16, right: 16, zIndex: 20, width: 44, height: 44 }}
         >
-          <X className="w-5 h-5" />
+          <X size={20} strokeWidth={1.6} />
         </button>
       </div>
     </div>

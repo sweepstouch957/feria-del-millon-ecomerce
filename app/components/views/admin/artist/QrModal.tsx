@@ -2,10 +2,13 @@
 
 import { useMemo } from "react";
 import Image from "next/image";
-import { Button } from "@components/ui/button";
-import { Download, ExternalLink, X, QrCode } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
 
+import StudioSheet from "./StudioSheet";
+import { EYEBROW, btnGhost, btnSolid, mix } from "./studioTheme";
+
+/** El QR de una obra: se escanea en el stand y lleva a su ficha de compra. */
 export default function QRModal({
   artworkId,
   open,
@@ -24,11 +27,9 @@ export default function QRModal({
     return {
       qrImg: qr.imageUrl as string | undefined,
       qrTarget: qr.target as string | undefined,
-      title: (doc?.title as string) || "QR",
+      title: (doc?.title as string) || "Obra",
     };
   }, [data]);
-
-  if (!open) return null;
 
   const downloadQr = async () => {
     if (!qrImg) return;
@@ -42,56 +43,52 @@ export default function QRModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[55] bg-black/50 p-4 flex items-center justify-center"
-      onClick={onClose}
+    <StudioSheet
+      open={open}
+      onClose={onClose}
+      eyebrow="Para imprimir"
+      title={title}
+      description="Pégalo junto a la obra: quien lo escanee ve la ficha y puede comprarla ahí mismo."
+      maxWidth={460}
+      footer={
+        qrImg ? (
+          <>
+            <button type="button" style={btnSolid} onClick={downloadQr}>
+              <Download size={14} strokeWidth={1.8} />
+              Descargar
+            </button>
+            {qrTarget && (
+              <button type="button" style={btnGhost} onClick={() => window.open(qrTarget, "_blank")}>
+                <ExternalLink size={13} strokeWidth={1.6} />
+                Abrir destino
+              </button>
+            )}
+          </>
+        ) : undefined
+      }
     >
-      <div
-        className="bg-white rounded-2xl w-full max-w-md overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <div className="flex items-center gap-2">
-            <QrCode className="w-4 h-4" />
-            <h3 className="font-semibold">Código QR</h3>
-          </div>
-          <button className="p-1 rounded hover:bg-gray-100" onClick={onClose}>
-            <X className="w-4 h-4" />
-          </button>
+      {isFetching ? (
+        <div className="fdm-skel" style={{ width: "100%", aspectRatio: "1" }} />
+      ) : qrImg ? (
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            aspectRatio: "1",
+            background: "#FFFFFF",
+            border: `1px solid ${mix(14)}`,
+          }}
+        >
+          <Image src={qrImg} alt={`Código QR de ${title}`} fill style={{ objectFit: "contain", padding: 18 }} />
         </div>
-
-        <div className="p-5">
-          {isFetching ? (
-            <div className="text-center text-gray-500 py-10">Cargando QR…</div>
-          ) : qrImg ? (
-            <div className="space-y-4">
-              <div className="relative w-full aspect-square bg-gray-50 rounded-xl overflow-hidden ring-1 ring-gray-200">
-                <Image src={qrImg} alt="QR" fill className="object-contain p-4" />
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={downloadQr}>
-                  <Download className="w-4 h-4 mr-1" />
-                  Descargar QR
-                </Button>
-                {qrTarget && (
-                  <Button
-                    variant="outline"
-                    onClick={() => window.open(qrTarget, "_blank")}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-1" />
-                    Abrir destino
-                  </Button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center text-gray-500 py-10">
-              No se encontró un QR para esta obra.
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+      ) : (
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: mix(70) }}>
+          Esta obra todavía no tiene QR.{" "}
+          <span style={{ ...EYEBROW, fontSize: 9.5, color: mix(50) }}>
+            Se genera al cargarla; si falta, avísale a la feria.
+          </span>
+        </p>
+      )}
+    </StudioSheet>
   );
 }

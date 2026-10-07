@@ -1,19 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@components/ui/dialog";
-import { Button } from "@components/ui/button";
-import { Input } from "@components/ui/input";
-import { Upload, Loader2, Image as ImgIcon, Save } from "lucide-react";
+import { Upload, ImagePlus, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -25,41 +16,49 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ArtworkRow } from "@hooks/queries/useArtworksCursor";
 import { uploadCampaignImage } from "@services/upload.service";
+import { formatCOP } from "@lib/money";
 
-// ========================= Schema =========================
+import StudioSheet from "./StudioSheet";
+import { EYEBROW, btnGhost, btnSolid, fieldHint, fieldInput, fieldLabel, hair, mix } from "./studioTheme";
+
+/* Crear o editar una obra.
+
+   La imagen manda: ocupa media hoja y debajo se ve, en chiquito, cómo va a
+   quedar la ficha en el catálogo — es lo que va a leer quien compre, y verlo
+   mientras se escribe evita títulos a medias y precios en blanco.
+
+   El tag es del sistema: se genera con el QR al crear la obra, así que el
+   artista no lo escribe (el backend ya ignoraba ese campo cuando venía de él). */
+
 const CURRENT_YEAR = new Date().getFullYear();
+const MAX_IMAGE_MB = 5;
 
 const FormSchema = z.object({
-  title: z.string().min(2, "El título es requerido"),
+  title: z.string().min(2, "Ponle un título a la obra"),
 
-  // Permite number o vacío (se transforma a undefined)
   price: z
-    .union([z.coerce.number().int().min(0, "Precio inválido"), z.nan()])
+    .union([z.coerce.number().int().min(0, "El precio no puede ser negativo"), z.nan()])
     .optional()
     .transform((v) => (Number.isNaN(v) ? undefined : v)),
 
   currency: z.string().default("COP").optional(),
 
-  // Permite URL válida o vacío (se transforma a undefined)
   image: z
     .string()
-    .url("URL inválida")
+    .url("Esa dirección de imagen no es válida")
     .optional()
     .or(z.literal("").transform(() => undefined)),
 
   description: z.string().optional(),
 
-  // Permite número válido, vacío o NaN (se transforma a undefined)
   year: z
     .union([
-      z.coerce.number().int().min(1800).max(CURRENT_YEAR),
+      z.coerce.number().int().min(1800, "Año muy antiguo").max(CURRENT_YEAR, `Como máximo ${CURRENT_YEAR}`),
       z.nan(),
       z.string().length(0),
     ])
     .optional()
-    .transform((v) =>
-      typeof v === "number" && !Number.isNaN(v) ? v : undefined
-    ),
+    .transform((v) => (typeof v === "number" && !Number.isNaN(v) ? v : undefined)),
 
   stock: z
     .union([z.coerce.number().int().min(0), z.nan()])
@@ -70,24 +69,26 @@ const FormSchema = z.object({
 
   reproducible: z.boolean().optional(),
 
-  technique: z.string().min(1, "Selecciona una técnica"),
+  technique: z.string().min(1, "Elige la técnica"),
 
   pavilion: z.string().optional(),
-
-  tagId: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof FormSchema>;
 
-// ========================= Utils =========================
 const slugify = (s: string) =>
-  s
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/\s+/g, "-");
+  s.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-");
 
-// ========================= Component =========================
+/** Error debajo del campo al que pertenece. */
+function FieldError({ msg }: { msg?: unknown }) {
+  if (typeof msg !== "string" || !msg) return null;
+  return (
+    <p role="alert" style={{ ...fieldHint, color: "#B4472A" }}>
+      {msg}
+    </p>
+  );
+}
+
 export default function CreateEditArtworkModal({
   open,
   onOpenChange,
@@ -110,6 +111,8 @@ export default function CreateEditArtworkModal({
   onDone: () => void;
 }) {
   const qc = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
 
   const {
     register,
@@ -119,9 +122,7 @@ export default function CreateEditArtworkModal({
     watch,
     formState: { isSubmitting, errors },
   } = useForm<FormValues>({
-    // Alineamos los tipos del resolver con el genérico del formulario
     resolver: zodResolver(FormSchema) as Resolver<FormValues>,
-    // Defaults seguros (parcial): no forzamos números vacíos
     defaultValues: {
       title: "",
       currency: "COP",
@@ -134,20 +135,21 @@ export default function CreateEditArtworkModal({
       dimensions: "",
       reproducible: false,
       pavilion: "",
-      tagId: "",
     } as Partial<FormValues>,
   });
 
   const imageUrl = watch("image");
   const isReproducible = watch("reproducible");
+  const previewTitle = watch("title");
+  const previewPrice = watch("price");
+  const previewDims = watch("dimensions");
+  const previewYear = watch("year");
 
   // Valor primitivo en vez del arreglo: si el padre re-renderiza, esto sigue
   // siendo el mismo string y el efecto de abajo no vuelve a resetear el
   // formulario a medio llenar.
-  const soloPavilion =
-    pavilionOptions?.length === 1 ? pavilionOptions[0].value : "";
+  const soloPavilion = pavilionOptions?.length === 1 ? pavilionOptions[0].value : "";
 
-  // Cargar datos si estamos editando
   useEffect(() => {
     if (!editingId) {
       reset({
@@ -164,7 +166,6 @@ export default function CreateEditArtworkModal({
         // Si el artista tiene un solo pabellón asignado, no tiene sentido
         // pedirle que lo elija: sus obras van ahí.
         pavilion: soloPavilion,
-        tagId: "",
       });
       return;
     }
@@ -180,51 +181,33 @@ export default function CreateEditArtworkModal({
     setValue("stock", (row.stock as any) ?? undefined);
     setValue("dimensions", (row as any)?.dimensionsText || "");
     setValue("reproducible", Boolean((row as any)?.reproducible));
-    setValue(
-      "technique",
-      ((row as any)?.techniqueInfo?._id || (row as any)?.technique || "") as any
-    );
-    setValue(
-      "pavilion",
-      ((row as any)?.pavilionInfo?._id || (row as any)?.pavilion || "") as any
-    );
-    setValue("tagId", (row as any)?.tagId || "");
+    setValue("technique", ((row as any)?.techniqueInfo?._id || (row as any)?.technique || "") as any);
+    setValue("pavilion", ((row as any)?.pavilionInfo?._id || (row as any)?.pavilion || "") as any);
     setValue("image", row.image || "");
   }, [editingId, currentRows, reset, setValue, soloPavilion]);
 
-  // ========================= Mutations =========================
   const mCreate = useMutation({
     mutationFn: async (payload: CreateArtworkInput) => createArtwork(payload),
     onSuccess: () => {
-      toast.success("Obra creada");
+      toast.success("Obra cargada");
       qc.invalidateQueries({ queryKey: ["artworks"] });
       onDone();
     },
-    onError: (e: any) => {
-      toast.error(e?.response?.data?.error || "Error creando la obra");
-    },
+    onError: (e: any) => toast.error(e?.response?.data?.error || "No se pudo cargar la obra"),
   });
 
   const mPatch = useMutation({
-    mutationFn: async ({
-      id,
-      payload,
-    }: {
-      id: string;
-      payload: PatchArtworkDto;
-    }) => patchArtwork(id, payload),
+    mutationFn: async ({ id, payload }: { id: string; payload: PatchArtworkDto }) =>
+      patchArtwork(id, payload),
     onSuccess: (resp) => {
       toast.success("Obra actualizada");
       qc.invalidateQueries({ queryKey: ["artworks"] });
       qc.invalidateQueries({ queryKey: ["artwork-detail", resp.doc.id] });
       onDone();
     },
-    onError: (e: any) => {
-      toast.error(e?.response?.data?.error || "Error actualizando la obra");
-    },
+    onError: (e: any) => toast.error(e?.response?.data?.error || "No se pudo actualizar la obra"),
   });
 
-  // ========================= Submit =========================
   const onSubmit = handleSubmit(async (form) => {
     const baseSlug = slugify(form.title);
 
@@ -242,7 +225,6 @@ export default function CreateEditArtworkModal({
         event: eventId,
         pavilion: form.pavilion || null,
         technique: form.technique,
-        tags: form.tagId ? [form.tagId] : undefined,
         // El estado y la visibilidad son del equipo de la feria: lo que carga
         // el artista espera a que se publique el catálogo.
       };
@@ -265,23 +247,23 @@ export default function CreateEditArtworkModal({
       reproducible: Boolean(form.reproducible),
       dimensionsText: form.dimensions || undefined,
       image: form.image,
-      tags: form.tagId ? [form.tagId] : undefined,
     };
     await mCreate.mutateAsync(createPayload);
   });
 
-  // ========================= Upload =========================
-  /** Tope de la feria para la imagen de una obra. */
-  const MAX_IMAGE_MB = 5;
-
   const onUploadFile = async (file?: File | null) => {
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Eso no es una imagen. Sube un JPG o un PNG.");
+      return;
+    }
     if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
       toast.error(
         `La imagen pesa ${(file.size / 1024 / 1024).toFixed(1)} MB: el máximo son ${MAX_IMAGE_MB} MB.`
       );
       return;
     }
+    setUploading(true);
     try {
       const form = new FormData();
       form.append("image", file);
@@ -289,212 +271,343 @@ export default function CreateEditArtworkModal({
       const res = await fetch("/upload", { method: "POST", body: form });
       const json = await res.json();
       if (json?.url) {
-        setValue("image", json.url);
+        setValue("image", json.url, { shouldValidate: true });
         return;
       }
       throw new Error("fallback");
     } catch {
       try {
         const r = await uploadCampaignImage(file!, "artworks");
-        setValue("image", (r as any)?.url);
+        setValue("image", (r as any)?.url, { shouldValidate: true });
       } catch {
         toast.error("No se pudo subir la imagen");
       }
+    } finally {
+      setUploading(false);
     }
   };
 
-  const closingDisabled = isSubmitting || mCreate.isPending || mPatch.isPending;
+  const busy = isSubmitting || mCreate.isPending || mPatch.isPending;
 
-  // ========================= Render =========================
   return (
-    <Dialog
+    <StudioSheet
       open={open}
-      onOpenChange={(v) => !closingDisabled && onOpenChange(v)}
+      onClose={() => !busy && onOpenChange(false)}
+      eyebrow={editingId ? "Editar obra" : "Nueva obra"}
+      title={editingId ? "Editar la obra" : "Cargar una obra"}
+      description="Imagen, título, dimensiones, técnica, precio y copias. Puedes editarla las veces que quieras hasta que envíes tu inventario."
+      maxWidth={940}
+      footer={
+        <>
+          <button type="button" style={btnGhost} onClick={() => onOpenChange(false)} disabled={busy}>
+            Cancelar
+          </button>
+          <button type="submit" form="artwork-form" style={btnSolid} disabled={busy || uploading}>
+            {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={1.8} />}
+            {busy ? "Guardando…" : editingId ? "Guardar cambios" : "Cargar obra"}
+          </button>
+          <span style={{ ...EYEBROW, fontSize: 9, color: mix(46), marginLeft: "auto" }}>
+            No se publica hasta que la feria publique el catálogo
+          </span>
+        </>
+      }
     >
-      <DialogContent
-        // Evita cierre por click fuera o ESC cuando está enviando
-        onInteractOutside={(e) => closingDisabled && e.preventDefault()}
-        onEscapeKeyDown={(e) => closingDisabled && e.preventDefault()}
-        className="max-w-3xl p-0 overflow-hidden"
+      <form
+        id="artwork-form"
+        onSubmit={onSubmit}
+        noValidate
+        style={{
+          display: "grid",
+          gap: "clamp(24px,3vw,38px)",
+          gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,290px),1fr))",
+        }}
       >
-        <DialogHeader className="px-6 pt-6">
-          <DialogTitle className="text-xl font-bold">
-            {editingId ? "Editar obra" : "Crear obra"}
-          </DialogTitle>
-          <DialogDescription className="text-gray-600">
-            Imagen, título, dimensiones, técnica, precio y número de
-            reproducciones. Tus obras no salen al catálogo hasta que la Feria
-            publique el catálogo.
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Contenedor con scroll propio para evitar que se “pierda” el contenido */}
-        <div className="px-6 pb-6 max-h-[75vh] overflow-y-auto">
-          <form
-            className="grid md:grid-cols-3 gap-4"
-            onSubmit={onSubmit}
-            noValidate
-          >
-            <div className="md:col-span-2 grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-gray-600">Título *</label>
-                <Input {...register("title")} placeholder="Nombre de la obra" />
-                {errors.title && (
-                  <p className="text-red-600 text-xs mt-1">
-                    {errors.title.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-600">Precio (COP)</label>
-                <Input
-                  type="number"
-                  {...register("price")}
-                  placeholder="1200000"
+        {/* ── Columna de la imagen ──────────────────────────────────────── */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <span style={fieldLabel}>Imagen de la obra</span>
+            <label
+              htmlFor="artwork-file"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                onUploadFile(e.dataTransfer.files?.[0]);
+              }}
+              style={{
+                display: "grid",
+                placeItems: "center",
+                position: "relative",
+                width: "100%",
+                aspectRatio: "4 / 5",
+                marginTop: 6,
+                cursor: uploading ? "wait" : "pointer",
+                background: mix(5),
+                border: `1px ${dragging ? "solid" : "dashed"} ${dragging ? "var(--acc)" : mix(24)}`,
+                overflow: "hidden",
+                transition: "border-color .25s ease, background .25s ease",
+                textTransform: "none",
+                letterSpacing: "normal",
+              }}
+            >
+              {imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imageUrl}
+                  alt="Vista previa de la obra"
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
                 />
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-600">Técnica *</label>
-                <select
-                  className="w-full border rounded-md px-3 py-2"
-                  {...register("technique")}
+              ) : (
+                <span
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 10,
+                    color: mix(46),
+                    textAlign: "center",
+                    padding: 24,
+                  }}
                 >
-                  <option value="">Selecciona técnica</option>
-                  {(techniqueOptions || []).map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.technique && (
-                  <p className="text-red-600 text-xs mt-1">
-                    {errors.technique.message}
-                  </p>
-                )}
-              </div>
+                  <ImagePlus size={24} strokeWidth={1.2} />
+                  <span style={{ fontSize: 13.5, lineHeight: 1.5, textTransform: "none", letterSpacing: "normal" }}>
+                    Arrastra la foto acá
+                    <br />o toca para buscarla
+                  </span>
+                </span>
+              )}
 
-              <div>
-                <label className="text-sm text-gray-600">Pabellón</label>
-                <select
-                  className="w-full border rounded-md px-3 py-2"
-                  {...register("pavilion")}
+              {uploading && (
+                <span
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    background: "color-mix(in srgb, var(--bg) 78%, transparent)",
+                    ...EYEBROW,
+                    fontSize: 9.5,
+                    color: "var(--acc)",
+                  }}
                 >
-                  <option value="">Sin pabellón</option>
-                  {(pavilionOptions || []).map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-600">Año</label>
-                <Input
-                  type="number"
-                  {...register("year")}
-                  placeholder={`${CURRENT_YEAR}`}
-                />
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-600">
-                  {isReproducible ? "N.º de reproducciones" : "Cantidad disponible"}
-                </label>
-                <Input type="number" {...register("stock")} placeholder="1" />
-                <p className="mt-1 text-[11px] text-gray-500">
-                  {isReproducible
-                    ? "Copias a la venta de esta obra (máximo 10 por serie). Cada compra, en feria o por QR, descuenta una."
-                    : "Obra única: deja 1. Cada venta la saca del inventario."}
-                </p>
-              </div>
-
-              <label className="flex items-center gap-2 text-sm text-gray-700 md:col-span-2">
-                <input type="checkbox" {...register("reproducible")} className="h-4 w-4" />
-                Es una reproducción (serigrafía, grabado, impresión…). La cantidad es el número de copias.
-              </label>
-
-              <div className="md:col-span-2">
-                <label className="text-sm text-gray-600">Descripción</label>
-                <textarea
-                  className="w-full border rounded-md px-3 py-2 min-h-[120px]"
-                  placeholder="Describe la obra…"
-                  {...register("description")}
-                />
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-600">Dimensiones</label>
-                <Input
-                  {...register("dimensions")}
-                  placeholder="42.3 CM x 34.5 CM"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm text-gray-600">Tag ID</label>
-                <Input {...register("tagId")} placeholder="13792" />
-              </div>
-            </div>
-
-            {/* Imagen + acciones */}
-            <div className="space-y-4">
-              <div className="w-full rounded-xl border bg-gray-50 aspect-[4/3] overflow-hidden grid place-items-center text-gray-400 text-sm">
-                {imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={imageUrl}
-                    alt="preview"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <ImgIcon className="w-6 h-6" />
-                    Vista previa (pega URL o sube archivo)
-                  </div>
-                )}
-              </div>
-
-              <label className="text-sm text-gray-600">URL de la imagen</label>
-              <Input {...register("image")} placeholder="https://…" />
-
-              <div>
-                <input
-                  id="file-input"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => onUploadFile(e.target.files?.[0])}
-                />
-                <label
-                  htmlFor="file-input"
-                  className="inline-flex items-center gap-2 px-3 py-2 border rounded-md cursor-pointer"
-                >
-                  <Upload className="w-4 h-4" />
-                  Subir imagen
-                </label>
-                <p className="mt-1 text-[11px] text-gray-500">
-                  JPG o PNG, máximo {MAX_IMAGE_MB} MB.
-                </p>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isSubmitting || mCreate.isPending || mPatch.isPending}
-                className="w-full"
+                  Subiendo…
+                </span>
+              )}
+            </label>
+            <input
+              id="artwork-file"
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => onUploadFile(e.target.files?.[0])}
+            />
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginTop: 10 }}>
+              <label
+                htmlFor="artwork-file"
+                style={{ ...btnGhost, height: 34, padding: "0 16px", cursor: "pointer" }}
               >
-                {(isSubmitting || mCreate.isPending || mPatch.isPending) && (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                )}
-                <Save className="w-4 h-4 mr-2" />
-                {editingId ? "Guardar cambios" : "Crear obra"}
-              </Button>
+                <Upload size={13} strokeWidth={1.6} />
+                {imageUrl ? "Cambiar" : "Subir imagen"}
+              </label>
+              <span style={{ ...fieldHint, margin: 0 }}>JPG o PNG, máximo {MAX_IMAGE_MB} MB.</span>
             </div>
-          </form>
+          </div>
+
+          <div>
+            <label htmlFor="artwork-image-url" style={fieldLabel}>
+              …o pega una dirección
+            </label>
+            <input id="artwork-image-url" {...register("image")} placeholder="https://…" style={fieldInput} />
+            <FieldError msg={errors.image?.message} />
+          </div>
+
+          {/* Cómo va a quedar en el catálogo */}
+          <div style={{ paddingTop: 16, borderTop: hair(14) }}>
+            <span style={{ ...EYEBROW, fontSize: 9, color: mix(44), display: "block", marginBottom: 10 }}>
+              Así se ve en el catálogo
+            </span>
+            <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+              <div
+                style={{
+                  width: 62,
+                  aspectRatio: "1",
+                  flexShrink: 0,
+                  background: mix(8),
+                  border: `1px solid ${mix(12)}`,
+                  overflow: "hidden",
+                }}
+              >
+                {imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                )}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.3 }}>
+                  {previewTitle || <span style={{ color: mix(38) }}>Título de la obra</span>}
+                </p>
+                <p style={{ ...EYEBROW, fontSize: 9, color: mix(46), margin: "6px 0 0" }}>
+                  {[previewYear, previewDims].filter(Boolean).join(" · ") || "Año · dimensiones"}
+                </p>
+                <p style={{ margin: "7px 0 0", fontSize: 14, fontVariantNumeric: "tabular-nums", color: mix(80) }}>
+                  {typeof previewPrice === "number" && !Number.isNaN(previewPrice)
+                    ? formatCOP(previewPrice, { currency: "COP" })
+                    : <span style={{ color: mix(38) }}>Sin precio</span>}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* ── Columna de los datos ──────────────────────────────────────── */}
+        <div style={{ display: "grid", gap: "clamp(18px,2.2vw,24px)", alignContent: "start" }}>
+          <div>
+            <label htmlFor="artwork-title" style={fieldLabel}>
+              Título *
+            </label>
+            <input
+              id="artwork-title"
+              {...register("title")}
+              placeholder="Nombre de la obra"
+              aria-invalid={!!errors.title}
+              style={fieldInput}
+            />
+            <FieldError msg={errors.title?.message} />
+          </div>
+
+          <div style={{ display: "grid", gap: "clamp(18px,2.2vw,24px)", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,130px),1fr))" }}>
+            <div>
+              <label htmlFor="artwork-technique" style={fieldLabel}>
+                Técnica *
+              </label>
+              <select
+                id="artwork-technique"
+                {...register("technique")}
+                aria-invalid={!!errors.technique}
+                style={fieldInput}
+              >
+                <option value="">Elige una</option>
+                {(techniqueOptions || []).map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              <FieldError msg={errors.technique?.message} />
+            </div>
+
+            <div>
+              <label htmlFor="artwork-year" style={fieldLabel}>
+                Año
+              </label>
+              <input
+                id="artwork-year"
+                type="number"
+                inputMode="numeric"
+                {...register("year")}
+                placeholder={`${CURRENT_YEAR}`}
+                style={fieldInput}
+              />
+              <FieldError msg={errors.year?.message as string} />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="artwork-dimensions" style={fieldLabel}>
+              Dimensiones
+            </label>
+            <input
+              id="artwork-dimensions"
+              {...register("dimensions")}
+              placeholder="42.3 cm x 34.5 cm"
+              style={fieldInput}
+            />
+          </div>
+
+          {/* Un solo pabellón no es una pregunta */}
+          {pavilionOptions.length > 1 ? (
+            <div>
+              <label htmlFor="artwork-pavilion" style={fieldLabel}>
+                Pabellón
+              </label>
+              <select id="artwork-pavilion" {...register("pavilion")} style={fieldInput}>
+                <option value="">Sin pabellón</option>
+                {(pavilionOptions || []).map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <input type="hidden" {...register("pavilion")} />
+          )}
+
+          <div style={{ display: "grid", gap: "clamp(18px,2.2vw,24px)", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,130px),1fr))" }}>
+            <div>
+              <label htmlFor="artwork-price" style={fieldLabel}>
+                Precio en pesos
+              </label>
+              <input
+                id="artwork-price"
+                type="number"
+                inputMode="numeric"
+                {...register("price")}
+                placeholder="1200000"
+                style={fieldInput}
+              />
+              <FieldError msg={errors.price?.message as string} />
+            </div>
+
+            <div>
+              <label htmlFor="artwork-stock" style={fieldLabel}>
+                {isReproducible ? "N.º de copias" : "Cantidad"}
+              </label>
+              <input
+                id="artwork-stock"
+                type="number"
+                inputMode="numeric"
+                {...register("stock")}
+                placeholder="1"
+                style={fieldInput}
+              />
+              <p style={fieldHint}>
+                {isReproducible
+                  ? "Copias a la venta, máximo 10 por serie. Cada compra descuenta una."
+                  : "Obra única: deja 1."}
+              </p>
+            </div>
+          </div>
+
+          <label
+            className="fdm-studio-check"
+            style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}
+          >
+            <input type="checkbox" {...register("reproducible")} style={{ marginTop: 3, width: 15, height: 15 }} />
+            <span>
+              Es una reproducción (serigrafía, grabado, impresión…). La cantidad pasa a ser el
+              número de copias.
+            </span>
+          </label>
+
+          <div>
+            <label htmlFor="artwork-description" style={fieldLabel}>
+              Descripción
+            </label>
+            <textarea
+              id="artwork-description"
+              {...register("description")}
+              rows={5}
+              placeholder="Qué es, de qué está hecha, qué cuenta…"
+              style={fieldInput}
+            />
+          </div>
+        </div>
+      </form>
+    </StudioSheet>
   );
 }

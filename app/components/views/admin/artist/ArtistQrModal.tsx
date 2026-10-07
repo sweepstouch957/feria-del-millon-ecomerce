@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { Button } from "@components/ui/button";
-import { Download, ExternalLink, X, QrCode } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
+
+import StudioSheet from "./StudioSheet";
+import { btnGhost, btnSolid, mix } from "./studioTheme";
 
 /** QR del artista → su galería pública (/artista/[id]). El comprador lo escanea en la feria. */
 export default function ArtistQrModal({
@@ -19,44 +21,56 @@ export default function ArtistQrModal({
   const target = typeof window !== "undefined" ? `${window.location.origin}/artista/${artistId}` : "";
 
   useEffect(() => {
-    if (open && target) QRCode.toDataURL(target, { width: 1024, margin: 2 }).then(setPng);
+    // 1024 px: tamaño cómodo para imprimir en el stand.
+    if (open && target) QRCode.toDataURL(target, { width: 1024, margin: 2 }).then(setPng).catch(() => setPng(""));
   }, [open, target]);
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-[55] bg-black/50 p-4 flex items-center justify-center" onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <div className="flex items-center gap-2">
-            <QrCode className="w-4 h-4" />
-            <h3 className="font-semibold">Mi QR de galería</h3>
-          </div>
-          <button className="p-1 rounded hover:bg-gray-100" onClick={onClose}>
-            <X className="w-4 h-4" />
+    <StudioSheet
+      open={open}
+      onClose={onClose}
+      eyebrow="Para imprimir"
+      title="Mi QR de galería"
+      description="Ponlo en tu stand: quien lo escanee ve todas tus obras disponibles y puede comprarlas."
+      maxWidth={460}
+      footer={
+        <>
+          <a
+            href={png || undefined}
+            download="mi-galeria-qr.png"
+            style={{ ...btnSolid, opacity: png ? 1 : 0.45, pointerEvents: png ? "auto" : "none" }}
+          >
+            <Download size={14} strokeWidth={1.8} />
+            Descargar
+          </a>
+          <button type="button" style={btnGhost} onClick={() => window.open(target, "_blank")}>
+            <ExternalLink size={13} strokeWidth={1.6} />
+            Ver mi galería
           </button>
-        </div>
-        <div className="p-5 space-y-4">
-          <p className="text-sm text-gray-600">
-            Imprímelo y ponlo en tu stand: quien lo escanee ve todas tus obras disponibles y puede comprarlas.
-          </p>
-          <div className="w-full aspect-square bg-gray-50 rounded-xl ring-1 ring-gray-200 grid place-items-center">
-            {png ? <img src={png} alt="QR de mi galería" className="w-full h-full object-contain p-4" /> : "Generando…"}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" asChild disabled={!png}>
-              <a href={png} download="mi-galeria-qr.png">
-                <Download className="w-4 h-4 mr-1" />
-                Descargar QR
-              </a>
-            </Button>
-            <Button variant="outline" onClick={() => window.open(target, "_blank")}>
-              <ExternalLink className="w-4 h-4 mr-1" />
-              Ver mi galería
-            </Button>
-          </div>
-        </div>
+        </>
+      }
+    >
+      <div
+        style={{
+          display: "grid",
+          placeItems: "center",
+          width: "100%",
+          aspectRatio: "1",
+          background: "#FFFFFF",
+          border: `1px solid ${mix(14)}`,
+        }}
+      >
+        {png ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={png}
+            alt="Código QR de mi galería"
+            style={{ width: "100%", height: "100%", objectFit: "contain", padding: 18 }}
+          />
+        ) : (
+          <div className="fdm-skel" style={{ width: "72%", aspectRatio: "1" }} />
+        )}
       </div>
-    </div>
+    </StudioSheet>
   );
 }

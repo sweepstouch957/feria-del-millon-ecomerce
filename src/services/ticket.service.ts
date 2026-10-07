@@ -195,6 +195,10 @@ export const getTicketTypes = async (eventId: string) => {
 /** ────────── Invitaciones (enlace del correo) ────────── */
 export interface InvitationView {
   name: string;
+  email?: string;
+  phone?: string;
+  documentNumber?: string;
+  address?: string;
   eventName?: string;
   eventDay: string;
   allDays: boolean;
@@ -210,9 +214,16 @@ export const getInvitation = async (token: string) => {
   return data;
 };
 
+/** Inscripción del invitado: nombre, celular, identificación y dirección. */
 export const confirmInvitation = async (
   token: string,
-  body: { phone: string; documentNumber?: string; companionName?: string },
+  body: {
+    name?: string;
+    phone: string;
+    documentNumber: string;
+    address: string;
+    companionName?: string;
+  },
 ) => {
   const { data } = await apiClient.post<InvitationView>(
     `/ticket/tickets/invitations/${encodeURIComponent(token)}/confirm`,

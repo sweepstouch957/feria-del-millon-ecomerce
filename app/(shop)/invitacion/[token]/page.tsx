@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -21,15 +21,36 @@ export default function InvitationPage() {
     retry: false,
   });
 
+  // Inscripción del invitado: con esto la feria sabe quién entra.
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [documentNumber, setDocumentNumber] = useState("");
+  const [address, setAddress] = useState("");
   const [companionName, setCompanionName] = useState("");
 
+  // El nombre llega del correo con el que lo invitaron; se puede corregir.
+  useEffect(() => {
+    if (inv?.name) setName((n) => n || inv.name);
+  }, [inv?.name]);
+
+  const complete =
+    name.trim().length >= 3 &&
+    phone.trim().length >= 7 &&
+    documentNumber.trim().length >= 4 &&
+    address.trim().length >= 5;
+
   const confirm = useMutation({
-    mutationFn: () => confirmInvitation(token, { phone: phone.trim(), documentNumber: documentNumber.trim(), companionName: companionName.trim() }),
+    mutationFn: () =>
+      confirmInvitation(token, {
+        name: name.trim(),
+        phone: phone.trim(),
+        documentNumber: documentNumber.trim(),
+        address: address.trim(),
+        companionName: companionName.trim(),
+      }),
     onSuccess: (data) => {
       qc.setQueryData(["invitation", token], data);
-      toast.success("Asistencia confirmada. También te enviamos el QR al correo.");
+      toast.success("Listo. Te enviamos el QR a tu correo.");
     },
     onError: () => toast.error("No pudimos confirmar tu asistencia. Intenta de nuevo."),
   });
@@ -80,16 +101,41 @@ export default function InvitationPage() {
           className="mt-8 space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
-            if (phone.trim().length >= 7) confirm.mutate();
+            if (complete) confirm.mutate();
           }}
         >
+          <p className="text-sm text-slate-600">
+            Completa tu inscripción y te enviamos el QR de entrada a tu correo.
+          </p>
+
           <label className="block text-sm">
-            Celular (WhatsApp)
+            Nombre completo
+            <input className={input} value={name} onChange={(e) => setName(e.target.value)} required />
+          </label>
+          <label className="block text-sm">
+            Número de celular (WhatsApp)
             <input className={input} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" required />
           </label>
           <label className="block text-sm">
-            Documento de identidad <span className="text-slate-400">(opcional)</span>
-            <input className={input} value={documentNumber} onChange={(e) => setDocumentNumber(e.target.value)} />
+            Identificación
+            <input
+              className={input}
+              value={documentNumber}
+              onChange={(e) => setDocumentNumber(e.target.value)}
+              inputMode="numeric"
+              placeholder="Cédula o pasaporte"
+              required
+            />
+          </label>
+          <label className="block text-sm">
+            Dirección
+            <input
+              className={input}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Calle 00 #00-00, ciudad"
+              required
+            />
           </label>
           {inv.admits > 1 && (
             <label className="block text-sm">
@@ -97,13 +143,17 @@ export default function InvitationPage() {
               <input className={input} value={companionName} onChange={(e) => setCompanionName(e.target.value)} />
             </label>
           )}
+
           <button
             type="submit"
-            disabled={confirm.isPending || phone.trim().length < 7}
+            disabled={confirm.isPending || !complete}
             className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-semibold text-white disabled:bg-slate-300"
           >
-            {confirm.isPending ? "Confirmando…" : "Confirmar asistencia"}
+            {confirm.isPending ? "Confirmando…" : "Confirmar e inscribirme"}
           </button>
+          <p className="text-xs text-slate-500">
+            Usamos estos datos para tu entrada y para avisarte de la feria. Nada más.
+          </p>
         </form>
       )}
     </main>

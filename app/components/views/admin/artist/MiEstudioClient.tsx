@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { FormikProps } from "formik";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -38,6 +39,8 @@ import StudioStepper, { type Step, type StepKey } from "./StudioStepper";
 import ProjectFields from "./ProjectFields";
 import ReviewPanel from "./ReviewPanel";
 import { Bone, Eyebrow, StudioButton } from "./ui";
+import type { FormState } from "./ui/fields";
+import type { ProjectFormValues } from "@validators/project";
 import {
   BODY,
   DISPLAY,
@@ -108,18 +111,25 @@ export default function MiEstudioClient() {
   /* ── El proyecto y el envío ──────────────────────────────────────────── */
   const {
     loading: projectLoading,
-    title,
-    review,
-    dirty,
-    tooLong,
-    editTitle,
-    editReview,
+    initialValues,
     save,
     send,
     sentAt,
     locked,
     savedTitle,
+    savedReview,
   } = useMyProject(!!artistId && isAuthenticated);
+
+  // El formulario del proyecto está en el paso 2, pero su botón vive en la
+  // barra fija: la barra lo envía por la ref y lee su estado del puente.
+  const projectForm = useRef<FormikProps<ProjectFormValues>>(null);
+  const [projectState, setProjectState] = useState<FormState>({
+    dirty: false,
+    valid: true,
+    submitting: false,
+  });
+  const onProjectState = useCallback((s: FormState) => setProjectState(s), []);
+  const saveProject = useCallback((v: ProjectFormValues) => save.mutateAsync(v), [save]);
 
   const [confirming, setConfirming] = useState(false);
 
@@ -257,20 +267,28 @@ export default function MiEstudioClient() {
   }, []);
 
   const saveAndGo = useCallback(async () => {
-    if (tooLong) {
-      toast.error("La descripción se pasó de 250 palabras.");
+    const form = projectForm.current;
+    if (!form) return;
+
+    // `validateForm` devuelve los errores en la mano; leerlos de la ref después
+    // de enviar daría los de la pasada anterior.
+    const errors = await form.validateForm();
+    if (Object.keys(errors).length > 0) {
+      form.setTouched({ title: true, review: true });
+      toast.error("Revisa tu proyecto antes de seguir.");
       return;
     }
-    if (dirty) {
+
+    if (projectState.dirty) {
       try {
-        await save.mutateAsync();
-        toast.success("Proyecto guardado");
+        await form.submitForm();
       } catch {
         return; // el error ya se avisó; no se avanza con algo sin guardar
       }
     }
+
     setStep("enviar");
-  }, [tooLong, dirty, save]);
+  }, [projectState.dirty]);
 
   const trySend = useCallback(() => {
     if (!rows.length) {
@@ -278,18 +296,18 @@ export default function MiEstudioClient() {
       setStep("obras");
       return;
     }
-    if (!title.trim()) {
+    if (!savedTitle?.trim()) {
       toast.error("Ponle título a tu proyecto antes de enviarlo.");
       setStep("proyecto");
       return;
     }
-    if (dirty) {
+    if (projectState.dirty) {
       toast.error("Guarda el proyecto antes de enviarlo.");
       setStep("proyecto");
       return;
     }
     setConfirming(true);
-  }, [rows.length, title, dirty]);
+  }, [rows.length, savedTitle, projectState.dirty]);
 
   /* ── Pantallas previas ───────────────────────────────────────────────── */
   if (isAuthLoading || appsLoading || pavsLoading) {
@@ -554,12 +572,12 @@ export default function MiEstudioClient() {
               {/* PASO 2 ─ Proyecto */}
               {step === "proyecto" && (
                 <ProjectFields
-                  title={title}
-                  review={review}
+                  initial={initialValues}
                   loading={projectLoading}
                   readOnly={locked}
-                  onTitle={editTitle}
-                  onReview={editReview}
+                  formRef={projectForm}
+                  onStateChange={onProjectState}
+                  onSave={saveProject}
                 />
               )}
 
@@ -567,8 +585,8 @@ export default function MiEstudioClient() {
               {step === "enviar" && (
                 <ReviewPanel
                   rows={rows}
-                  projectTitle={title}
-                  projectReview={review}
+                  projectTitle={savedTitle || ""}
+                  projectReview={savedReview || ""}
                   pavilionName={pavilionOptions[0]?.label}
                   artistId={String(artistId)}
                   sentAt={sentAt}
@@ -633,9 +651,9 @@ export default function MiEstudioClient() {
                     ? `${rows.length} ${rows.length === 1 ? "obra cargada" : "obras cargadas"}`
                     : "Todavía sin obras"
                   : step === "proyecto"
-                    ? dirty
+                    ? projectState.dirty
                       ? "Sin guardar"
-                      : title
+                      : savedTitle
                         ? "Proyecto guardado"
                         : "Ponle título"
                     : "Todo listo para enviar"}
@@ -666,13 +684,17 @@ export default function MiEstudioClient() {
               )}
 
               {step === "proyecto" && (
-                <StudioButton variant="solid" onClick={saveAndGo} disabled={save.isPending || tooLong}>
+                <StudioButton
+                  variant="solid"
+                  onClick={saveAndGo}
+                  disabled={save.isPending || projectState.submitting}
+                >
                   {save.isPending ? (
                     "Guardando…"
                   ) : (
                     <>
                       <Check size={14} strokeWidth={1.8} />
-                      {dirty ? "Guardar y seguir" : "Seguir a revisar"}
+                      {projectState.dirty ? "Guardar y seguir" : "Seguir a revisar"}
                     </>
                   )}
                 </StudioButton>
@@ -714,9 +736,9 @@ export default function MiEstudioClient() {
             <strong style={{ fontWeight: 500, color: "var(--fg)" }}>
               {rows.length} {rows.length === 1 ? "obra" : "obras"}
             </strong>
-            {title ? (
+            {savedTitle ? (
               <>
-                {" "}del proyecto <strong style={{ fontWeight: 500, color: "var(--fg)" }}>{title}</strong>
+                {" "}del proyecto <strong style={{ fontWeight: 500, color: "var(--fg)" }}>{savedTitle}</strong>
               </>
             ) : null}
             .

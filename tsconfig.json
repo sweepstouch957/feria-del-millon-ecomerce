@@ -22,6 +22,7 @@
       "@core/*": ["src/core/*"],
       "@provider/*": ["src/provider/*"],
       "@hooks/*": ["src/hooks/*"],
+      "@validators/*": ["src/validators/*"],
     },
     "incremental": true,
     "plugins": [

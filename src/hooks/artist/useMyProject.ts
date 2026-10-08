@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -7,15 +7,16 @@ import {
   sendMyInventory,
   updateMyProject,
 } from "@services/applications.service";
-import { MAX_PROJECT_WORDS, countWords } from "@lib/artwork";
+import type { ProjectFormValues } from "@validators/project";
 
 export const MY_PROJECT_KEY = ["my-project"] as const;
 
-/* El proyecto del artista: lo guardado, el borrador en pantalla y el envío.
+/* El proyecto del artista: lo guardado y el envío.
 
-   Vive en un hook porque tres pantallas lo necesitan a la vez (los campos, la
-   barra de acciones y la revisión final) y porque el envío es de una sola vez:
-   quien decide si ya se envió tiene que ser uno solo. */
+   El borrador de los campos es de Formik; acá sólo vive lo que viene y va al
+   servidor. Y el envío, que es de una sola vez: quien decide si ya se envió
+   tiene que ser uno solo, porque lo preguntan la barra de acciones, el índice
+   de pasos y la revisión final. */
 export function useMyProject(enabled = true) {
   const qc = useQueryClient();
 
@@ -28,26 +29,17 @@ export function useMyProject(enabled = true) {
 
   const saved = query.data;
 
-  const [title, setTitle] = useState("");
-  const [review, setReview] = useState("");
-  const [dirty, setDirty] = useState(false);
-
-  // Lo guardado manda: al llegar (o al refrescar) se reescribe el borrador.
-  useEffect(() => {
-    if (!saved) return;
-    setTitle(saved.projectTitle || "");
-    setReview(saved.projectReview || "");
-    setDirty(false);
-  }, [saved]);
-
-  const words = countWords(review);
-  const tooLong = words > MAX_PROJECT_WORDS;
+  const initialValues: ProjectFormValues = useMemo(
+    () => ({ title: saved?.projectTitle || "", review: saved?.projectReview || "" }),
+    [saved?.projectTitle, saved?.projectReview]
+  );
 
   const save = useMutation({
-    mutationFn: () => updateMyProject({ projectTitle: title, projectReview: review }),
+    mutationFn: (v: ProjectFormValues) =>
+      updateMyProject({ projectTitle: v.title, projectReview: v.review }),
     onSuccess: (p) => {
       qc.setQueryData(MY_PROJECT_KEY, { ...(saved ?? {}), ...p });
-      setDirty(false);
+      toast.success("Proyecto guardado");
     },
     onError: () => toast.error("No se pudo guardar el proyecto"),
   });
@@ -70,30 +62,16 @@ export function useMyProject(enabled = true) {
     },
   });
 
-  const editTitle = useCallback((v: string) => {
-    setTitle(v);
-    setDirty(true);
-  }, []);
-
-  const editReview = useCallback((v: string) => {
-    setReview(v);
-    setDirty(true);
-  }, []);
-
   return {
     loading: query.isLoading,
-    title,
-    review,
-    dirty,
-    words,
-    tooLong,
-    editTitle,
-    editReview,
+    /** Lo guardado, listo para abrir el formulario. */
+    initialValues,
     save,
     send,
     sentAt: saved?.inventorySentAt as string | undefined,
     /** Enviado = de acá en adelante se mira, no se toca. */
     locked: !!saved?.inventorySentAt,
     savedTitle: saved?.projectTitle as string | undefined,
+    savedReview: saved?.projectReview as string | undefined,
   };
 }

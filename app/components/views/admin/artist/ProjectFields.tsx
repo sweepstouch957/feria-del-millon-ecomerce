@@ -1,31 +1,39 @@
 "use client";
 
-import { MAX_PROJECT_WORDS, countWords } from "@lib/artwork";
-import { BODY, fieldInput, mix } from "./studioTheme";
-import { Bone, Field } from "./ui";
+import { Form, Formik, type FormikProps } from "formik";
+
+import { MAX_PROJECT_WORDS } from "@lib/artwork";
+import { EMPTY_PROJECT, projectSchema, type ProjectFormValues } from "@validators/project";
+import { zodValidator } from "@validators/formikZod";
+
+import { BODY } from "./studioTheme";
+import { Bone } from "./ui";
+import { FormStateBridge, TextArea, TextInput, WordCount, type FormState } from "./ui/fields";
 
 /* Paso 2: el proyecto con el que el artista expone.
-   Campos controlados desde el estudio, porque el botón de guardar vive en la
-   barra de abajo junto al resto de las acciones del paso. */
+
+   El botón de guardar no está acá: vive en la barra fija de abajo, junto al
+   resto de las acciones del paso. Por eso el formulario expone su `innerRef`
+   —para que la barra pueda enviarlo— y avisa hacia arriba si hay cambios sin
+   guardar, en vez de que ese estado exista dos veces. */
+
+const validate = zodValidator<ProjectFormValues>(projectSchema);
 
 export default function ProjectFields({
-  title,
-  review,
-  onTitle,
-  onReview,
+  initial,
   readOnly,
   loading,
+  formRef,
+  onStateChange,
+  onSave,
 }: {
-  title: string;
-  review: string;
-  onTitle: (v: string) => void;
-  onReview: (v: string) => void;
+  initial: ProjectFormValues;
   readOnly?: boolean;
   loading?: boolean;
+  formRef: React.Ref<FormikProps<ProjectFormValues>>;
+  onStateChange: (s: FormState) => void;
+  onSave: (values: ProjectFormValues) => Promise<unknown>;
 }) {
-  const words = countWords(review);
-  const tooLong = words > MAX_PROJECT_WORDS;
-
   if (loading) {
     return (
       <div style={{ display: "grid", gap: 16, maxWidth: 760 }}>
@@ -57,38 +65,38 @@ export default function ProjectFields({
         </p>
       </div>
 
-      <Field id="project-title" label="Título del proyecto">
-        <input
-          id="project-title"
-          value={title}
-          onChange={(e) => onTitle(e.target.value)}
-          placeholder="Nombre del proyecto o serie"
-          maxLength={160}
-          disabled={readOnly}
-          style={{ ...fieldInput, opacity: readOnly ? 0.55 : 1 }}
-        />
-      </Field>
-
-      <Field
-        id="project-review"
-        label="Descripción del proyecto"
-        hint={
-          <span aria-live="polite" style={{ color: tooLong ? "#B4472A" : mix(50) }}>
-            {words} de {MAX_PROJECT_WORDS} palabras
-            {tooLong ? " · te pasaste, recorta antes de guardar" : ""}
-          </span>
-        }
+      <Formik<ProjectFormValues>
+        innerRef={formRef}
+        initialValues={initial.title || initial.review ? initial : EMPTY_PROJECT}
+        // Lo guardado manda: si llega del servidor mientras no hay cambios, se
+        // reescribe solo.
+        enableReinitialize
+        validate={validate}
+        onSubmit={async (values) => {
+          await onSave(values);
+        }}
       >
-        <textarea
-          id="project-review"
-          value={review}
-          onChange={(e) => onReview(e.target.value)}
-          placeholder="De qué trata, qué lo une, qué quieres que vea quien se pare enfrente…"
-          rows={8}
-          disabled={readOnly}
-          style={{ ...fieldInput, opacity: readOnly ? 0.55 : 1 }}
-        />
-      </Field>
+        <Form style={{ display: "grid", gap: "clamp(22px,2.8vw,32px)" }}>
+          <FormStateBridge onChange={onStateChange} />
+
+          <TextInput
+            name="title"
+            label="Título del proyecto"
+            placeholder="Nombre del proyecto o serie"
+            maxLength={160}
+            disabled={readOnly}
+          />
+
+          <TextArea
+            name="review"
+            label="Descripción del proyecto"
+            rows={8}
+            disabled={readOnly}
+            placeholder="De qué trata, qué lo une, qué quieres que vea quien se pare enfrente…"
+            hint={<WordCount name="review" max={MAX_PROJECT_WORDS} />}
+          />
+        </Form>
+      </Formik>
     </div>
   );
 }

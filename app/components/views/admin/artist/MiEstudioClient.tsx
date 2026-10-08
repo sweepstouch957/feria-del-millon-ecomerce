@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormikProps } from "formik";
-import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -76,7 +75,6 @@ const STEP_TITLE: React.CSSProperties = {
    abajo. Se puede ir y volver: lo único que no se deshace es el envío. */
 
 export default function MiEstudioClient() {
-  const router = useRouter();
   const DEFAULT_EVENT_ID = useEventId();
   const { user, isAuthLoading, isAuthenticated } = useAuth();
   const artistId = user?.id || user?._id;
@@ -87,28 +85,28 @@ export default function MiEstudioClient() {
     enabled: !!artistId && isAuthenticated,
   });
 
-  // Invitado = asignado a un pabellón por el admin, aunque no se haya postulado.
   const { data: pavsByUser, isLoading: pavsLoading } = usePavilionsByUser(
     DEFAULT_EVENT_ID,
     artistId as string,
     true
   );
-  const isInvited = (pavsByUser?.rows?.length ?? 0) > 0;
 
-  useEffect(() => {
-    if (!isAuthLoading && !appsLoading && !pavsLoading && isAuthenticated) {
-      if (isInvited) return;
-      if (apps.length === 0) {
-        toast.error("Debes iniciar una postulación primero.");
-        router.push("/convocatoria/pagar");
-        return;
-      }
-      if (!apps.some((app) => app.status === "accepted")) {
-        toast.error("Tu postulación aún no ha sido aprobada.");
-        router.push("/convocatoria/mi-solicitud");
-      }
-    }
-  }, [isAuthLoading, appsLoading, pavsLoading, isInvited, isAuthenticated, apps, router]);
+  /* Invitado por la feria: entra sin convocatoria y sin pagar.
+     Vale por las dos vías, porque llegan en distinto orden: la marca de su
+     postulación (lo invitaron) o tener ya un pabellón asignado (lo pusieron en
+     uno). Con una sola, al invitado recién creado todavía sin pabellón se le
+     mandaba a pagar una inscripción que no debe. */
+  const isInvited =
+    apps.some((a) => a.invited) || (pavsByUser?.rows?.length ?? 0) > 0;
+
+  /* Antes, quien llegaba acá sin postulación aceptada era expulsado a
+     /convocatoria/pagar con un toast de error. Se lo comía cualquiera cuyo
+     estado no encajara —y en particular el invitado, al que la feria metió a
+     dedo y no le debe inscripción: terminaba en una pasarela de pago.
+
+     Ahora nadie se va a ningún lado: si no corresponde cargar inventario, la
+     página muestra en qué punto va su postulación, que es lo que vino a saber.
+     El servidor sigue siendo el que decide qué puede guardar. */
 
   /* ── El proyecto y el envío ──────────────────────────────────────────── */
   const {

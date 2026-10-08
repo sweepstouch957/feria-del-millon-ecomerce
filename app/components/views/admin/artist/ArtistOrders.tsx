@@ -64,7 +64,8 @@ export default function ArtistOrders() {
     retry: false,
   });
 
-  const isAccepted = (apps ?? []).some((a) => a.status === "accepted");
+  // El invitado está dentro por invitación: no hay postulación que esperar.
+  const isAccepted = (apps ?? []).some((a) => a.status === "accepted" || a.invited);
 
   const {
     data: orders = [],

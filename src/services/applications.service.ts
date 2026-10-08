@@ -5,6 +5,8 @@ export interface ArtistApplication {
   convocatoria: { _id: string; name: string; slug: string; fee: number; currency: string; startDate: string; endDate: string; status: string } | string;
   artist: string;
   status: "pending_payment" | "draft" | "submitted" | "under_review" | "revision_requested" | "accepted" | "rejected";
+  /** Invitado por la feria: entra sin convocatoria y sin pagar inscripción. */
+  invited?: boolean;
   paymentStatus: "pending" | "approved" | "rejected" | "cancelled";
   isPaid: boolean;
   paidAt?: string;

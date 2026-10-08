@@ -28,6 +28,20 @@ const STEPS: Step[] = [
 
 /** Traduce el estado del backend a: paso actual, tono y qué hacer ahora. */
 function readStatus(app: ArtistApplication | null) {
+  // El invitado no pasó por convocatoria: no hay pago pendiente ni curaduría
+  // esperándolo, y ofrecerle "pagar inscripción" es pedirle plata de más.
+  if (app?.invited) {
+    return {
+      current: 3,
+      title: "Entraste por invitación",
+      detail:
+        "La feria te invitó directamente, así que no tienes que postularte ni pagar inscripción. Ya puedes cargar tu obra.",
+      tone: "ok" as const,
+      cta: { href: "/admin/artist", label: "Ir a mi estudio" },
+      done: true,
+    };
+  }
+
   if (!app) {
     return {
       current: 0,
@@ -181,9 +195,10 @@ export default function ApplicationStatusCard() {
         )}
       </div>
 
-      {/* Pasos */}
+      {/* Pasos: el invitado no recorrió ninguno, así que marcarlos todos como
+          hechos —incluido el pago— seria mentirle. */}
       <div style={{ display: "flex", flexDirection: "column" }}>
-        {STEPS.map((st, i) => {
+        {(app?.invited ? [] : STEPS).map((st, i) => {
           const isDone = i < s.current || (s.done && s.tone === "ok");
           const isCurrent = i === s.current && !s.done;
           return (

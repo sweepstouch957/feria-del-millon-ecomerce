@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,12 +19,9 @@ import { useTechniques } from "@hooks/queries/useTechniques";
 import { usePavilionsByUser } from "@hooks/queries/usePavilionsByUser";
 import { useArtworksCursor, type ArtworkRow } from "@hooks/queries/useArtworksCursor";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
-import {
-  getMyApplications,
-  getMyProject,
-  sendMyInventory,
-  updateMyProject,
-} from "@services/applications.service";
+import { getMyApplications } from "@services/applications.service";
+import { useMyProject } from "@hooks/artist/useMyProject";
+import { useDebouncedValue } from "@hooks/artist/useDebouncedValue";
 
 import ArtworksTable from "./ArtworksTable";
 import ArtworkDetailModal from "./ArtworkDetailModal";
@@ -38,8 +35,9 @@ import ArtistQrModal from "./ArtistQrModal";
 import ApplicationStatusCard from "@components/views/admin/artist/ApplicationStatusCard";
 import StudioSheet from "./StudioSheet";
 import StudioStepper, { type Step, type StepKey } from "./StudioStepper";
-import ProjectFields, { MAX_PROJECT_WORDS, countWords } from "./ProjectFields";
+import ProjectFields from "./ProjectFields";
 import ReviewPanel from "./ReviewPanel";
+import { Bone, Eyebrow, StudioButton } from "./ui";
 import {
   BODY,
   DISPLAY,
@@ -77,7 +75,6 @@ export default function MiEstudioClient() {
   const DEFAULT_EVENT_ID = useEventId();
   const { user, isAuthLoading, isAuthenticated } = useAuth();
   const artistId = user?.id || user?._id;
-  const qc = useQueryClient();
 
   const { data: apps = [], isLoading: appsLoading } = useQuery({
     queryKey: ["my-applications", artistId],
@@ -109,39 +106,20 @@ export default function MiEstudioClient() {
   }, [isAuthLoading, appsLoading, pavsLoading, isInvited, isAuthenticated, apps, router]);
 
   /* ── El proyecto y el envío ──────────────────────────────────────────── */
-  const { data: project, isLoading: projectLoading } = useQuery({
-    queryKey: ["my-project"],
-    queryFn: getMyProject,
-    staleTime: 60_000,
-    enabled: !!artistId && isAuthenticated,
-  });
-
-  const sentAt = project?.inventorySentAt;
-  const locked = !!sentAt;
-
-  const [title, setTitle] = useState("");
-  const [review, setReview] = useState("");
-  const [touched, setTouched] = useState(false);
-
-  // Lo guardado manda: al llegar (o al refrescar) se reescriben los campos.
-  useEffect(() => {
-    if (!project) return;
-    setTitle(project.projectTitle || "");
-    setReview(project.projectReview || "");
-    setTouched(false);
-  }, [project]);
-
-  const words = countWords(review);
-  const tooLong = words > MAX_PROJECT_WORDS;
-
-  const save = useMutation({
-    mutationFn: () => updateMyProject({ projectTitle: title, projectReview: review }),
-    onSuccess: (p) => {
-      qc.setQueryData(["my-project"], { ...(project ?? {}), ...p });
-      setTouched(false);
-    },
-    onError: () => toast.error("No se pudo guardar el proyecto"),
-  });
+  const {
+    loading: projectLoading,
+    title,
+    review,
+    dirty,
+    tooLong,
+    editTitle,
+    editReview,
+    save,
+    send,
+    sentAt,
+    locked,
+    savedTitle,
+  } = useMyProject(!!artistId && isAuthenticated);
 
   const [confirming, setConfirming] = useState(false);
 
@@ -158,9 +136,12 @@ export default function MiEstudioClient() {
 
   const { data: techniques = [] } = useTechniques();
 
+  // Una petición por tecla era una petición por tecla.
+  const debouncedQ = useDebouncedValue(q, 350);
+
   const filters = useMemo(
     () => ({
-      q: q || undefined,
+      q: debouncedQ || undefined,
       event: DEFAULT_EVENT_ID,
       pavilion: pavilion === "all" ? undefined : pavilion,
       technique: tech === "all" ? undefined : tech,
@@ -170,7 +151,7 @@ export default function MiEstudioClient() {
       // estudio el artista tiene que verlas igual.
       includeHidden: 1,
     }),
-    [q, pavilion, tech, artistId]
+    [debouncedQ, pavilion, tech, artistId, DEFAULT_EVENT_ID]
   );
 
   const artworksQuery = useArtworksCursor(filters as any);
@@ -193,25 +174,12 @@ export default function MiEstudioClient() {
     [techniques]
   );
 
-  const send = useMutation({
-    mutationFn: () => sendMyInventory({ artworkCount: rows.length, pavilionName: pavilionOptions[0]?.label }),
-    onSuccess: (r) => {
-      qc.setQueryData(["my-project"], { ...(project ?? {}), inventorySentAt: r.inventorySentAt });
-      setConfirming(false);
-      toast.success("Inventario enviado. Ya tienes tus QR.");
-    },
-    onError: (e: any) => {
-      // Enviar es de una sola vez: si ya estaba enviado, el servidor lo dice.
-      const already = e?.response?.data?.inventorySentAt;
-      setConfirming(false);
-      if (already) {
-        qc.setQueryData(["my-project"], { ...(project ?? {}), inventorySentAt: already });
-        toast.error("Ya habías enviado tu inventario");
-        return;
-      }
-      toast.error("No se pudo avisar a la feria");
-    },
-  });
+  const doSend = useCallback(() => {
+    send
+      .mutateAsync({ artworkCount: rows.length, pavilionName: pavilionOptions[0]?.label })
+      .catch(() => {})
+      .finally(() => setConfirming(false));
+  }, [send, rows.length, pavilionOptions]);
 
   /* ── Pasos ───────────────────────────────────────────────────────────── */
   const [tab, setTab] = useState("inventario");
@@ -221,52 +189,63 @@ export default function MiEstudioClient() {
   const [placed, setPlaced] = useState(false);
   useEffect(() => {
     if (placed || projectLoading || artworksQuery.isLoading) return;
-    setStep(locked ? "enviar" : !rows.length ? "obras" : !project?.projectTitle ? "proyecto" : "enviar");
+    setStep(locked ? "enviar" : !rows.length ? "obras" : !savedTitle ? "proyecto" : "enviar");
     setPlaced(true);
-  }, [placed, projectLoading, artworksQuery.isLoading, locked, rows.length, project?.projectTitle]);
+  }, [placed, projectLoading, artworksQuery.isLoading, locked, rows.length, savedTitle]);
 
-  const steps: Step[] = [
-    {
-      key: "obras",
-      label: "Tus obras",
-      hint: rows.length
-        ? `${rows.length} ${rows.length === 1 ? "obra cargada" : "obras cargadas"}`
-        : "Carga la primera con su imagen y su precio",
-      done: rows.length > 0,
-    },
-    {
-      key: "proyecto",
-      label: "Tu proyecto",
-      hint: project?.projectTitle
-        ? project.projectTitle
-        : "Ponle título y cuenta de qué va",
-      done: !!project?.projectTitle,
-    },
-    {
-      key: "enviar",
-      label: "Revisar y enviar",
-      hint: locked
-        ? `Enviado el ${new Date(sentAt as string).toLocaleDateString("es-CO")}`
-        : "Lo revisas y se lo mandas a la feria",
-      done: locked,
-    },
-  ];
+  const steps: Step[] = useMemo(
+    () => [
+      {
+        key: "obras",
+        label: "Tus obras",
+        hint: rows.length
+          ? `${rows.length} ${rows.length === 1 ? "obra cargada" : "obras cargadas"}`
+          : "Carga la primera con su imagen y su precio",
+        done: rows.length > 0,
+      },
+      {
+        key: "proyecto",
+        label: "Tu proyecto",
+        hint: savedTitle || "Ponle título y cuenta de qué va",
+        done: !!savedTitle,
+      },
+      {
+        key: "enviar",
+        label: "Revisar y enviar",
+        hint: locked
+          ? `Enviado el ${new Date(sentAt as string).toLocaleDateString("es-CO")}`
+          : "Lo revisas y se lo mandas a la feria",
+        done: locked,
+      },
+    ],
+    [rows.length, savedTitle, locked, sentAt]
+  );
 
-  const openNew = () => {
+  const openNew = useCallback(() => {
     if (locked) {
       toast.error("Ya enviaste tu inventario: escríbele a la feria para cambiar algo.");
       return;
     }
     setEditingId(null);
     setModalOpen(true);
-  };
+  }, [locked]);
 
-  const saveAndGo = async () => {
+  const openEdit = useCallback((id: string) => {
+    setEditingId(id);
+    setModalOpen(true);
+  }, []);
+
+  const openDetail = useCallback((id: string) => setDetailId(id), []);
+  const openQr = useCallback((id: string) => setQrForId(id), []);
+  const notify = useCallback((msg: string) => toast.success(msg), []);
+  const loadMore = useCallback(() => artworksQuery.loadMore(), [artworksQuery]);
+
+  const saveAndGo = useCallback(async () => {
     if (tooLong) {
       toast.error("La descripción se pasó de 250 palabras.");
       return;
     }
-    if (touched) {
+    if (dirty) {
       try {
         await save.mutateAsync();
         toast.success("Proyecto guardado");
@@ -275,9 +254,9 @@ export default function MiEstudioClient() {
       }
     }
     setStep("enviar");
-  };
+  }, [tooLong, dirty, save]);
 
-  const trySend = () => {
+  const trySend = useCallback(() => {
     if (!rows.length) {
       toast.error("Carga al menos una obra antes de enviar.");
       setStep("obras");
@@ -288,13 +267,13 @@ export default function MiEstudioClient() {
       setStep("proyecto");
       return;
     }
-    if (touched) {
+    if (dirty) {
       toast.error("Guarda el proyecto antes de enviarlo.");
       setStep("proyecto");
       return;
     }
     setConfirming(true);
-  };
+  }, [rows.length, title, dirty]);
 
   /* ── Pantallas previas ───────────────────────────────────────────────── */
   if (isAuthLoading || appsLoading || pavsLoading) {
@@ -544,15 +523,12 @@ export default function MiEstudioClient() {
                     loading={artworksQuery.isLoading}
                     locked={locked}
                     filtering={filtering}
-                    onView={(id) => setDetailId(id)}
-                    onEdit={(id) => {
-                      setEditingId(id);
-                      setModalOpen(true);
-                    }}
+                    onView={openDetail}
+                    onEdit={openEdit}
                     onCreate={openNew}
-                    onOpenQr={(id) => setQrForId(id)}
-                    onShare={(msg) => toast.success(msg)}
-                    onLoadMore={() => artworksQuery.loadMore()}
+                    onOpenQr={openQr}
+                    onShare={notify}
+                    onLoadMore={loadMore}
                     hasMore={!!artworksQuery.hasNextPage}
                     loadingMore={!!artworksQuery.isFetchingNextPage}
                   />
@@ -566,14 +542,8 @@ export default function MiEstudioClient() {
                   review={review}
                   loading={projectLoading}
                   readOnly={locked}
-                  onTitle={(v) => {
-                    setTitle(v);
-                    setTouched(true);
-                  }}
-                  onReview={(v) => {
-                    setReview(v);
-                    setTouched(true);
-                  }}
+                  onTitle={editTitle}
+                  onReview={editReview}
                 />
               )}
 
@@ -638,16 +608,16 @@ export default function MiEstudioClient() {
             }}
           >
             <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: "min(100%,180px)" }}>
-              <span style={{ ...EYEBROW, fontSize: 9, color: mix(46) }}>
+              <Eyebrow tone="faint" size={9}>
                 Paso {step === "obras" ? 1 : step === "proyecto" ? 2 : 3} de 3
-              </span>
+              </Eyebrow>
               <span style={{ fontSize: 14.5, lineHeight: 1.3 }}>
                 {step === "obras"
                   ? rows.length
                     ? `${rows.length} ${rows.length === 1 ? "obra cargada" : "obras cargadas"}`
                     : "Todavía sin obras"
                   : step === "proyecto"
-                    ? touched
+                    ? dirty
                       ? "Sin guardar"
                       : title
                         ? "Proyecto guardado"
@@ -658,54 +628,45 @@ export default function MiEstudioClient() {
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginLeft: "auto" }}>
               {step !== "obras" && (
-                <button
-                  type="button"
-                  style={btnGhost}
-                  onClick={() => setStep(step === "enviar" ? "proyecto" : "obras")}
-                >
+                <StudioButton onClick={() => setStep(step === "enviar" ? "proyecto" : "obras")}>
                   <ArrowLeft size={14} strokeWidth={1.6} />
                   Atrás
-                </button>
+                </StudioButton>
               )}
 
               {step === "obras" && (
                 <>
-                  <button type="button" style={rows.length ? btnGhost : btnSolid} onClick={openNew}>
+                  <StudioButton variant={rows.length ? "ghost" : "solid"} onClick={openNew}>
                     <Plus size={15} strokeWidth={1.8} />
                     Nueva obra
-                  </button>
+                  </StudioButton>
                   {rows.length > 0 && (
-                    <button type="button" style={btnSolid} onClick={() => setStep("proyecto")}>
+                    <StudioButton variant="solid" onClick={() => setStep("proyecto")}>
                       Seguir con el proyecto
                       <ArrowRight size={14} strokeWidth={1.8} />
-                    </button>
+                    </StudioButton>
                   )}
                 </>
               )}
 
               {step === "proyecto" && (
-                <button
-                  type="button"
-                  style={{ ...btnSolid, opacity: tooLong ? 0.45 : 1 }}
-                  onClick={saveAndGo}
-                  disabled={save.isPending || tooLong}
-                >
+                <StudioButton variant="solid" onClick={saveAndGo} disabled={save.isPending || tooLong}>
                   {save.isPending ? (
                     "Guardando…"
                   ) : (
                     <>
                       <Check size={14} strokeWidth={1.8} />
-                      {touched ? "Guardar y seguir" : "Seguir a revisar"}
+                      {dirty ? "Guardar y seguir" : "Seguir a revisar"}
                     </>
                   )}
-                </button>
+                </StudioButton>
               )}
 
               {step === "enviar" && (
-                <button type="button" style={btnSolid} onClick={trySend} disabled={send.isPending}>
+                <StudioButton variant="solid" onClick={trySend} disabled={send.isPending}>
                   <Send size={14} strokeWidth={1.8} />
                   {send.isPending ? "Enviando…" : "Enviar mi inventario"}
-                </button>
+                </StudioButton>
               )}
             </div>
           </div>
@@ -721,13 +682,13 @@ export default function MiEstudioClient() {
         maxWidth={520}
         footer={
           <>
-            <button type="button" style={btnGhost} onClick={() => setConfirming(false)} disabled={send.isPending}>
+            <StudioButton onClick={() => setConfirming(false)} disabled={send.isPending}>
               Todavía no
-            </button>
-            <button type="button" style={btnSolid} onClick={() => send.mutate()} disabled={send.isPending}>
+            </StudioButton>
+            <StudioButton variant="solid" onClick={doSend} disabled={send.isPending}>
               <Send size={14} strokeWidth={1.8} />
               {send.isPending ? "Enviando…" : "Sí, enviar"}
-            </button>
+            </StudioButton>
           </>
         }
       >

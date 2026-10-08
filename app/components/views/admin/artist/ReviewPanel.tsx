@@ -5,8 +5,10 @@ import { AlertCircle, Check } from "lucide-react";
 
 import type { ArtworkRow } from "@hooks/queries/useArtworksCursor";
 import { formatCOP } from "@lib/money";
+import { missingFields } from "@lib/artwork";
 import InventoryQrCards from "./InventoryQrCards";
 import { BODY, EYEBROW, hair, mix } from "./studioTheme";
+import { Eyebrow, StudioButton } from "./ui";
 
 /* Paso 3: revisar antes de entregar.
 
@@ -17,18 +19,10 @@ import { BODY, EYEBROW, hair, mix } from "./studioTheme";
 
 type Gap = { id: string; title: string; missing: string[] };
 
-function gapsOf(rows: ArtworkRow[]): Gap[] {
-  return rows
-    .map((r) => {
-      const missing: string[] = [];
-      if (!r.image) missing.push("imagen");
-      if (typeof r.price !== "number") missing.push("precio");
-      if (!(r as any)?.dimensionsText) missing.push("dimensiones");
-      if (!(r?.techniqueInfo?.name || r.technique)) missing.push("técnica");
-      return { id: r.id, title: r.title, missing };
-    })
+const gapsOf = (rows: ArtworkRow[]): Gap[] =>
+  rows
+    .map((r) => ({ id: r.id, title: r.title, missing: missingFields(r as any) }))
     .filter((g) => g.missing.length > 0);
-}
 
 export default function ReviewPanel({
   rows,
@@ -162,28 +156,17 @@ export default function ReviewPanel({
                     }}
                   >
                     <span style={{ flex: "1 1 180px", fontSize: 14.5, minWidth: 0 }}>{g.title}</span>
-                    <span style={{ ...EYEBROW, fontSize: 9, color: "#B4472A" }}>
+                    <Eyebrow tone="bad" size={9}>
                       Falta {g.missing.join(" · ")}
-                    </span>
+                    </Eyebrow>
                     {onFix && (
-                      <button
-                        type="button"
-                        className="fdm-studio-plain"
+                      <StudioButton
+                        variant="link"
                         onClick={() => onFix(g.id)}
-                        style={{
-                          ...EYEBROW,
-                          fontSize: 9.5,
-                          letterSpacing: "0.14em",
-                          marginLeft: "auto",
-                          background: "transparent",
-                          border: 0,
-                          padding: "6px 0",
-                          cursor: "pointer",
-                          color: "var(--acc)",
-                        }}
+                        style={{ marginLeft: "auto", color: "var(--acc)" }}
                       >
                         Completar
-                      </button>
+                      </StudioButton>
                     )}
                   </li>
                 ))}

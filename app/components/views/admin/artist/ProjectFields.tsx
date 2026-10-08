@@ -1,13 +1,12 @@
 "use client";
 
-import { BODY, fieldHint, fieldInput, fieldLabel, mix } from "./studioTheme";
+import { MAX_PROJECT_WORDS, countWords } from "@lib/artwork";
+import { BODY, fieldInput, mix } from "./studioTheme";
+import { Bone, Field } from "./ui";
 
 /* Paso 2: el proyecto con el que el artista expone.
    Campos controlados desde el estudio, porque el botón de guardar vive en la
    barra de abajo junto al resto de las acciones del paso. */
-
-export const MAX_PROJECT_WORDS = 250;
-export const countWords = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0);
 
 export default function ProjectFields({
   title,
@@ -30,9 +29,9 @@ export default function ProjectFields({
   if (loading) {
     return (
       <div style={{ display: "grid", gap: 16, maxWidth: 760 }}>
-        <div className="fdm-skel" style={{ width: 120, height: 10 }} />
-        <div className="fdm-skel" style={{ width: "min(360px,70%)", height: 26 }} />
-        <div className="fdm-skel" style={{ width: "100%", height: 150 }} />
+        <Bone w={120} h={10} />
+        <Bone w="min(360px,70%)" h={26} />
+        <Bone h={150} />
       </div>
     );
   }
@@ -58,10 +57,7 @@ export default function ProjectFields({
         </p>
       </div>
 
-      <div>
-        <label htmlFor="project-title" style={fieldLabel}>
-          Título del proyecto
-        </label>
+      <Field id="project-title" label="Título del proyecto">
         <input
           id="project-title"
           value={title}
@@ -71,12 +67,18 @@ export default function ProjectFields({
           disabled={readOnly}
           style={{ ...fieldInput, opacity: readOnly ? 0.55 : 1 }}
         />
-      </div>
+      </Field>
 
-      <div>
-        <label htmlFor="project-review" style={fieldLabel}>
-          Descripción del proyecto
-        </label>
+      <Field
+        id="project-review"
+        label="Descripción del proyecto"
+        hint={
+          <span aria-live="polite" style={{ color: tooLong ? "#B4472A" : mix(50) }}>
+            {words} de {MAX_PROJECT_WORDS} palabras
+            {tooLong ? " · te pasaste, recorta antes de guardar" : ""}
+          </span>
+        }
+      >
         <textarea
           id="project-review"
           value={review}
@@ -84,18 +86,9 @@ export default function ProjectFields({
           placeholder="De qué trata, qué lo une, qué quieres que vea quien se pare enfrente…"
           rows={8}
           disabled={readOnly}
-          aria-describedby="project-words"
           style={{ ...fieldInput, opacity: readOnly ? 0.55 : 1 }}
         />
-        <p
-          id="project-words"
-          aria-live="polite"
-          style={{ ...fieldHint, color: tooLong ? "#B4472A" : mix(50) }}
-        >
-          {words} de {MAX_PROJECT_WORDS} palabras
-          {tooLong ? " · te pasaste, recorta antes de guardar" : ""}
-        </p>
-      </div>
+      </Field>
     </div>
   );
 }

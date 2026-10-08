@@ -31,6 +31,10 @@ const STEP_LABELS = [
 ];
 
 function getActionable(app: ArtistApplication): ActionableInfo | null {
+  // Al invitado no se le cobra inscripción: la feria lo metió a dedo. Su
+  // postulación existe para colgarle el pabellón, no para que la complete.
+  if (app.invited) return null;
+
   if (["submitted", "under_review", "accepted", "rejected"].includes(app.status)) {
     return null;
   }
@@ -259,22 +263,19 @@ export function ApplicationContinueBanner() {
   const hiddenPaths = ["/convocatoria/aplicar", "/convocatoria/pagar"];
   const onHiddenPath = hiddenPaths.some((p) => pathname?.startsWith(p));
 
+  /* Quien ya está dentro de la feria no tiene nada pendiente, y da igual qué
+     haya quedado a medias en otra convocatoria: a un artista aceptado —o
+     invitado— no se le puede seguir pidiendo que pague una inscripción. El
+     banner agarraba la primera postulación accionable de la lista, así que un
+     borrador viejo sin pagar lo perseguía por todo el sitio. */
+  const alreadyIn = (apps ?? []).some((a) => a.invited || a.status === "accepted");
+
   let info: ActionableInfo | null = null;
-  if (!onHiddenPath && !dismissed && isAuthenticated && !isAuthLoading && apps) {
-    const activeInfo = apps.map(getActionable).find(Boolean);
-    if (activeInfo) {
-      info = activeInfo;
-    } else if (apps.length === 0) {
-      info = {
-        app: null as any,
-        convName: "Feria del Millón 2026",
-        stepLabel: "Pago inscripción",
-        stepIndex: 0,
-        href: "/convocatoria/aplicar",
-        ctaText: "Iniciar postulación",
-        variant: "payment",
-      };
-    }
+  if (!onHiddenPath && !dismissed && isAuthenticated && !isAuthLoading && apps && !alreadyIn) {
+    // Sin postulaciones no se inventa una: el banner es para retomar algo
+    // empezado. Invitar a postularse es trabajo de la página de convocatoria,
+    // y esto le aparecía igual a cajeros y compradores con cuenta.
+    info = apps.map(getActionable).find(Boolean) ?? null;
   }
 
   const variant = info?.variant as string | undefined;

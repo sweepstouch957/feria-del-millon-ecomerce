@@ -31,7 +31,8 @@ export default function ArtistInventoryBanner() {
   });
 
   if (!isAuthenticated) return null;
-  const accepted = apps.some((a) => a.status === "accepted");
+  // El invitado también está dentro, aunque no haya pasado por curaduría.
+  const accepted = apps.some((a) => a.status === "accepted" || a.invited);
   const pavilion = (pavilionData?.rows ?? [])[0] as any;
   if (!accepted && !pavilion) return null;
 

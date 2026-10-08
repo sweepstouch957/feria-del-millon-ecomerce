@@ -18,6 +18,11 @@ import { CheckCircle2, Hourglass } from "lucide-react";
  * Steps < stepNum render as done, stepNum renders as active (white).
  */
 function getSmartRedirect(app: ArtistApplication): { url: string; stepLabel: string; stepNum: number } {
+  // Invitado por la feria: no paga inscripción ni llena postulación. Lo único
+  // que le falta es cargar su obra.
+  if (app.invited) {
+    return { url: "/admin/artist", stepLabel: "Cargar mi inventario", stepNum: 6 };
+  }
   // Step 2: needs to pay
   if (!app.isPaid || app.status === "pending_payment") {
     return { url: `/convocatoria/pagar?appId=${app._id}`, stepLabel: "Pagar inscripción", stepNum: 2 };
@@ -176,8 +181,14 @@ export function LoggedInArtistGate({ children }: { children: React.ReactNode }) 
         <div className="gate-stats">
           <div className="gate-stat">
             <span className="gate-stat__label">Pago</span>
-            <span className={`gate-stat__value ${app.isPaid ? "gate-stat__value--green" : "gate-stat__value--amber"}`}>
-              {app.isPaid ? <><CheckCircle2 size={14} style={{ verticalAlign: "-2px" }} /> Confirmado</> : <><Hourglass size={14} style={{ verticalAlign: "-2px" }} /> Pendiente</>}
+            <span className={`gate-stat__value ${app.isPaid || app.invited ? "gate-stat__value--green" : "gate-stat__value--amber"}`}>
+              {app.invited ? (
+                <><CheckCircle2 size={14} style={{ verticalAlign: "-2px" }} /> No aplica</>
+              ) : app.isPaid ? (
+                <><CheckCircle2 size={14} style={{ verticalAlign: "-2px" }} /> Confirmado</>
+              ) : (
+                <><Hourglass size={14} style={{ verticalAlign: "-2px" }} /> Pendiente</>
+              )}
             </span>
           </div>
           <div className="gate-stat">
@@ -192,7 +203,7 @@ export function LoggedInArtistGate({ children }: { children: React.ReactNode }) 
 
         {/* CTA */}
         <Link href={redirect.url} className="gate-btn gate-btn--primary">
-          {app.isPaid ? `Continuar: ${redirect.stepLabel}` : "Completar pago"}
+          {app.isPaid || app.invited ? `Continuar: ${redirect.stepLabel}` : "Completar pago"}
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </Link>
         <Link href="/convocatoria/mi-solicitud" className="gate-btn gate-btn--ghost">

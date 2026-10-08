@@ -1,20 +1,33 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@components/ui/tabs";
-import { Plus, Brush, Receipt, Search, QrCode, Lock } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Brush,
+  Check,
+  Lock,
+  Plus,
+  QrCode,
+  Receipt,
+  Search,
+  Send,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { useTechniques } from "@hooks/queries/useTechniques";
 import { usePavilionsByUser } from "@hooks/queries/usePavilionsByUser";
-import {
-  useArtworksCursor,
-  type ArtworkRow,
-} from "@hooks/queries/useArtworksCursor";
+import { useArtworksCursor, type ArtworkRow } from "@hooks/queries/useArtworksCursor";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
-import { getMyApplications, getMyProject } from "@services/applications.service";
+import {
+  getMyApplications,
+  getMyProject,
+  sendMyInventory,
+  updateMyProject,
+} from "@services/applications.service";
 
 import ArtworksTable from "./ArtworksTable";
 import ArtworkDetailModal from "./ArtworkDetailModal";
@@ -22,12 +35,14 @@ import ArtistOrders from "./ArtistOrders";
 import { useAuth } from "@provider/authProvider";
 import { useEventId } from "@provider/editionProvider";
 
-// Modales extra
 import CreateEditArtworkModal from "./CreateEditArtworkModal";
 import QRModal from "./QrModal";
 import ArtistQrModal from "./ArtistQrModal";
 import ApplicationStatusCard from "@components/views/admin/artist/ApplicationStatusCard";
-import ProjectCard from "./ProjectCard";
+import StudioSheet from "./StudioSheet";
+import StudioStepper, { type Step, type StepKey } from "./StudioStepper";
+import ProjectFields, { MAX_PROJECT_WORDS, countWords } from "./ProjectFields";
+import ReviewPanel from "./ReviewPanel";
 import {
   BODY,
   DISPLAY,
@@ -42,15 +57,18 @@ import {
 } from "./studioTheme";
 
 /* El estudio del artista.
-   El orden de la página es el orden del trabajo: primero las obras —que es lo
-   que lleva tiempo—, después el proyecto que las agrupa y el envío a la feria,
-   que es el final del camino y de una sola vez. */
+
+   Era una página larga donde todo estaba al mismo nivel y no se sabía qué
+   tocaba primero. Ahora es un camino de tres pasos —cargar las obras, contar
+   el proyecto, revisar y enviar— con la acción del paso siempre en la barra de
+   abajo. Se puede ir y volver: lo único que no se deshace es el envío. */
 
 export default function MiEstudioClient() {
   const router = useRouter();
-  const DEFAULT_EVENT_ID = useEventId(); // edición vigente (dinámica)
+  const DEFAULT_EVENT_ID = useEventId();
   const { user, isAuthLoading, isAuthenticated } = useAuth();
   const artistId = user?.id || user?._id;
+  const qc = useQueryClient();
 
   const { data: apps = [], isLoading: appsLoading } = useQuery({
     queryKey: ["my-applications", artistId],
@@ -66,17 +84,6 @@ export default function MiEstudioClient() {
   );
   const isInvited = (pavsByUser?.rows?.length ?? 0) > 0;
 
-  // El envío cierra la edición: mientras no se haya enviado, todo se puede
-  // cambiar. Misma clave que ProjectCard, así que no son dos peticiones.
-  const { data: project } = useQuery({
-    queryKey: ["my-project"],
-    queryFn: getMyProject,
-    staleTime: 60_000,
-    enabled: !!artistId && isAuthenticated,
-  });
-  const sentAt = project?.inventorySentAt;
-  const locked = !!sentAt;
-
   useEffect(() => {
     if (!isAuthLoading && !appsLoading && !pavsLoading && isAuthenticated) {
       if (isInvited) return;
@@ -85,25 +92,58 @@ export default function MiEstudioClient() {
         router.push("/convocatoria/pagar");
         return;
       }
-      const isApproved = apps.some((app) => app.status === "accepted");
-      if (!isApproved) {
+      if (!apps.some((app) => app.status === "accepted")) {
         toast.error("Tu postulación aún no ha sido aprobada.");
         router.push("/convocatoria/mi-solicitud");
       }
     }
   }, [isAuthLoading, appsLoading, pavsLoading, isInvited, isAuthenticated, apps, router]);
 
+  /* ── El proyecto y el envío ──────────────────────────────────────────── */
+  const { data: project, isLoading: projectLoading } = useQuery({
+    queryKey: ["my-project"],
+    queryFn: getMyProject,
+    staleTime: 60_000,
+    enabled: !!artistId && isAuthenticated,
+  });
+
+  const sentAt = project?.inventorySentAt;
+  const locked = !!sentAt;
+
+  const [title, setTitle] = useState("");
+  const [review, setReview] = useState("");
+  const [touched, setTouched] = useState(false);
+
+  // Lo guardado manda: al llegar (o al refrescar) se reescriben los campos.
+  useEffect(() => {
+    if (!project) return;
+    setTitle(project.projectTitle || "");
+    setReview(project.projectReview || "");
+    setTouched(false);
+  }, [project]);
+
+  const words = countWords(review);
+  const tooLong = words > MAX_PROJECT_WORDS;
+
+  const save = useMutation({
+    mutationFn: () => updateMyProject({ projectTitle: title, projectReview: review }),
+    onSuccess: (p) => {
+      qc.setQueryData(["my-project"], { ...(project ?? {}), ...p });
+      setTouched(false);
+    },
+    onError: () => toast.error("No se pudo guardar el proyecto"),
+  });
+
+  const [confirming, setConfirming] = useState(false);
+
+  /* ── Obras ───────────────────────────────────────────────────────────── */
   const [q, setQ] = useState("");
   const [tech, setTech] = useState<string | "all">("all");
   const [pavilion, setPavilion] = useState<string | "all">("all");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
-
-  // Modal crear/editar
   const [modalOpen, setModalOpen] = useState(false);
-
-  // Modal de QR
   const [qrForId, setQrForId] = useState<string | null>(null);
   const [artistQrOpen, setArtistQrOpen] = useState(false);
 
@@ -127,9 +167,7 @@ export default function MiEstudioClient() {
   const artworksQuery = useArtworksCursor(filters as any);
   const rows = (artworksQuery.rows ?? []) as ArtworkRow[];
 
-  const { data: detailData, isFetching: loadingDetail } = useArtworkDetail(
-    detailId ?? undefined
-  );
+  const { data: detailData, isFetching: loadingDetail } = useArtworkDetail(detailId ?? undefined);
 
   const pavilionOptions = useMemo(
     () =>
@@ -142,12 +180,68 @@ export default function MiEstudioClient() {
 
   const techniqueOptions = useMemo(
     () =>
-      (techniques ?? []).map((t: any) => ({
-        value: t.id || t._id,
-        label: t.name,
-      })),
+      (techniques ?? []).map((t: any) => ({ value: t.id || t._id, label: t.name })),
     [techniques]
   );
+
+  const send = useMutation({
+    mutationFn: () => sendMyInventory({ artworkCount: rows.length, pavilionName: pavilionOptions[0]?.label }),
+    onSuccess: (r) => {
+      qc.setQueryData(["my-project"], { ...(project ?? {}), inventorySentAt: r.inventorySentAt });
+      setConfirming(false);
+      toast.success("Inventario enviado. Ya tienes tus QR.");
+    },
+    onError: (e: any) => {
+      // Enviar es de una sola vez: si ya estaba enviado, el servidor lo dice.
+      const already = e?.response?.data?.inventorySentAt;
+      setConfirming(false);
+      if (already) {
+        qc.setQueryData(["my-project"], { ...(project ?? {}), inventorySentAt: already });
+        toast.error("Ya habías enviado tu inventario");
+        return;
+      }
+      toast.error("No se pudo avisar a la feria");
+    },
+  });
+
+  /* ── Pasos ───────────────────────────────────────────────────────────── */
+  const [tab, setTab] = useState("inventario");
+  const [step, setStep] = useState<StepKey>("obras");
+
+  // Al entrar se abre en el paso donde quedó, no siempre en el primero.
+  const [placed, setPlaced] = useState(false);
+  useEffect(() => {
+    if (placed || projectLoading || artworksQuery.isLoading) return;
+    setStep(locked ? "enviar" : !rows.length ? "obras" : !project?.projectTitle ? "proyecto" : "enviar");
+    setPlaced(true);
+  }, [placed, projectLoading, artworksQuery.isLoading, locked, rows.length, project?.projectTitle]);
+
+  const steps: Step[] = [
+    {
+      key: "obras",
+      label: "Tus obras",
+      hint: rows.length
+        ? `${rows.length} ${rows.length === 1 ? "obra cargada" : "obras cargadas"}`
+        : "Carga la primera con su imagen y su precio",
+      done: rows.length > 0,
+    },
+    {
+      key: "proyecto",
+      label: "Tu proyecto",
+      hint: project?.projectTitle
+        ? project.projectTitle
+        : "Ponle título y cuenta de qué va",
+      done: !!project?.projectTitle,
+    },
+    {
+      key: "enviar",
+      label: "Revisar y enviar",
+      hint: locked
+        ? `Enviado el ${new Date(sentAt as string).toLocaleDateString("es-CO")}`
+        : "Lo revisas y se lo mandas a la feria",
+      done: locked,
+    },
+  ];
 
   const openNew = () => {
     if (locked) {
@@ -158,6 +252,42 @@ export default function MiEstudioClient() {
     setModalOpen(true);
   };
 
+  const saveAndGo = async () => {
+    if (tooLong) {
+      toast.error("La descripción se pasó de 250 palabras.");
+      return;
+    }
+    if (touched) {
+      try {
+        await save.mutateAsync();
+        toast.success("Proyecto guardado");
+      } catch {
+        return; // el error ya se avisó; no se avanza con algo sin guardar
+      }
+    }
+    setStep("enviar");
+  };
+
+  const trySend = () => {
+    if (!rows.length) {
+      toast.error("Carga al menos una obra antes de enviar.");
+      setStep("obras");
+      return;
+    }
+    if (!title.trim()) {
+      toast.error("Ponle título a tu proyecto antes de enviarlo.");
+      setStep("proyecto");
+      return;
+    }
+    if (touched) {
+      toast.error("Guarda el proyecto antes de enviarlo.");
+      setStep("proyecto");
+      return;
+    }
+    setConfirming(true);
+  };
+
+  /* ── Pantallas previas ───────────────────────────────────────────────── */
   if (isAuthLoading || appsLoading || pavsLoading) {
     return (
       <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "70vh" }}>
@@ -189,24 +319,12 @@ export default function MiEstudioClient() {
     );
   }
 
-  // Sin resolución aceptada no hay catálogo que cargar. En vez de un
-  // "redirigiendo" que no explica nada, se muestra en qué punto va y qué le
-  // toca hacer — el mismo panel que usa /admin/account.
   const isApproved = isInvited || apps.some((app) => app.status === "accepted");
   if (!isApproved && !appsLoading) {
     return (
       <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "60vh" }}>
         <style>{STUDIO_CSS}</style>
-        <div
-          style={{
-            maxWidth: 720,
-            margin: "0 auto",
-            padding: "clamp(30px,5vw,70px) clamp(20px,4vw,56px)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 22,
-          }}
-        >
+        <div style={{ maxWidth: 720, margin: "0 auto", padding: "clamp(30px,5vw,70px) clamp(20px,4vw,56px)", display: "flex", flexDirection: "column", gap: 22 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <span style={{ ...EYEBROW, color: "var(--acc)" }}>Convocatoria</span>
             <h1 style={DISPLAY}>Tu estudio te espera</h1>
@@ -215,15 +333,15 @@ export default function MiEstudioClient() {
               tu postulación quede aceptada. Este es el punto en el que va.
             </p>
           </div>
-
           <ApplicationStatusCard />
         </div>
       </div>
     );
   }
 
+  const filtering = !!(q || pavilion !== "all" || tech !== "all");
   const total = artworksQuery.totalLabel;
-  const filtering = q || pavilion !== "all" || tech !== "all";
+  const showBar = tab === "inventario" && !locked;
 
   return (
     <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "100vh" }}>
@@ -233,7 +351,7 @@ export default function MiEstudioClient() {
         style={{
           maxWidth: 1180,
           margin: "0 auto",
-          padding: "clamp(26px,4vw,54px) clamp(20px,4vw,48px) clamp(56px,7vw,96px)",
+          padding: `clamp(26px,4vw,54px) clamp(20px,4vw,48px) ${showBar ? "150px" : "clamp(56px,7vw,96px)"}`,
         }}
       >
         {/* ── Cabecera ──────────────────────────────────────────────────── */}
@@ -244,8 +362,7 @@ export default function MiEstudioClient() {
             alignItems: "flex-end",
             justifyContent: "space-between",
             gap: 22,
-            paddingBottom: "clamp(18px,2.4vw,28px)",
-            borderBottom: hair(20),
+            paddingBottom: "clamp(16px,2.2vw,24px)",
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: "min(100%,300px)" }}>
@@ -253,9 +370,6 @@ export default function MiEstudioClient() {
               Mi estudio{pavilionOptions[0] ? ` · ${pavilionOptions[0].label}` : ""}
             </span>
             <h1 style={DISPLAY}>Mi estudio</h1>
-            <p style={{ ...BODY, maxWidth: "52ch" }}>
-              Carga tus obras, escribe de qué va tu proyecto y envíalo a la feria.
-            </p>
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
@@ -263,21 +377,14 @@ export default function MiEstudioClient() {
               <QrCode size={14} strokeWidth={1.6} />
               Mi QR
             </button>
-            {!locked && (
-              <button type="button" style={btnSolid} onClick={openNew}>
-                <Plus size={15} strokeWidth={1.8} />
-                Nueva obra
-              </button>
-            )}
           </div>
         </header>
 
-        {/* ── Pestañas ──────────────────────────────────────────────────── */}
-        <Tabs defaultValue="artworks" className="">
-          <TabsList className="fdm-studio-tablist" style={{ marginTop: 26 }}>
-            <TabsTrigger value="artworks" className="fdm-studio-tab">
+        <Tabs value={tab} onValueChange={setTab} className="">
+          <TabsList className="fdm-studio-tablist">
+            <TabsTrigger value="inventario" className="fdm-studio-tab">
               <Brush size={14} strokeWidth={1.6} />
-              Obras
+              Mi inventario
             </TabsTrigger>
             <TabsTrigger value="orders" className="fdm-studio-tab">
               <Receipt size={14} strokeWidth={1.6} />
@@ -285,8 +392,8 @@ export default function MiEstudioClient() {
             </TabsTrigger>
           </TabsList>
 
-          {/* ── OBRAS ───────────────────────────────────────────────────── */}
-          <TabsContent value="artworks" className="" style={{ marginTop: "clamp(24px,3vw,38px)" }}>
+          {/* ── INVENTARIO: los tres pasos ──────────────────────────────── */}
+          <TabsContent value="inventario" className="" style={{ marginTop: "clamp(22px,2.6vw,32px)" }}>
             {locked && (
               <div
                 style={{
@@ -294,138 +401,176 @@ export default function MiEstudioClient() {
                   alignItems: "flex-start",
                   gap: 11,
                   padding: "14px 16px",
-                  marginBottom: "clamp(22px,2.6vw,32px)",
+                  marginBottom: "clamp(20px,2.4vw,28px)",
                   border: `1px solid ${mix(20)}`,
                   background: mix(4),
                 }}
               >
                 <Lock size={15} strokeWidth={1.6} style={{ marginTop: 2, color: "var(--acc)", flexShrink: 0 }} />
                 <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: mix(72) }}>
-                  Enviaste tu inventario el{" "}
-                  <strong style={{ fontWeight: 500 }}>
-                    {new Date(sentAt as string).toLocaleDateString("es-CO", { day: "2-digit", month: "long" })}
-                  </strong>
-                  . Ya no se puede editar desde acá: si necesitas cambiar una obra, escríbele a la feria.
+                  Tu inventario ya está entregado, así que esto queda de consulta. Si necesitas
+                  cambiar una obra, escríbele a la feria.
                 </p>
               </div>
             )}
 
-            {/* Filtros: una fila de líneas, no una tarjeta flotante */}
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "flex-end",
-                gap: "clamp(14px,2.2vw,26px)",
-                paddingBottom: 16,
-                borderBottom: hair(16),
-              }}
-            >
-              <div style={{ flex: "1 1 240px", minWidth: "min(100%,220px)", position: "relative" }}>
-                <label htmlFor="studio-q" style={{ ...EYEBROW, fontSize: 9.5, letterSpacing: "0.22em", color: mix(58), display: "block", marginBottom: 2 }}>
-                  Buscar
-                </label>
-                <Search
-                  size={14}
-                  strokeWidth={1.5}
-                  style={{ position: "absolute", left: 0, bottom: 13, color: mix(40), pointerEvents: "none" }}
-                />
-                <input
-                  id="studio-q"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Título o descripción"
-                  style={{ ...fieldInput, paddingLeft: 22 }}
-                />
-              </div>
+            <StudioStepper steps={steps} current={step} onSelect={setStep} />
 
-              {pavilionOptions.length > 1 && (
-                <div style={{ flex: "0 1 200px", minWidth: "min(100%,170px)" }}>
-                  <label htmlFor="studio-pav" style={{ ...EYEBROW, fontSize: 9.5, letterSpacing: "0.22em", color: mix(58), display: "block", marginBottom: 2 }}>
-                    Pabellón
-                  </label>
-                  <select id="studio-pav" value={pavilion} onChange={(e) => setPavilion(e.target.value)} style={fieldInput}>
-                    <option value="all">Todos</option>
-                    {pavilionOptions.map((p) => (
-                      <option key={p.value} value={p.value}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div style={{ marginTop: "clamp(28px,3.4vw,44px)" }}>
+              {/* PASO 1 ─ Obras */}
+              {step === "obras" && (
+                <section>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 9, marginBottom: "clamp(20px,2.4vw,30px)" }}>
+                    <span style={{ ...EYEBROW, color: "var(--acc)" }}>Paso 1 de 3</span>
+                    <h2
+                      style={{
+                        margin: 0,
+                        fontWeight: 300,
+                        fontSize: "clamp(23px,2.8vw,34px)",
+                        lineHeight: 1.05,
+                        letterSpacing: "0.02em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Tus obras
+                    </h2>
+                    <p style={{ ...BODY, maxWidth: "54ch" }}>
+                      Cada obra lleva su imagen, sus dimensiones, su técnica, su precio y cuántas
+                      copias hay. Puedes editarlas hasta que envíes el inventario.
+                    </p>
+                  </div>
+
+                  {/* Filtros: solo estorban cuando hay poco que filtrar */}
+                  {(rows.length > 4 || filtering) && (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        alignItems: "flex-end",
+                        gap: "clamp(14px,2.2vw,26px)",
+                        paddingBottom: 16,
+                        borderBottom: hair(16),
+                        marginBottom: 4,
+                      }}
+                    >
+                      <div style={{ flex: "1 1 240px", minWidth: "min(100%,220px)", position: "relative" }}>
+                        <label htmlFor="studio-q" style={{ ...EYEBROW, fontSize: 9.5, letterSpacing: "0.22em", color: mix(58), display: "block", marginBottom: 2 }}>
+                          Buscar
+                        </label>
+                        <Search size={14} strokeWidth={1.5} style={{ position: "absolute", left: 0, bottom: 13, color: mix(40), pointerEvents: "none" }} />
+                        <input
+                          id="studio-q"
+                          value={q}
+                          onChange={(e) => setQ(e.target.value)}
+                          placeholder="Título o descripción"
+                          style={{ ...fieldInput, paddingLeft: 22 }}
+                        />
+                      </div>
+
+                      {pavilionOptions.length > 1 && (
+                        <div style={{ flex: "0 1 200px", minWidth: "min(100%,170px)" }}>
+                          <label htmlFor="studio-pav" style={{ ...EYEBROW, fontSize: 9.5, letterSpacing: "0.22em", color: mix(58), display: "block", marginBottom: 2 }}>
+                            Pabellón
+                          </label>
+                          <select id="studio-pav" value={pavilion} onChange={(e) => setPavilion(e.target.value)} style={fieldInput}>
+                            <option value="all">Todos</option>
+                            {pavilionOptions.map((p) => (
+                              <option key={p.value} value={p.value}>
+                                {p.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+
+                      <div style={{ flex: "0 1 200px", minWidth: "min(100%,170px)" }}>
+                        <label htmlFor="studio-tech" style={{ ...EYEBROW, fontSize: 9.5, letterSpacing: "0.22em", color: mix(58), display: "block", marginBottom: 2 }}>
+                          Técnica
+                        </label>
+                        <select id="studio-tech" value={tech} onChange={(e) => setTech(e.target.value)} style={fieldInput}>
+                          <option value="all">Todas</option>
+                          {techniqueOptions.map((t) => (
+                            <option key={t.value} value={t.value}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <span aria-live="polite" style={{ ...EYEBROW, fontSize: 9.5, color: mix(52), paddingBottom: 12, whiteSpace: "nowrap" }}>
+                        {artworksQuery.isFetching ? "Buscando…" : `${total} ${total === "1" ? "obra" : "obras"}`}
+                      </span>
+
+                      {filtering && (
+                        <button
+                          type="button"
+                          className="fdm-studio-plain"
+                          onClick={() => {
+                            setQ("");
+                            setTech("all");
+                            setPavilion("all");
+                          }}
+                          style={{ ...EYEBROW, fontSize: 9.5, letterSpacing: "0.14em", background: "transparent", border: 0, padding: "0 0 12px", cursor: "pointer", color: "var(--acc)" }}
+                        >
+                          Limpiar
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <ArtworksTable
+                    rows={rows}
+                    loading={artworksQuery.isLoading}
+                    locked={locked}
+                    filtering={filtering}
+                    onView={(id) => setDetailId(id)}
+                    onEdit={(id) => {
+                      setEditingId(id);
+                      setModalOpen(true);
+                    }}
+                    onCreate={openNew}
+                    onOpenQr={(id) => setQrForId(id)}
+                    onShare={(msg) => toast.success(msg)}
+                    onLoadMore={() => artworksQuery.loadMore()}
+                    hasMore={!!artworksQuery.hasNextPage}
+                    loadingMore={!!artworksQuery.isFetchingNextPage}
+                  />
+                </section>
               )}
 
-              <div style={{ flex: "0 1 200px", minWidth: "min(100%,170px)" }}>
-                <label htmlFor="studio-tech" style={{ ...EYEBROW, fontSize: 9.5, letterSpacing: "0.22em", color: mix(58), display: "block", marginBottom: 2 }}>
-                  Técnica
-                </label>
-                <select id="studio-tech" value={tech} onChange={(e) => setTech(e.target.value)} style={fieldInput}>
-                  <option value="all">Todas</option>
-                  {techniqueOptions.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <span
-                aria-live="polite"
-                style={{ ...EYEBROW, fontSize: 9.5, color: mix(52), paddingBottom: 12, whiteSpace: "nowrap" }}
-              >
-                {artworksQuery.isFetching ? "Buscando…" : `${total} ${total === "1" ? "obra" : "obras"}`}
-              </span>
-
-              {filtering && (
-                <button
-                  type="button"
-                  className="fdm-studio-plain"
-                  onClick={() => {
-                    setQ("");
-                    setTech("all");
-                    setPavilion("all");
+              {/* PASO 2 ─ Proyecto */}
+              {step === "proyecto" && (
+                <ProjectFields
+                  title={title}
+                  review={review}
+                  loading={projectLoading}
+                  readOnly={locked}
+                  onTitle={(v) => {
+                    setTitle(v);
+                    setTouched(true);
                   }}
-                  style={{
-                    ...EYEBROW,
-                    fontSize: 9.5,
-                    letterSpacing: "0.14em",
-                    background: "transparent",
-                    border: 0,
-                    padding: "0 0 12px",
-                    cursor: "pointer",
-                    color: "var(--acc)",
+                  onReview={(v) => {
+                    setReview(v);
+                    setTouched(true);
                   }}
-                >
-                  Limpiar
-                </button>
+                />
               )}
-            </div>
 
-            <ArtworksTable
-              rows={rows}
-              loading={artworksQuery.isLoading}
-              locked={locked}
-              filtering={!!filtering}
-              onView={(id) => setDetailId(id)}
-              onEdit={(id) => {
-                setEditingId(id);
-                setModalOpen(true);
-              }}
-              onCreate={openNew}
-              onOpenQr={(id) => setQrForId(id)}
-              onShare={(msg) => toast.success(msg)}
-              onLoadMore={() => artworksQuery.loadMore()}
-              hasMore={!!artworksQuery.hasNextPage}
-              loadingMore={!!artworksQuery.isFetchingNextPage}
-            />
-
-            {/* El proyecto y el envío: el final del camino, debajo de las obras */}
-            <div style={{ marginTop: "clamp(44px,5vw,72px)" }}>
-              <ProjectCard
-                artistId={String(artistId)}
-                artworkCount={rows.length}
-                pavilionName={pavilionOptions[0]?.label}
-              />
+              {/* PASO 3 ─ Revisar y enviar */}
+              {step === "enviar" && (
+                <ReviewPanel
+                  rows={rows}
+                  projectTitle={title}
+                  projectReview={review}
+                  pavilionName={pavilionOptions[0]?.label}
+                  artistId={String(artistId)}
+                  sentAt={sentAt}
+                  onFix={(id) => {
+                    setEditingId(id);
+                    setModalOpen(true);
+                  }}
+                />
+              )}
             </div>
           </TabsContent>
 
@@ -436,7 +581,159 @@ export default function MiEstudioClient() {
         </Tabs>
       </div>
 
-      {/* Modal de detalle (ver) */}
+      {/* ── Barra del paso: la acción siempre al alcance del pulgar ─────── */}
+      {showBar && (
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 40,
+            background: "color-mix(in srgb, var(--bg) 94%, transparent)",
+            backdropFilter: "blur(8px)",
+            borderTop: `1px solid ${mix(16)}`,
+            paddingBottom: "env(safe-area-inset-bottom)",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 1180,
+              margin: "0 auto",
+              padding: "14px clamp(20px,4vw,48px)",
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: "min(100%,180px)" }}>
+              <span style={{ ...EYEBROW, fontSize: 9, color: mix(46) }}>
+                Paso {step === "obras" ? 1 : step === "proyecto" ? 2 : 3} de 3
+              </span>
+              <span style={{ fontSize: 14.5, lineHeight: 1.3 }}>
+                {step === "obras"
+                  ? rows.length
+                    ? `${rows.length} ${rows.length === 1 ? "obra cargada" : "obras cargadas"}`
+                    : "Todavía sin obras"
+                  : step === "proyecto"
+                    ? touched
+                      ? "Sin guardar"
+                      : title
+                        ? "Proyecto guardado"
+                        : "Ponle título"
+                    : "Todo listo para enviar"}
+              </span>
+            </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginLeft: "auto" }}>
+              {step !== "obras" && (
+                <button
+                  type="button"
+                  style={btnGhost}
+                  onClick={() => setStep(step === "enviar" ? "proyecto" : "obras")}
+                >
+                  <ArrowLeft size={14} strokeWidth={1.6} />
+                  Atrás
+                </button>
+              )}
+
+              {step === "obras" && (
+                <>
+                  <button type="button" style={rows.length ? btnGhost : btnSolid} onClick={openNew}>
+                    <Plus size={15} strokeWidth={1.8} />
+                    Nueva obra
+                  </button>
+                  {rows.length > 0 && (
+                    <button type="button" style={btnSolid} onClick={() => setStep("proyecto")}>
+                      Seguir con el proyecto
+                      <ArrowRight size={14} strokeWidth={1.8} />
+                    </button>
+                  )}
+                </>
+              )}
+
+              {step === "proyecto" && (
+                <button
+                  type="button"
+                  style={{ ...btnSolid, opacity: tooLong ? 0.45 : 1 }}
+                  onClick={saveAndGo}
+                  disabled={save.isPending || tooLong}
+                >
+                  {save.isPending ? (
+                    "Guardando…"
+                  ) : (
+                    <>
+                      <Check size={14} strokeWidth={1.8} />
+                      {touched ? "Guardar y seguir" : "Seguir a revisar"}
+                    </>
+                  )}
+                </button>
+              )}
+
+              {step === "enviar" && (
+                <button type="button" style={btnSolid} onClick={trySend} disabled={send.isPending}>
+                  <Send size={14} strokeWidth={1.8} />
+                  {send.isPending ? "Enviando…" : "Enviar mi inventario"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirmar el envío: es irreversible, se dice con números ────── */}
+      <StudioSheet
+        open={confirming}
+        onClose={() => !send.isPending && setConfirming(false)}
+        eyebrow="Se envía una sola vez"
+        title="¿Enviamos tu inventario?"
+        maxWidth={520}
+        footer={
+          <>
+            <button type="button" style={btnGhost} onClick={() => setConfirming(false)} disabled={send.isPending}>
+              Todavía no
+            </button>
+            <button type="button" style={btnSolid} onClick={() => send.mutate()} disabled={send.isPending}>
+              <Send size={14} strokeWidth={1.8} />
+              {send.isPending ? "Enviando…" : "Sí, enviar"}
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: "grid", gap: 18 }}>
+          <p style={{ ...BODY, color: mix(80) }}>
+            Vas a enviarle a la feria{" "}
+            <strong style={{ fontWeight: 500, color: "var(--fg)" }}>
+              {rows.length} {rows.length === 1 ? "obra" : "obras"}
+            </strong>
+            {title ? (
+              <>
+                {" "}del proyecto <strong style={{ fontWeight: 500, color: "var(--fg)" }}>{title}</strong>
+              </>
+            ) : null}
+            .
+          </p>
+          <div style={{ display: "grid", gap: 10, padding: "16px 0", borderTop: hair(14), borderBottom: hair(14) }}>
+            {[
+              "Después de enviar no vas a poder editar tus obras por tu cuenta.",
+              "La feria recibe el aviso y revisa tu inventario.",
+              "Te quedan tus dos códigos QR para imprimir y poner en el stand.",
+            ].map((t) => (
+              <div key={t} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span style={{ width: 4, height: 4, borderRadius: 4, background: "var(--acc)", marginTop: 8, flexShrink: 0 }} />
+                <span style={{ fontSize: 13.5, lineHeight: 1.6, color: mix(70) }}>{t}</span>
+              </div>
+            ))}
+          </div>
+          <p style={{ ...EYEBROW, fontSize: 9.5, color: mix(48), margin: 0 }}>
+            Si falta una obra, cierra esto y cárgala primero.
+          </p>
+        </div>
+      </StudioSheet>
+
+      {/* Modales de obra */}
       <ArtworkDetailModal
         id={detailId}
         data={detailData}
@@ -452,7 +749,6 @@ export default function MiEstudioClient() {
         onOpenQr={(id) => setQrForId(id)}
       />
 
-      {/* Modal crear/editar (unificado) */}
       <CreateEditArtworkModal
         open={modalOpen}
         onOpenChange={setModalOpen}
@@ -468,14 +764,9 @@ export default function MiEstudioClient() {
         }}
       />
 
-      {/* Modal de QR */}
       <QRModal artworkId={qrForId} open={!!qrForId} onClose={() => setQrForId(null)} />
 
-      <ArtistQrModal
-        artistId={String(artistId)}
-        open={artistQrOpen}
-        onClose={() => setArtistQrOpen(false)}
-      />
+      <ArtistQrModal artistId={String(artistId)} open={artistQrOpen} onClose={() => setArtistQrOpen(false)} />
     </div>
   );
 }

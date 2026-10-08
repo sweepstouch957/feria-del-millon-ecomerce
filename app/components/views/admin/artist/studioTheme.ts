@@ -172,7 +172,9 @@ export const fieldHint: React.CSSProperties = {
 export const sheetOverlay: React.CSSProperties = {
   position: "fixed",
   inset: 0,
-  zIndex: 55,
+  // Por encima de la navegación del sitio (60) y de su menú de usuario (70):
+  // con 55, la barra de arriba le comía la primera línea a la hoja.
+  zIndex: 80,
   background: "color-mix(in srgb, #0B0B0A 72%, transparent)",
   display: "flex",
   alignItems: "center",

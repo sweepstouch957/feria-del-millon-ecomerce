@@ -259,7 +259,8 @@ function ImagePreviewModal({
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 60,
+        // Sobre la hoja que la abrió (80), que a su vez va sobre la navegación.
+        zIndex: 90,
         background: "#0B0B0A",
         display: "flex",
         alignItems: "center",

@@ -88,6 +88,36 @@ export const btnGhost: React.CSSProperties = {
   border: `1px solid ${mix(26)}`,
 };
 
+/* Interruptor de sección (inventario / entregas).
+   Va chico y arriba a la derecha a propósito: la navegación de la página son
+   los pasos, y esto solo cambia de asunto. Dos barras del mismo tamaño se
+   leían como dos navegaciones peleando. */
+
+export const segmentWrap: React.CSSProperties = {
+  display: "inline-flex",
+  padding: 3,
+  gap: 2,
+  borderRadius: 999,
+  border: `1px solid ${mix(18)}`,
+};
+
+export const segment = (active: boolean): React.CSSProperties => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  height: 32,
+  padding: "0 15px",
+  borderRadius: 999,
+  border: 0,
+  cursor: "pointer",
+  background: active ? "var(--fg)" : "transparent",
+  color: active ? "var(--bg)" : mix(60),
+  transition: "background .25s ease, color .25s ease",
+  ...EYEBROW,
+  fontSize: 9.5,
+  letterSpacing: "0.14em",
+});
+
 /** Acción en texto, para las filas de una tabla. */
 export const btnLink: React.CSSProperties = {
   display: "inline-flex",
@@ -174,48 +204,6 @@ export const STUDIO_CSS = `
     letter-spacing: 0.005em;
   }
 
-  /* Pestañas de shadcn al subrayado editorial */
-  .fdm-studio-tablist {
-    display: flex;
-    flex-wrap: wrap;
-    gap: clamp(18px,2.4vw,34px);
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid ${mix(20)};
-    border-radius: 0;
-    padding: 0;
-    height: auto;
-    box-shadow: none;
-    width: 100%;
-    justify-content: flex-start;
-  }
-  .fdm-studio-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    background: transparent;
-    border: 0;
-    border-bottom: 1px solid transparent;
-    border-radius: 0;
-    padding: 8px 0;
-    cursor: pointer;
-    font-family: Jost, system-ui, sans-serif;
-    font-weight: 500;
-    font-size: 11.5px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: ${mix(55)};
-    box-shadow: none;
-    transition: color .3s ease, border-color .3s ease;
-  }
-  .fdm-studio-tab:hover { color: var(--acc); }
-  .fdm-studio-tab[data-state="active"] {
-    color: var(--acc);
-    border-bottom-color: var(--acc);
-    background: transparent;
-    box-shadow: none;
-  }
-
   /* Superficies y bordes heredados */
   .fdm-studio .bg-white,
   .fdm-studio .bg-gray-50,
@@ -300,8 +288,8 @@ export const STUDIO_CSS = `
   }
 
   /* Botones heredados de shadcn: píldora y versalitas */
-  .fdm-studio button:not(.fdm-studio-tab):not(.fdm-studio-plain),
-  .fdm-studio-sheet button:not(.fdm-studio-tab):not(.fdm-studio-plain) {
+  .fdm-studio button:not(.fdm-studio-plain),
+  .fdm-studio-sheet button:not(.fdm-studio-plain) {
     border-radius: 999px;
     font-family: Jost, system-ui, sans-serif;
     font-weight: 500;

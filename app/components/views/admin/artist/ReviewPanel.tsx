@@ -65,16 +65,13 @@ export default function ReviewPanel({
 
   return (
     <div style={{ display: "grid", gap: "clamp(26px,3vw,38px)" }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 9, maxWidth: 760 }}>
-        <span style={{ ...EYEBROW, color: "var(--acc)" }}>
-          {delivered ? "Entregado" : "Paso 3 de 3"}
-        </span>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 760 }}>
         <h2
           style={{
             margin: 0,
             fontWeight: 300,
-            fontSize: "clamp(23px,2.8vw,34px)",
-            lineHeight: 1.05,
+            fontSize: "clamp(26px,3.2vw,40px)",
+            lineHeight: 1.03,
             letterSpacing: "0.02em",
             textTransform: "uppercase",
           }}

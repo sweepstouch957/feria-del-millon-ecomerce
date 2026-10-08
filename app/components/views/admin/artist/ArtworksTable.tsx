@@ -98,8 +98,17 @@ export default function ArtworksTable({
 
   if (!rows.length) {
     return (
-      <div style={{ padding: "clamp(44px,6vw,80px) 0", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 16 }}>
-        <h3 style={{ margin: 0, fontWeight: 300, fontSize: "clamp(20px,2.4vw,28px)", letterSpacing: "0.02em", textTransform: "uppercase" }}>
+      <div
+        style={{
+          padding: "clamp(26px,3vw,40px)",
+          border: `1px dashed ${mix(20)}`,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          gap: 14,
+        }}
+      >
+        <h3 style={{ margin: 0, fontWeight: 400, fontSize: "clamp(17px,1.9vw,21px)", letterSpacing: "0.01em" }}>
           {filtering ? "Nada con esos filtros" : "Todavía no hay obras"}
         </h3>
         <p style={{ ...BODY, maxWidth: "48ch" }}>

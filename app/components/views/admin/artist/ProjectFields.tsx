@@ -1,6 +1,6 @@
 "use client";
 
-import { BODY, EYEBROW, fieldHint, fieldInput, fieldLabel, mix } from "./studioTheme";
+import { BODY, fieldHint, fieldInput, fieldLabel, mix } from "./studioTheme";
 
 /* Paso 2: el proyecto con el que el artista expone.
    Campos controlados desde el estudio, porque el botón de guardar vive en la
@@ -39,14 +39,13 @@ export default function ProjectFields({
 
   return (
     <div style={{ display: "grid", gap: "clamp(22px,2.8vw,32px)", maxWidth: 760 }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-        <span style={{ ...EYEBROW, color: "var(--acc)" }}>Paso 2 de 3</span>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <h2
           style={{
             margin: 0,
             fontWeight: 300,
-            fontSize: "clamp(23px,2.8vw,34px)",
-            lineHeight: 1.05,
+            fontSize: "clamp(26px,3.2vw,40px)",
+            lineHeight: 1.03,
             letterSpacing: "0.02em",
             textTransform: "uppercase",
           }}

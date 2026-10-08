@@ -38,7 +38,6 @@ export default function StudioStepper({
           display: "grid",
           gap: 0,
           gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,210px),1fr))",
-          borderTop: `1px solid ${mix(16)}`,
         }}
       >
         {steps.map((s, i) => {
@@ -52,16 +51,16 @@ export default function StudioStepper({
                 aria-current={active ? "step" : undefined}
                 style={{
                   width: "100%",
-                  minHeight: 76,
+                  minHeight: 72,
                   display: "flex",
                   alignItems: "flex-start",
                   gap: 13,
-                  padding: "18px 16px 18px 0",
+                  padding: "16px 16px 16px 0",
                   background: "transparent",
                   border: 0,
-                  // La línea de arriba es el riel del paso: verde si ya está.
-                  borderTop: `2px solid ${active ? "var(--acc)" : s.done ? mix(40) : "transparent"}`,
-                  marginTop: -1,
+                  // El riel de arriba: una sola línea que cruza los tres pasos y
+                  // se pinta de verde en el tramo que ya está.
+                  borderTop: `2px solid ${active ? "var(--acc)" : s.done ? mix(42) : mix(14)}`,
                   textAlign: "left",
                   cursor: "pointer",
                   color: "inherit",

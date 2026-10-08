@@ -3,16 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@components/ui/tabs";
 import {
   ArrowLeft,
   ArrowRight,
-  Brush,
   Check,
   Lock,
   Plus,
   QrCode,
-  Receipt,
   Search,
   Send,
 } from "lucide-react";
@@ -54,7 +51,19 @@ import {
   fieldInput,
   hair,
   mix,
+  segment,
+  segmentWrap,
 } from "./studioTheme";
+
+/** Título del paso: es el que manda en la pantalla. */
+const STEP_TITLE: React.CSSProperties = {
+  margin: 0,
+  fontWeight: 300,
+  fontSize: "clamp(26px,3.2vw,40px)",
+  lineHeight: 1.03,
+  letterSpacing: "0.02em",
+  textTransform: "uppercase",
+};
 
 /* El estudio del artista.
 
@@ -354,46 +363,70 @@ export default function MiEstudioClient() {
           padding: `clamp(26px,4vw,54px) clamp(20px,4vw,48px) ${showBar ? "150px" : "clamp(56px,7vw,96px)"}`,
         }}
       >
-        {/* ── Cabecera ──────────────────────────────────────────────────── */}
+        {/* ── Cabecera: quién soy y en qué estoy ────────────────────────── */}
         <header
           style={{
             display: "flex",
             flexWrap: "wrap",
-            alignItems: "flex-end",
+            alignItems: "center",
             justifyContent: "space-between",
-            gap: 22,
-            paddingBottom: "clamp(16px,2.2vw,24px)",
+            gap: 16,
+            paddingBottom: 16,
+            borderBottom: hair(16),
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: "min(100%,300px)" }}>
-            <span style={{ ...EYEBROW, color: "var(--acc)" }}>
-              Mi estudio{pavilionOptions[0] ? ` · ${pavilionOptions[0].label}` : ""}
-            </span>
-            <h1 style={DISPLAY}>Mi estudio</h1>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <h1
+              style={{
+                margin: 0,
+                fontWeight: 400,
+                fontSize: 19,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}
+            >
+              Mi estudio
+            </h1>
+            {pavilionOptions[0] && (
+              <span style={{ ...EYEBROW, fontSize: 9, color: mix(48) }}>{pavilionOptions[0].label}</span>
+            )}
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-            <button type="button" style={btnGhost} onClick={() => setArtistQrOpen(true)}>
-              <QrCode size={14} strokeWidth={1.6} />
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+            {/* El interruptor de asunto: chico, porque la navegación son los pasos */}
+            <div style={segmentWrap} role="tablist" aria-label="Qué estoy viendo">
+              {[
+                { key: "inventario", label: "Inventario" },
+                { key: "orders", label: "Entregas" },
+              ].map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === s.key}
+                  className="fdm-studio-plain"
+                  onClick={() => setTab(s.key)}
+                  style={segment(tab === s.key)}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              style={{ ...btnGhost, height: 34, padding: "0 16px" }}
+              onClick={() => setArtistQrOpen(true)}
+            >
+              <QrCode size={13} strokeWidth={1.6} />
               Mi QR
             </button>
           </div>
         </header>
 
-        <Tabs value={tab} onValueChange={setTab} className="">
-          <TabsList className="fdm-studio-tablist">
-            <TabsTrigger value="inventario" className="fdm-studio-tab">
-              <Brush size={14} strokeWidth={1.6} />
-              Mi inventario
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="fdm-studio-tab">
-              <Receipt size={14} strokeWidth={1.6} />
-              Entregas
-            </TabsTrigger>
-          </TabsList>
-
-          {/* ── INVENTARIO: los tres pasos ──────────────────────────────── */}
-          <TabsContent value="inventario" className="" style={{ marginTop: "clamp(22px,2.6vw,32px)" }}>
+        {/* ── INVENTARIO: los tres pasos ────────────────────────────────── */}
+        {tab === "inventario" && (
+          <div style={{ marginTop: "clamp(22px,2.6vw,30px)" }}>
             {locked && (
               <div
                 style={{
@@ -416,24 +449,12 @@ export default function MiEstudioClient() {
 
             <StudioStepper steps={steps} current={step} onSelect={setStep} />
 
-            <div style={{ marginTop: "clamp(28px,3.4vw,44px)" }}>
+            <div style={{ marginTop: "clamp(26px,3vw,38px)" }}>
               {/* PASO 1 ─ Obras */}
               {step === "obras" && (
                 <section>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 9, marginBottom: "clamp(20px,2.4vw,30px)" }}>
-                    <span style={{ ...EYEBROW, color: "var(--acc)" }}>Paso 1 de 3</span>
-                    <h2
-                      style={{
-                        margin: 0,
-                        fontWeight: 300,
-                        fontSize: "clamp(23px,2.8vw,34px)",
-                        lineHeight: 1.05,
-                        letterSpacing: "0.02em",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Tus obras
-                    </h2>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: "clamp(18px,2.2vw,26px)" }}>
+                    <h2 style={STEP_TITLE}>Tus obras</h2>
                     <p style={{ ...BODY, maxWidth: "54ch" }}>
                       Cada obra lleva su imagen, sus dimensiones, su técnica, su precio y cuántas
                       copias hay. Puedes editarlas hasta que envíes el inventario.
@@ -572,13 +593,21 @@ export default function MiEstudioClient() {
                 />
               )}
             </div>
-          </TabsContent>
+          </div>
+        )}
 
-          {/* ── ENTREGAS ────────────────────────────────────────────────── */}
-          <TabsContent value="orders" className="" style={{ marginTop: "clamp(24px,3vw,38px)" }}>
+        {/* ── ENTREGAS ──────────────────────────────────────────────────── */}
+        {tab === "orders" && (
+          <div style={{ marginTop: "clamp(24px,3vw,36px)" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: "clamp(20px,2.4vw,30px)" }}>
+              <h2 style={STEP_TITLE}>Entregas</h2>
+              <p style={{ ...BODY, maxWidth: "54ch" }}>
+                Quién compró una obra tuya, a dónde va y qué falta por entregar.
+              </p>
+            </div>
             <ArtistOrders />
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </div>
 
       {/* ── Barra del paso: la acción siempre al alcance del pulgar ─────── */}

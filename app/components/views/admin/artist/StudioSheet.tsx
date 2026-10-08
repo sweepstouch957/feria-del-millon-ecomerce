@@ -39,19 +39,33 @@ export default function StudioSheet({
 }) {
   const panel = useRef<HTMLDivElement>(null);
 
+  /* `onClose` casi siempre llega como función nueva en cada render, así que no
+     puede estar en las dependencias del efecto: cuando lo estuvo, cada tecla
+     escrita en el formulario volvía a correr el efecto, el foco saltaba del
+     input a la hoja y no se podía escribir más de una letra. Con la ref, el
+     efecto corre una sola vez: al abrir. */
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
+
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeRef.current();
+    };
     window.addEventListener("keydown", onKey);
+
     // El foco entra a la hoja: si no, el teclado sigue en la página de atrás.
     panel.current?.focus();
+
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

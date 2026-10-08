@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, useWatch, type Control, type Resolver } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, ImagePlus, Loader2, Upload } from "lucide-react";
@@ -88,6 +88,55 @@ const EMPTY: Partial<FormValues> = {
   pavilion: "",
 };
 
+/* La ficha de cómo va a quedar en el catálogo.
+
+   Es un componente aparte y se suscribe sola a los campos que muestra: si el
+   formulario entero escuchara el título para pintar esta ficha, cada tecla
+   redibujaría los quince campos. */
+function CatalogPreview({ control, image }: { control: Control<FormValues>; image?: string }) {
+  const [title, price, dimensions, year] = useWatch({
+    control,
+    name: ["title", "price", "dimensions", "year"],
+  });
+
+  return (
+    <div style={{ display: "flex", gap: 13, alignItems: "flex-start" }}>
+      <div
+        style={{
+          width: 58,
+          aspectRatio: "1",
+          flexShrink: 0,
+          background: mix(8),
+          border: `1px solid ${mix(12)}`,
+          overflow: "hidden",
+        }}
+      >
+        {image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        )}
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 15, lineHeight: 1.3 }}>
+          {title || <span style={{ color: mix(38) }}>Título de la obra</span>}
+        </p>
+        <p style={{ margin: "6px 0 0" }}>
+          <Eyebrow tone="faint" size={9}>
+            {[year, dimensions].filter(Boolean).join(" · ") || "Año · dimensiones"}
+          </Eyebrow>
+        </p>
+        <p style={{ margin: "7px 0 0", fontSize: 14, fontVariantNumeric: "tabular-nums", color: mix(80) }}>
+          {typeof price === "number" && !Number.isNaN(price) ? (
+            formatCOP(price, { currency: "COP" })
+          ) : (
+            <span style={{ color: mix(38) }}>Sin precio</span>
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function CreateEditArtworkModal({
   open,
   onOpenChange,
@@ -119,18 +168,17 @@ export default function CreateEditArtworkModal({
     setValue,
     reset,
     watch,
+    control,
     formState: { isSubmitting, errors },
   } = useForm<FormValues>({
     resolver: zodResolver(FormSchema) as Resolver<FormValues>,
     defaultValues: EMPTY as Partial<FormValues>,
   });
 
+  // Solo estos dos cambian lo que se dibuja alrededor del formulario; el resto
+  // de la vista previa se suscribe por su cuenta.
   const imageUrl = watch("image");
   const isReproducible = watch("reproducible");
-  const previewTitle = watch("title");
-  const previewPrice = watch("price");
-  const previewDims = watch("dimensions");
-  const previewYear = watch("year");
 
   const onUploaded = useCallback(
     (url: string) => {
@@ -235,17 +283,24 @@ export default function CreateEditArtworkModal({
   const busy = isSubmitting || mCreate.isPending || mPatch.isPending;
   const showPreview = !!imageUrl && !imageBroken;
 
+  // Estable a propósito: lo que cambia es `busy`, y se lee por ref dentro.
+  const busyRef = useRef(busy);
+  busyRef.current = busy;
+  const close = useCallback(() => {
+    if (!busyRef.current) onOpenChange(false);
+  }, [onOpenChange]);
+
   return (
     <StudioSheet
       open={open}
-      onClose={() => !busy && onOpenChange(false)}
+      onClose={close}
       eyebrow={editingId ? "Editar obra" : "Nueva obra"}
       title={editingId ? "Editar la obra" : "Cargar una obra"}
       description="Imagen, título, dimensiones, técnica, precio y copias. Puedes editarla las veces que quieras hasta que envíes tu inventario."
       maxWidth={900}
       footer={
         <>
-          <StudioButton onClick={() => onOpenChange(false)} disabled={busy}>
+          <StudioButton onClick={close} disabled={busy}>
             Cancelar
           </StudioButton>
           {/* Vive fuera del <form> (está en el pie de la hoja), así que dispara
@@ -402,40 +457,7 @@ export default function CreateEditArtworkModal({
             <Eyebrow tone="faint" size={9} style={{ display: "block", marginBottom: 10 }}>
               Así se ve en el catálogo
             </Eyebrow>
-            <div style={{ display: "flex", gap: 13, alignItems: "flex-start" }}>
-              <div
-                style={{
-                  width: 58,
-                  aspectRatio: "1",
-                  flexShrink: 0,
-                  background: mix(8),
-                  border: `1px solid ${mix(12)}`,
-                  overflow: "hidden",
-                }}
-              >
-                {showPreview && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                )}
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.3 }}>
-                  {previewTitle || <span style={{ color: mix(38) }}>Título de la obra</span>}
-                </p>
-                <p style={{ margin: "6px 0 0" }}>
-                  <Eyebrow tone="faint" size={9}>
-                    {[previewYear, previewDims].filter(Boolean).join(" · ") || "Año · dimensiones"}
-                  </Eyebrow>
-                </p>
-                <p style={{ margin: "7px 0 0", fontSize: 14, fontVariantNumeric: "tabular-nums", color: mix(80) }}>
-                  {typeof previewPrice === "number" && !Number.isNaN(previewPrice) ? (
-                    formatCOP(previewPrice, { currency: "COP" })
-                  ) : (
-                    <span style={{ color: mix(38) }}>Sin precio</span>
-                  )}
-                </p>
-              </div>
-            </div>
+            <CatalogPreview control={control} image={showPreview ? imageUrl : undefined} />
           </div>
         </div>
 

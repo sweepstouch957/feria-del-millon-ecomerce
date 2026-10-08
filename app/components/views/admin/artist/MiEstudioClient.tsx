@@ -240,6 +240,22 @@ export default function MiEstudioClient() {
   const notify = useCallback((msg: string) => toast.success(msg), []);
   const loadMore = useCallback(() => artworksQuery.loadMore(), [artworksQuery]);
 
+  // Los cierres van memoizados: una hoja que recibe un onClose nuevo en cada
+  // render del padre es una hoja que se reinicia por dentro sin motivo.
+  const closeDetail = useCallback(() => setDetailId(null), []);
+  const closeQr = useCallback(() => setQrForId(null), []);
+  const closeArtistQr = useCallback(() => setArtistQrOpen(false), []);
+  const closeConfirm = useCallback(() => setConfirming(false), []);
+  const editFromDetail = useCallback((id: string) => {
+    setDetailId(null);
+    setEditingId(id);
+    setModalOpen(true);
+  }, []);
+  const closeArtworkForm = useCallback(() => {
+    setEditingId(null);
+    setModalOpen(false);
+  }, []);
+
   const saveAndGo = useCallback(async () => {
     if (tooLong) {
       toast.error("La descripción se pasó de 250 palabras.");
@@ -676,13 +692,13 @@ export default function MiEstudioClient() {
       {/* ── Confirmar el envío: es irreversible, se dice con números ────── */}
       <StudioSheet
         open={confirming}
-        onClose={() => !send.isPending && setConfirming(false)}
+        onClose={closeConfirm}
         eyebrow="Se envía una sola vez"
         title="¿Enviamos tu inventario?"
         maxWidth={520}
         footer={
           <>
-            <StudioButton onClick={() => setConfirming(false)} disabled={send.isPending}>
+            <StudioButton onClick={closeConfirm} disabled={send.isPending}>
               Todavía no
             </StudioButton>
             <StudioButton variant="solid" onClick={doSend} disabled={send.isPending}>
@@ -730,13 +746,9 @@ export default function MiEstudioClient() {
         open={!!detailId}
         loading={loadingDetail}
         locked={locked}
-        onClose={() => setDetailId(null)}
-        onEdit={(id) => {
-          setDetailId(null);
-          setEditingId(id);
-          setModalOpen(true);
-        }}
-        onOpenQr={(id) => setQrForId(id)}
+        onClose={closeDetail}
+        onEdit={editFromDetail}
+        onOpenQr={openQr}
       />
 
       <CreateEditArtworkModal
@@ -748,15 +760,12 @@ export default function MiEstudioClient() {
         techniqueOptions={techniqueOptions}
         pavilionOptions={pavilionOptions}
         artistId={artistId as string}
-        onDone={() => {
-          setEditingId(null);
-          setModalOpen(false);
-        }}
+        onDone={closeArtworkForm}
       />
 
-      <QRModal artworkId={qrForId} open={!!qrForId} onClose={() => setQrForId(null)} />
+      <QRModal artworkId={qrForId} open={!!qrForId} onClose={closeQr} />
 
-      <ArtistQrModal artistId={String(artistId)} open={artistQrOpen} onClose={() => setArtistQrOpen(false)} />
+      <ArtistQrModal artistId={String(artistId)} open={artistQrOpen} onClose={closeArtistQr} />
     </div>
   );
 }

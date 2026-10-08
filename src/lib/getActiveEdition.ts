@@ -35,11 +35,19 @@ export interface EditionConvocatoria {
   requirements?: ConvocatoriaRequirements;
 }
 
+/** Ventana en la que los artistas pueden cargar su inventario. Cada punta es
+ *  opcional: sin apertura se puede desde siempre, sin cierre hasta siempre. */
+export interface EditionInventoryWindow {
+  openAt?: string;
+  closeAt?: string;
+}
+
 export interface Edition {
   eventId: string;
   eventName: string;
   pavilions: EditionPavilion[];
   convocatoria: EditionConvocatoria | null;
+  inventory: EditionInventoryWindow;
 }
 
 export const FALLBACK_EDITION: Edition = {
@@ -47,6 +55,9 @@ export const FALLBACK_EDITION: Edition = {
   eventName: DEFAULT_EVENT_NAME,
   pavilions: [{ id: FIXED_PAVILION_ID, name: FIXED_PAVILION_NAME, slug: "" }],
   convocatoria: null,
+  // Sin datos del evento no se le cierra la puerta a nadie: si el servicio está
+  // caído, el servidor igual valida la ventana al guardar.
+  inventory: {},
 };
 
 // Circuit breaker de proceso — ver la nota en getSiteConfig.
@@ -87,6 +98,10 @@ export async function getActiveEdition(): Promise<Edition> {
       eventId: String(ev._id),
       eventName: ev.name || DEFAULT_EVENT_NAME,
       pavilions: pavilions.length ? pavilions : FALLBACK_EDITION.pavilions,
+      inventory: {
+        openAt: ev.inventoryOpenAt || undefined,
+        closeAt: ev.inventoryCloseAt || undefined,
+      },
       convocatoria: c?._id
         ? {
             id: String(c._id),

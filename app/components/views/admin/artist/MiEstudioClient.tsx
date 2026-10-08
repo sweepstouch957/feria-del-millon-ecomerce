@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarClock,
   Check,
   Lock,
   Plus,
@@ -23,6 +24,7 @@ import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
 import { getMyApplications } from "@services/applications.service";
 import { useMyProject } from "@hooks/artist/useMyProject";
 import { useDebouncedValue } from "@hooks/artist/useDebouncedValue";
+import { useInventoryWindow } from "@hooks/artist/useInventoryWindow";
 
 import ArtworksTable from "./ArtworksTable";
 import ArtworkDetailModal from "./ArtworkDetailModal";
@@ -133,6 +135,9 @@ export default function MiEstudioClient() {
 
   const [confirming, setConfirming] = useState(false);
 
+  // La feria decide entre qué fechas se puede cargar. Acá sólo se dice antes.
+  const inventory = useInventoryWindow();
+
   /* ── Obras ───────────────────────────────────────────────────────────── */
   const [q, setQ] = useState("");
   const [tech, setTech] = useState<string | "all">("all");
@@ -236,9 +241,13 @@ export default function MiEstudioClient() {
       toast.error("Ya enviaste tu inventario: escríbele a la feria para cambiar algo.");
       return;
     }
+    if (!inventory.canUpload) {
+      toast.error(inventory.reason as string);
+      return;
+    }
     setEditingId(null);
     setModalOpen(true);
-  }, [locked]);
+  }, [locked, inventory.canUpload, inventory.reason]);
 
   const openEdit = useCallback((id: string) => {
     setEditingId(id);
@@ -474,6 +483,31 @@ export default function MiEstudioClient() {
                     </p>
                   </div>
 
+                  {/* La ventana de carga de la feria: se dice acá, no cuando el
+                      guardado contesta que no. */}
+                  {!locked && (inventory.reason || inventory.closingSoon) && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 11,
+                        padding: "13px 15px",
+                        marginBottom: "clamp(18px,2.2vw,26px)",
+                        border: `1px solid ${inventory.reason ? mix(26) : "var(--acc)"}`,
+                        background: mix(4),
+                      }}
+                    >
+                      {inventory.reason ? (
+                        <Lock size={15} strokeWidth={1.6} style={{ marginTop: 2, flexShrink: 0, color: mix(60) }} />
+                      ) : (
+                        <CalendarClock size={15} strokeWidth={1.6} style={{ marginTop: 2, flexShrink: 0, color: "var(--acc)" }} />
+                      )}
+                      <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: mix(74) }}>
+                        {inventory.reason ?? inventory.closingSoon}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Filtros: solo estorban cuando hay poco que filtrar */}
                   {(rows.length > 4 || filtering) && (
                     <div
@@ -555,7 +589,9 @@ export default function MiEstudioClient() {
                   <ArtworksTable
                     rows={rows}
                     loading={artworksQuery.isLoading}
-                    locked={locked}
+                    // Fuera de la ventana tampoco se puede editar: el servidor
+                    // lo rechaza igual, así que el botón no se ofrece.
+                    locked={locked || !inventory.canUpload}
                     filtering={filtering}
                     onView={openDetail}
                     onEdit={openEdit}
@@ -670,7 +706,11 @@ export default function MiEstudioClient() {
 
               {step === "obras" && (
                 <>
-                  <StudioButton variant={rows.length ? "ghost" : "solid"} onClick={openNew}>
+                  <StudioButton
+                    variant={rows.length ? "ghost" : "solid"}
+                    onClick={openNew}
+                    disabled={!inventory.canUpload}
+                  >
                     <Plus size={15} strokeWidth={1.8} />
                     Nueva obra
                   </StudioButton>
@@ -767,7 +807,7 @@ export default function MiEstudioClient() {
         data={detailData}
         open={!!detailId}
         loading={loadingDetail}
-        locked={locked}
+        locked={locked || !inventory.canUpload}
         onClose={closeDetail}
         onEdit={editFromDetail}
         onOpenQr={openQr}

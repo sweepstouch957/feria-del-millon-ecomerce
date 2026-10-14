@@ -79,6 +79,9 @@ const Row = memo(function Row({
   onShare: (id: string, title: string) => void;
 }) {
   const hidden = (r as any)?.hiddenUntilEvent;
+  // La feria la devolvió para corregir: se edita aunque el resto esté cerrado.
+  const returned = !!(r as any)?.editUnlocked;
+  const note: string = (r as any)?.editNote || "";
 
   return (
     <article
@@ -158,7 +161,23 @@ const Row = memo(function Row({
             >
               {hidden ? "Sin publicar" : "En el catálogo"}
             </span>
+            {returned && (
+              <span
+                style={{
+                  ...EYEBROW,
+                  fontSize: 8.5,
+                  padding: "2px 8px",
+                  background: "var(--acc)",
+                  color: "#fff",
+                }}
+              >
+                La feria te pide corregirla
+              </span>
+            )}
           </p>
+          {returned && note && (
+            <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.45, color: mix(70) }}>{note}</p>
+          )}
         </div>
       </button>
 
@@ -193,7 +212,7 @@ const Row = memo(function Row({
           <Eye size={13} strokeWidth={1.6} />
           Ver
         </StudioButton>
-        {!locked && (
+        {(!locked || returned) && (
           <StudioButton variant="link" onClick={() => onEdit(r.id)}>
             <Pencil size={13} strokeWidth={1.6} />
             Editar

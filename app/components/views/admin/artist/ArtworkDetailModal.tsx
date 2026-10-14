@@ -89,7 +89,7 @@ export default function ArtworkDetailModal({
         maxWidth={920}
         footer={
           <>
-            {!locked && id && onEdit && (
+            {(!locked || (doc as any)?.editUnlocked) && id && onEdit && (
               <button type="button" style={btnSolid} onClick={() => onEdit(id)}>
                 <Pencil size={14} strokeWidth={1.8} />
                 Editar

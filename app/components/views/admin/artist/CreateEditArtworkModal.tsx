@@ -310,7 +310,7 @@ function ArtworkFields({
             placeholder="1"
             hint={
               values.reproducible
-                ? `Copias a la venta, máximo ${MAX_COPIES} por serie. Cada compra descuenta una.`
+                ? `Copias a la venta, máximo ${MAX_COPIES} por obra. Cada compra descuenta una.`
                 : "Obra única: deja 1."
             }
           />

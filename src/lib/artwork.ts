@@ -5,7 +5,7 @@
 
 export const MAX_IMAGE_MB = 5;
 export const MAX_PROJECT_WORDS = 250;
-export const MAX_COPIES = 10;
+export const MAX_COPIES = 15;
 
 export const countWords = (s: string) => (s.trim() ? s.trim().split(/\s+/).length : 0);
 

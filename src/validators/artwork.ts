@@ -42,8 +42,15 @@ export const artworkSchema = z.object({
     z.number().int("El precio va sin decimales").min(0, "El precio no puede ser negativo").optional()
   ),
 
+  // Obligatorio: vacío se guardaba como 1 y las series quedaban con una sola
+  // copia a la venta. Obra única = 1, a propósito. Tope por obra: una serie de
+  // 400 copias es un póster, y la feria cobra por obra.
   stock: optionalNumber.pipe(
-    z.number().int("La cantidad va sin decimales").min(0, "No puede ser negativa").optional()
+    z
+      .number({ required_error: "Pon cuántas hay a la venta (1 si es obra única)" })
+      .int("La cantidad va sin decimales")
+      .min(1, "Pon cuántas hay a la venta (1 si es obra única)")
+      .max(MAX_COPIES, `Máximo ${MAX_COPIES} por obra`)
   ),
 
   dimensions: z.string().max(120, "Dimensiones muy largas").optional(),
@@ -57,13 +64,7 @@ export const artworkSchema = z.object({
     .trim()
     .optional()
     .refine((v) => !v || /^https?:\/\/\S+$/i.test(v), "Esa dirección de imagen no es válida"),
-})
-  // Una serie de 400 copias no es una serie: es un póster, y la feria cobra por
-  // obra. El tope vive con el resto de las reglas de la obra.
-  .refine((v) => !v.reproducible || (v.stock ?? 1) <= MAX_COPIES, {
-    path: ["stock"],
-    message: `Máximo ${MAX_COPIES} copias por serie`,
-  });
+});
 
 export type ArtworkFormValues = {
   title: string;

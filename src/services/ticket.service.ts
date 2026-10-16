@@ -203,11 +203,17 @@ export interface InvitationView {
   lastName?: string;
   /** Imagen de cabecera del correo de invitación. */
   image?: string;
+  /** "Confirme antes de…" (solo informativo). */
+  deadline?: string;
+  /** Si este pase es de un acompañante: quién lo invitó. */
+  hostName?: string;
+  /** Acompañantes con su propio QR (ya inscritos). */
+  companions?: { name: string; email: string }[];
   eventName?: string;
   eventDay: string;
   allDays: boolean;
   admits: number;
-  status: "pending" | "confirmed" | "canceled";
+  status: "pending" | "confirmed" | "canceled" | "declined";
   companionName?: string;
   shortCode?: string;
   qrDataUrl?: string;
@@ -231,10 +237,29 @@ export interface InvitationRegistration {
   company?: string;
   position?: string;
   corporateEmail?: string;
-  companionName?: string;
+  /** Cada acompañante recibe su propio QR en su correo y WhatsApp. */
+  companions?: InvitationCompanion[];
   /** Aceptó el tratamiento de datos: sin esto el servidor no inscribe. */
   dataConsent: boolean;
 }
+
+export interface InvitationCompanion {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  documentType?: string;
+  documentNumber?: string;
+}
+
+/** El invitado dice que no va. */
+export const declineInvitation = async (token: string) => {
+  const { data } = await apiClient.post<InvitationView>(
+    `/ticket/tickets/invitations/${encodeURIComponent(token)}/decline`,
+    {},
+  );
+  return data;
+};
 
 /** Inscripción del invitado: al confirmar recibe el QR por correo y WhatsApp. */
 export const confirmInvitation = async (token: string, body: InvitationRegistration) => {

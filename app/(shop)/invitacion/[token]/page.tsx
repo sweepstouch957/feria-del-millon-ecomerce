@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { getInvitation, confirmInvitation, type InvitationRegistration } from "@services/ticket.service";
+import {
+  getInvitation,
+  confirmInvitation,
+  declineInvitation,
+  type InvitationRegistration,
+  type InvitationCompanion,
+} from "@services/ticket.service";
 
 /* Confirmación de invitación: llega desde el botón del correo. Es la
    inscripción del invitado (los mismos datos que pide ARTBO) y al confirmar se
@@ -21,12 +27,22 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATA_CONTACT = "info@sweepstouch.com";
 const WHATSAPP = "+57 300 748 5406";
 
-type Form = Omit<InvitationRegistration, "dataConsent"> & { dataConsent: "" | "yes" | "no" };
+type Form = Omit<InvitationRegistration, "dataConsent" | "companions"> & { dataConsent: "" | "yes" | "no" };
 
 const EMPTY: Form = {
   firstName: "", lastName: "", documentType: "", documentNumber: "", country: "Colombia", city: "",
-  address: "", phone: "", email: "", company: "", position: "", corporateEmail: "", companionName: "",
+  address: "", phone: "", email: "", company: "", position: "", corporateEmail: "",
   dataConsent: "",
+};
+
+const EMPTY_COMPANION: InvitationCompanion = { firstName: "", lastName: "", email: "", phone: "", documentType: "", documentNumber: "" };
+
+/** Un acompañante se deja vacío (su cupo queda en el QR del invitado) o completo. */
+const companionState = (c: InvitationCompanion) => {
+  const filled = Object.values(c).some((v) => String(v ?? "").trim());
+  if (!filled) return "empty";
+  const ok = c.firstName.trim() && c.lastName.trim() && c.phone.trim() && EMAIL_RE.test(c.email.trim());
+  return ok ? "ok" : "incomplete";
 };
 
 export default function InvitationPage() {
@@ -41,6 +57,37 @@ export default function InvitationPage() {
   const [f, setF] = useState<Form>(EMPTY);
   const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
+
+  // Invitación doble = 2 QR: un bloque por acompañante.
+  const seats = Math.max((inv?.admits || 1) - 1, 0);
+  const [companions, setCompanions] = useState<InvitationCompanion[]>([]);
+  useEffect(() => {
+    setCompanions((cs) => Array.from({ length: seats }, (_, i) => cs[i] || { ...EMPTY_COMPANION }));
+  }, [seats]);
+  const setC = (i: number, k: keyof InvitationCompanion) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setCompanions((cs) => cs.map((c, j) => (j === i ? { ...c, [k]: e.target.value } : c)));
+
+  // "Declinar" llega del botón del correo (?declinar=1). Sin useSearchParams: pide Suspense en el build.
+  const [declining, setDeclining] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("declinar") === "1") setDeclining(true);
+  }, []);
+  // Quien declinó puede cambiar de opinión y volver al formulario.
+  const [reconsider, setReconsider] = useState(false);
+
+  const decline = useMutation({
+    mutationFn: () => declineInvitation(token),
+    onSuccess: (data) => {
+      qc.setQueryData(["invitation", token], data);
+      setDeclining(false);
+    },
+    onError: (e: any) =>
+      toast.error(
+        e?.response?.data?.error === "already_confirmed"
+          ? "Esta invitación ya fue confirmada. Escríbanos por WhatsApp si no podrá asistir."
+          : "No pudimos registrar su respuesta. Intente de nuevo."
+      ),
+  });
 
   // Nombre y correo llegan de la invitación; se pueden corregir.
   useEffect(() => {
@@ -58,12 +105,18 @@ export default function InvitationPage() {
   const missing = required.filter((k) => !String(f[k] ?? "").trim());
   const emailOk = EMAIL_RE.test(f.email.trim());
   const corpOk = !f.corporateEmail?.trim() || EMAIL_RE.test(f.corporateEmail.trim());
-  const complete = !missing.length && emailOk && corpOk && f.dataConsent === "yes";
+  const companionsOk = companions.every((c) => companionState(c) !== "incomplete");
+  const complete = !missing.length && emailOk && corpOk && companionsOk && f.dataConsent === "yes";
 
   const confirm = useMutation({
     mutationFn: () => {
-      const body = Object.fromEntries(Object.entries(f).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v]));
-      return confirmInvitation(token, { ...(body as any), dataConsent: f.dataConsent === "yes" });
+      const trim = <T extends object>(o: T) =>
+        Object.fromEntries(Object.entries(o).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v])) as T;
+      return confirmInvitation(token, {
+        ...(trim(f) as any),
+        companions: companions.filter((c) => companionState(c) === "ok").map(trim),
+        dataConsent: f.dataConsent === "yes",
+      });
     },
     onSuccess: (data) => {
       qc.setQueryData(["invitation", token], data);
@@ -77,7 +130,11 @@ export default function InvitationPage() {
           ? "Debe aceptar el tratamiento de datos para inscribirse."
           : code === "email_invalid"
             ? "Revise el correo electrónico."
-            : "No pudimos confirmar su asistencia. Intente de nuevo."
+            : code === "companion_same_email"
+              ? "Su acompañante necesita un correo distinto al suyo: allí le llega su propio pase."
+              : String(code || "").startsWith("companion_")
+                ? "Revise los datos de su acompañante."
+                : "No pudimos confirmar su asistencia. Intente de nuevo."
       );
     },
   });
@@ -97,6 +154,10 @@ export default function InvitationPage() {
   }
 
   const when = inv.allDays ? "todos los días de la feria" : fmtDay(inv.eventDay);
+  const deadlineText = inv.deadline
+    ? new Date(inv.deadline).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Bogota" })
+    : "";
+  const showForm = inv.status === "pending" || (inv.status === "declined" && reconsider);
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
@@ -113,13 +174,25 @@ export default function InvitationPage() {
 
       {inv.status === "confirmed" && (
         <div className="mt-8 rounded-2xl border border-slate-200 p-6 text-center">
-          <p className="text-xl font-semibold">¡Gracias por confirmar su asistencia!</p>
-          <p className="mt-1 text-sm text-slate-500">Thank you for confirming your attendance!</p>
+          {inv.hostName ? (
+            <>
+              <p className="text-xl font-semibold">Su pase de acceso</p>
+              <p className="mt-1 text-sm text-slate-500">{inv.hostName} le invitó como su acompañante.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-xl font-semibold">¡Gracias por confirmar su asistencia!</p>
+              <p className="mt-1 text-sm text-slate-500">Thank you for confirming your attendance!</p>
+            </>
+          )}
           <p className="mt-4 text-sm text-slate-700">
-            Pase válido para <b>{when}</b>
-            {inv.admits > 1 ? <> · <b>{inv.admits} personas</b></> : null}.
+            Pase válido para <b>{when}</b> · <b>{inv.admits > 1 ? `${inv.admits} personas` : "1 persona"}</b>.
           </p>
-          {inv.companionName && <p className="text-sm text-slate-500">Acompañante: {inv.companionName}</p>}
+          {!!inv.companions?.length && (
+            <p className="mt-1 text-sm text-slate-500">
+              Su acompañante tiene su propio QR; se lo enviamos a {inv.companions.map((c) => `${c.name} (${c.email})`).join(", ")}.
+            </p>
+          )}
           {inv.qrDataUrl && <img src={inv.qrDataUrl} alt="QR de acceso" className="mx-auto mt-4 w-64" />}
           <p className="mt-2 text-xs text-slate-500">Código {inv.shortCode}. Presente este QR en la entrada.</p>
           {inv.qrDataUrl && (
@@ -131,7 +204,33 @@ export default function InvitationPage() {
         </div>
       )}
 
-      {inv.status === "pending" && (
+      {inv.status === "declined" && !reconsider && (
+        <div className="mt-8 rounded-2xl border border-slate-200 p-6 text-center">
+          <p className="text-xl font-semibold">Gracias por avisarnos</p>
+          <p className="mt-1 text-sm text-slate-500">Registramos que no podrá asistir. Thank you for letting us know.</p>
+          <button type="button" onClick={() => setReconsider(true)} className="mt-5 rounded-lg border-2 border-black px-5 py-2.5 text-sm font-semibold">
+            Cambié de opinión: confirmar asistencia
+          </button>
+        </div>
+      )}
+
+      {inv.status === "pending" && declining && (
+        <div className="mt-8 rounded-2xl border border-slate-200 p-6 text-center">
+          <p className="text-xl font-semibold">¿No podrá acompañarnos?</p>
+          <p className="mt-1 text-sm text-slate-500">Si declina, liberamos su cupo. Puede volver a este enlace si cambia de opinión.</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <button type="button" disabled={decline.isPending} onClick={() => decline.mutate()}
+              className="rounded-lg bg-black px-5 py-2.5 text-sm font-semibold text-white disabled:bg-slate-300">
+              {decline.isPending ? "Enviando…" : "Declinar invitación"}
+            </button>
+            <button type="button" onClick={() => setDeclining(false)} className="rounded-lg border-2 border-black px-5 py-2.5 text-sm font-semibold">
+              Prefiero confirmar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showForm && !declining && (
         <form
           className="mt-8 space-y-5"
           onSubmit={(e) => {
@@ -144,8 +243,9 @@ export default function InvitationPage() {
             <p>
               Para completar su registro, le solicitamos actualizar sus datos, especialmente su correo electrónico, ya que allí
               recibirá su Pase de Acceso personalizado para ingresar a la Feria. Pase válido para <b>{when}</b>
-              {inv.admits > 1 ? <> · <b>{inv.admits} personas</b></> : null}.
+              {inv.admits > 1 ? <> · <b>{inv.admits} personas, un QR para cada una</b></> : null}.
             </p>
+            {deadlineText && <p>Le agradecemos confirmar antes del <b>{deadlineText}</b>.</p>}
             <p className="text-sm text-slate-500">
               To complete your registration, please make sure your information is up to date — especially your email address, as
               your personalized entry pass for the Fair will be sent there.
@@ -192,12 +292,48 @@ export default function InvitationPage() {
             <label className={`${lbl} sm:col-span-2`}>Correo electrónico institucional <span className={en}>/ Corporate e-mail</span>
               <input className={input} type="email" value={f.corporateEmail} onChange={set("corporateEmail")} />
             </label>
-            {inv.admits > 1 && (
-              <label className={`${lbl} sm:col-span-2`}>Nombre de su acompañante <span className={en}>/ Companion (opcional)</span>
-                <input className={input} value={f.companionName} onChange={set("companionName")} />
-              </label>
-            )}
           </div>
+
+          {companions.map((c, i) => {
+            const st = companionState(c);
+            return (
+              <fieldset key={i} className="rounded-xl border border-slate-200 p-4">
+                <legend className="px-1 text-sm font-semibold text-slate-800">
+                  {seats > 1 ? `Acompañante ${i + 1}` : "Su acompañante"} <span className={en}>/ Companion</span>
+                </legend>
+                <p className="mb-3 text-xs text-slate-500">
+                  Recibe su propio pase con QR en su correo y su WhatsApp. Si aún no sabe quién le acompaña, déjelo en blanco:
+                  ese cupo queda en su QR.
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className={lbl}>Nombres
+                    <input className={input} value={c.firstName} onChange={setC(i, "firstName")} />
+                  </label>
+                  <label className={lbl}>Apellidos
+                    <input className={input} value={c.lastName} onChange={setC(i, "lastName")} />
+                  </label>
+                  <label className={lbl}>Celular (WhatsApp)
+                    <input className={input} value={c.phone} onChange={setC(i, "phone")} inputMode="tel" placeholder="300 000 0000" />
+                  </label>
+                  <label className={lbl}>Correo electrónico
+                    <input className={input} type="email" value={c.email} onChange={setC(i, "email")} />
+                  </label>
+                  <label className={lbl}>Tipo de documento <span className={en}>(opcional)</span>
+                    <select className={input} value={c.documentType} onChange={setC(i, "documentType")}>
+                      <option value="">—</option>
+                      {DOC_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </label>
+                  <label className={lbl}>Número de documento <span className={en}>(opcional)</span>
+                    <input className={input} value={c.documentNumber} onChange={setC(i, "documentNumber")} />
+                  </label>
+                </div>
+                {st === "incomplete" && (
+                  <p className="mt-2 text-xs text-red-600">Complete nombres, apellidos, celular y un correo válido, o deje el bloque vacío.</p>
+                )}
+              </fieldset>
+            );
+          })}
 
           <fieldset className="rounded-xl border border-slate-200 p-4">
             <legend className="px-1 text-sm font-medium text-slate-800">
@@ -227,6 +363,14 @@ export default function InvitationPage() {
           >
             {confirm.isPending ? "Enviando…" : "Enviar / Submit"}
           </button>
+          {inv.status === "pending" && (
+            <p className="text-center text-sm">
+              <button type="button" onClick={() => { setDeclining(true); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                className="text-slate-500 underline underline-offset-2">
+                No podré asistir / Decline invitation
+              </button>
+            </p>
+          )}
 
           <section className="space-y-4 border-t border-slate-200 pt-6 text-[11.5px] leading-relaxed text-slate-500">
             <div>

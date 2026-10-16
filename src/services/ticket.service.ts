@@ -199,6 +199,10 @@ export interface InvitationView {
   phone?: string;
   documentNumber?: string;
   address?: string;
+  firstName?: string;
+  lastName?: string;
+  /** Imagen de cabecera del correo de invitación. */
+  image?: string;
   eventName?: string;
   eventDay: string;
   allDays: boolean;
@@ -214,17 +218,26 @@ export const getInvitation = async (token: string) => {
   return data;
 };
 
-/** Inscripción del invitado: nombre, celular, identificación y dirección. */
-export const confirmInvitation = async (
-  token: string,
-  body: {
-    name?: string;
-    phone: string;
-    documentNumber: string;
-    address: string;
-    companionName?: string;
-  },
-) => {
+export interface InvitationRegistration {
+  firstName: string;
+  lastName: string;
+  documentType: string;
+  documentNumber: string;
+  country: string;
+  city: string;
+  address: string;
+  phone: string;
+  email: string;
+  company?: string;
+  position?: string;
+  corporateEmail?: string;
+  companionName?: string;
+  /** Aceptó el tratamiento de datos: sin esto el servidor no inscribe. */
+  dataConsent: boolean;
+}
+
+/** Inscripción del invitado: al confirmar recibe el QR por correo y WhatsApp. */
+export const confirmInvitation = async (token: string, body: InvitationRegistration) => {
   const { data } = await apiClient.post<InvitationView>(
     `/ticket/tickets/invitations/${encodeURIComponent(token)}/confirm`,
     body,

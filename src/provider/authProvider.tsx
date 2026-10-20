@@ -43,7 +43,9 @@ const USER_STORAGE_KEY = "auth_user";
 const LAST_PUBLIC_PATH_KEY = "last_public_path";
 
 // Rutas que requieren autenticación
-const PROTECTED_ROUTES = ["/checkout", "/account", "/orders", "/me", "/artist"];
+// El checkout es público: el comprador deja nombre, correo, celular y dirección,
+// sin cuenta. Lo que sigue (pedidos, perfil, panel de artista) sí pide sesión.
+const PROTECTED_ROUTES = ["/account", "/orders", "/me", "/artist"];
 
 // ¿El path actual es protegido?
 function isProtectedPath(pathname?: string | null) {

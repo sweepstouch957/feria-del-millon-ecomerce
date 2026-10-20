@@ -34,6 +34,7 @@ import { CheckoutConfirmation } from "@components/views/checkout/CheckoutConfirm
 import { useEdition } from "@provider/editionProvider";
 import PaymentForm, { PaymentFormPayload } from "../payment/PaymentForm";
 import { useAuth } from "@provider/authProvider";
+import { useCatalogSalesPaused } from "@provider/siteConfigProvider";
 import { getArtworkByIdOrSlug } from "@services/artworks.service";
 import { pickSrc } from "@lib/utils";
 
@@ -59,6 +60,7 @@ export default function CheckoutPageClient() {
     const steps = ["Dirección", "Pago", "Confirmación"];
 
     const { user } = useAuth();
+    const salesPause = useCatalogSalesPaused();
 
     const {
         register,
@@ -205,6 +207,7 @@ export default function CheckoutPageClient() {
                     name: `${values.firstName} ${values.lastName}`,
                     email: values.email,
                     phone: values.phone,
+                    document: values.documentNumber,
                     address: {
                         line1: values.address,
                         line2: values.notes ?? "",
@@ -275,10 +278,12 @@ export default function CheckoutPageClient() {
                             letterSpacing: "0.02em",
                         }}
                     >
-                        {artworkUnavailable ? "Obra no disponible" : "No hay obras en el carrito"}
+                        {salesPause.paused ? "Venta en feria" : artworkUnavailable ? "Obra no disponible" : "No hay obras en el carrito"}
                     </span>
                     <p style={{ margin: 0, maxWidth: "42ch", fontSize: 15, lineHeight: 1.6, color: mix(70) }}>
-                        {artworkUnavailable
+                        {salesPause.paused
+                            ? salesPause.message
+                            : artworkUnavailable
                             ? artworkUnavailable
                             : "Agregá obras al carrito para continuar con el pago."}
                     </p>

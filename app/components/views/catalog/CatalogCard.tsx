@@ -15,6 +15,7 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { formatMoney, mergeImages } from "@lib/utils";
+import { useCatalogSalesPaused } from "@provider/siteConfigProvider";
 
 export type CatalogCardProps = {
   artwork: any;
@@ -87,7 +88,10 @@ export default function CatalogCard({
   const pavilionName = artwork?.pavilionInfo?.name;
   const pavilionSlug = artwork?.pavilionInfo?.slug;
   const detailHref = `/obra/${encodeURIComponent(artwork?._id || artwork?.id)}`;
-  const available = Number(artwork?.stock || 0) > 0;
+  const { paused: salesPaused } = useCatalogSalesPaused();
+  const available = Number(artwork?.stock || 0) > 0 && !salesPaused;
+  const buyLabel = (long: boolean) =>
+    salesPaused ? "Venta en feria" : available ? (long ? "Agregar al Carrito" : "Agregar") : (long ? "Agotado" : "Agotado");
 
   // ─────────────────────────────
   // Navegación al hacer click en el card (mobile + desktop)
@@ -148,7 +152,7 @@ export default function CatalogCard({
               disabled={!available}
             >
               <ShoppingCart className="mr-2 h-4 w-4" />
-              {available ? "Agregar al Carrito" : "Agotado"}
+              {buyLabel(true)}
             </Button>
           </div>
           {showId && (
@@ -351,7 +355,7 @@ export default function CatalogCard({
               }`}
           >
             <ShoppingCart className="mr-2 h-4 w-4" />
-            {available ? "Agregar" : "Agotado"}
+            {buyLabel(false)}
           </Button>
         </div>
 

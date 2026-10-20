@@ -64,8 +64,22 @@ export interface LandingConfig {
   showTicker: boolean;
   showPrices: boolean;
   priceLabel: string;
+  /** Congelamiento de la venta en línea (días de feria: solo compra presencial). Fechas YYYY-MM-DD, inclusive, hora Bogotá. */
+  catalogSales: { pausedFrom: string; pausedTo: string; message: string };
   convocatoriaPage: ConvocatoriaPage;
   linktree: LinktreeConfig;
+}
+
+/** ¿Está congelada la venta en línea hoy (Bogotá)? Misma regla que orders-svc. */
+export function isCatalogSalesPaused(c?: LandingConfig["catalogSales"], now = new Date()): boolean {
+  const ok = (v?: string) => /^\d{4}-\d{2}-\d{2}$/.test(v || "");
+  const from = ok(c?.pausedFrom) ? c!.pausedFrom : "";
+  const to = ok(c?.pausedTo) ? c!.pausedTo : "";
+  if (!from && !to) return false;
+  const today = now.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+  if (from && today < from) return false;
+  if (to && today > to) return false;
+  return true;
 }
 
 // ── Página de enlaces (/links) — la que se imprime en un QR ────────────────
@@ -578,6 +592,7 @@ export const SITE_DEFAULTS: SiteConfig = {
     showTicker: true,
     showPrices: true,
     priceLabel: "$1.000.000",
+    catalogSales: { pausedFrom: "", pausedTo: "", message: "Durante los días de feria las obras se compran en el recinto. La venta en línea se reabre al terminar." },
     convocatoriaPage: CONVOCATORIA_PAGE_DEFAULTS,
     linktree: LINKTREE_DEFAULTS,
   },
@@ -685,6 +700,7 @@ export function mergeSiteConfig(raw: any): SiteConfig {
       showTicker: l.showTicker ?? DL.showTicker,
       showPrices: l.showPrices ?? DL.showPrices,
       priceLabel: l.priceLabel || DL.priceLabel,
+      catalogSales: { ...DL.catalogSales, ...(l.catalogSales || {}) },
       convocatoriaPage: mergeConvPage(l.convocatoriaPage),
       linktree: {
         ...LINKTREE_DEFAULTS,

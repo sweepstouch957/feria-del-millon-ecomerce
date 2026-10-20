@@ -25,6 +25,8 @@ export interface BuyerInput {
     name: string;
     email: string;
     phone?: string;
+    /** Cédula / NIT del comprador. */
+    document?: string;
     address: AddressInput;
 }
 
@@ -150,6 +152,9 @@ export const chargeMercadoPagoCard = async (payload: {
 export interface ArtistOrderItem {
   id: string;
   artworkId: string;
+  /** Título e imagen de la obra (los resuelve el backend). */
+  title?: string;
+  image?: string;
   copyId?: string | null;
   qty: number;
   unitPrice: number;
@@ -179,6 +184,7 @@ export interface ArtistOrder {
     name: string;
     email: string;
     phone?: string;
+    document?: string;
     address?: ArtistOrderAddress | null;
   } | null;
   items: ArtistOrderItem[];

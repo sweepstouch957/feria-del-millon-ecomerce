@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import useCart from "@store/useCart";
+import { useCatalogSalesPaused } from "@provider/siteConfigProvider";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
 import { mergeImages, pickSrc } from "@lib/utils";
 import { formatCOP } from "@lib/money";
@@ -107,6 +108,7 @@ export default function Page() {
   const id = params?.id;
   const { data, isLoading, isError, error } = useArtworkDetail(id);
   const { add, items } = useCart();
+  const { paused: salesPaused, message: salesPausedMsg } = useCatalogSalesPaused();
   const reduce = useReducedMotion();
   const rise = reduce
     ? {}
@@ -225,7 +227,8 @@ export default function Page() {
   const currency = doc.currency || "COP";
   const stock = Number(doc.stock ?? (copies.length ? 1 : 0));
   const availableCopy = copies.find((c: any) => c.status === "available");
-  const isAvailable = stock > 0 && !!availableCopy;
+  const inStock = stock > 0 && !!availableCopy;
+  const isAvailable = inStock && !salesPaused;
 
   const artistFullName =
     [doc.artistInfo?.firstName, doc.artistInfo?.lastName].filter(Boolean).join(" ") ||
@@ -463,8 +466,11 @@ export default function Page() {
                   color: inCart ? "#0B0B0A" : "var(--bg)",
                 }}
               >
-                {!isAvailable ? "Agotada" : inCart ? "En el carrito ✓" : "Agregar al carrito"}
+                {salesPaused ? "Venta en feria" : !isAvailable ? "Agotada" : inCart ? "En el carrito ✓" : "Agregar al carrito"}
               </button>
+              {salesPaused && inStock && (
+                <p style={{ flex: "1 1 100%", margin: "10px 0 0", fontSize: 13.5, lineHeight: 1.5, color: mix(62) }}>{salesPausedMsg}</p>
+              )}
 
               <button
                 type="button"

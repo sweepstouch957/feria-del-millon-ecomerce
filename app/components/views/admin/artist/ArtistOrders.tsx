@@ -239,6 +239,9 @@ export default function ArtistOrders() {
                     {o.buyer?.name || "Comprador"}
                   </span>
 
+                  {o.buyer?.document && (
+                    <span style={{ fontSize: 13.5, color: mix(62) }}>Documento: {o.buyer.document}</span>
+                  )}
                   {o.buyer?.phone && (
                     <a
                       href={`tel:${o.buyer.phone}`}
@@ -318,6 +321,7 @@ export default function ArtistOrders() {
                         }}
                       >
                         <span style={{ flex: "1 1 130px", fontSize: 14.5, minWidth: 0 }}>
+                          {it.title && <span style={{ display: "block", fontWeight: 500 }}>{it.title}</span>}
                           {it.qty > 1 ? `${it.qty} × ` : ""}
                           {formatCOP(it.unitPrice, { currency: it.currency })}
                         </span>

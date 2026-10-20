@@ -5,9 +5,10 @@ import TicketsUI from "./TicketsUI";
 import type { TicketDay } from "./ticketTypes";
 import { getTicketDays } from "@services/ticket.service";
 import { useEdition } from "@provider/editionProvider";
+import { ROOT_VARS, EYEBROW, mix } from "@components/views/checkout/checkoutTheme";
 
 // Preventa: se compran entradas semanas antes, así que la página muestra TODOS
-// los días de la feria (antes solo el de hoy, y fuera de la feria no salía nada).
+// los días de la feria. Misma cáscara editorial v2 que catálogo, obra y checkout.
 export function ExampleTicketsSection() {
     const { eventId, eventName } = useEdition();
     const { data, isLoading, isError } = useQuery({
@@ -17,21 +18,14 @@ export function ExampleTicketsSection() {
         staleTime: 60_000,
     });
 
-    if (isLoading) {
+    if (isLoading || isError) {
         return (
-            <div className="p-4 md:p-6">
-                <div className="rounded-3xl border border-slate-200 bg-white p-6">
-                    Cargando los días de la feria…
-                </div>
-            </div>
-        );
-    }
-
-    if (isError) {
-        return (
-            <div className="p-4 md:p-6">
-                <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-700">
-                    No pudimos cargar las entradas. Intenta de nuevo en un momento.
+            <div style={ROOT_VARS}>
+                <div style={{ maxWidth: 1180, margin: "0 auto", padding: "clamp(40px,6vw,80px) clamp(16px,3vw,32px)", display: "flex", flexDirection: "column", gap: 12 }}>
+                    <span style={{ ...EYEBROW, opacity: 0.65 }}>Entradas</span>
+                    <p style={{ margin: 0, fontSize: 18, fontWeight: 300, color: isError ? "inherit" : mix(60) }}>
+                        {isError ? "No pudimos cargar las entradas. Intenta de nuevo en un momento." : "Cargando los días de la feria…"}
+                    </p>
                 </div>
             </div>
         );
@@ -52,7 +46,7 @@ export function ExampleTicketsSection() {
         }));
 
     return (
-        <div className="p-4 md:p-6">
+        <div style={ROOT_VARS}>
             <TicketsUI eventId={eventId} eventName={eventName} days={days} />
         </div>
     );

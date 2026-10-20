@@ -1,11 +1,17 @@
-// components/tickets/DayCard.tsx
+// components/tickets/DayCard.tsx — un día de feria, sistema editorial v2.
 "use client";
 
-import { motion } from "framer-motion";
-import { CalendarDays } from "lucide-react";
-import { TicketDay, badges, classNames } from "./ticketTypes";
-import { CapacityBar, Pill } from "./TicketAtoms";
+import { TicketDay } from "./ticketTypes";
+import { CapacityBar, EYEBROW, Pill } from "./TicketAtoms";
 import { formatMoney } from "@lib/utils";
+
+const KIND_LABEL: Record<string, string> = {
+  opening: "Apertura",
+  normal: "Día de feria",
+  penultimate: "Penúltimo día",
+  last: "Último día",
+  presale: "Preventa",
+};
 
 type Props = {
   day: TicketDay;
@@ -15,42 +21,30 @@ type Props = {
 };
 
 export function DayCard({ day, selected, onSelect, currency = "COP" }: Props) {
-  // fallback bonito si no existe el badge para ese kind
-  const k =
-    badges[day.kind] ??
-    ({
-      label: "Día",
-      className: "bg-slate-100 text-slate-700",
-    } as const);
-
+  const soldOut = day.cap - day.sold <= 0;
+  const [dow, ...rest] = day.display.split(" ");
   return (
-    <motion.button
+    <button
       type="button"
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.98 }}
       onClick={() => onSelect?.(day)}
-      className={classNames(
-        "w-full rounded-2xl border bg-white p-4 text-left transition-all",
-        selected
-          ? "border-slate-900 shadow-md"
-          : "border-slate-200 hover:border-slate-300"
-      )}
+      disabled={soldOut}
+      aria-pressed={selected}
+      className={`fdm-tix-card${selected ? " is-selected" : ""}`}
+      style={{ display: "flex", flexDirection: "column", gap: 14, padding: "18px 18px 16px", textAlign: "left", cursor: soldOut ? "not-allowed" : "pointer", opacity: soldOut ? 0.45 : 1 }}
     >
-      <div className="mb-2 flex items-center gap-2">
-        <CalendarDays className="size-4 text-slate-500" />
-        <span className="text-sm font-semibold">{day.display}</span>
-        <Pill className={classNames("ml-auto", k.className)}>{k.label}</Pill>
-       
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <span style={{ ...EYEBROW, opacity: 0.65 }}>{KIND_LABEL[day.kind] || "Día"}</span>
+        {day.isToday && <Pill tone="acc">Hoy</Pill>}
       </div>
-
-      <div className="mb-3 flex items-end gap-3">
-        <span className="text-2xl font-bold">
-          {formatMoney(day.price, currency)}
-        </span>
-        <span className="text-[12px] text-slate-500">por boleto</span>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 10, lineHeight: 1 }}>
+        <span style={{ fontSize: "clamp(30px,3.2vw,40px)", fontWeight: 300, letterSpacing: "-0.01em" }}>{dow}</span>
+        <span style={{ fontSize: 15, opacity: 0.75 }}>{rest.join(" ")}</span>
       </div>
-
-      <CapacityBar cap={day.cap} sold={day.utilization * 1000} />
-    </motion.button>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+        <span style={{ fontSize: 19, fontWeight: 400, fontVariantNumeric: "tabular-nums" }}>{formatMoney(day.price, currency)}</span>
+        <span style={{ fontSize: 12, opacity: 0.6 }}>por persona</span>
+      </div>
+      <CapacityBar cap={day.cap} sold={day.sold} onDark={selected} />
+    </button>
   );
 }

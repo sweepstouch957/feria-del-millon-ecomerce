@@ -164,6 +164,8 @@ export interface TicketTypeOption {
   key: TicketTypeKey;
   label: string;
   desc?: string;
+  /** Banner de la tarjeta (lo sube el panel). */
+  image?: string | null;
   /** null = lo pone el día elegido. */
   price: number | null;
   pickDay: boolean;

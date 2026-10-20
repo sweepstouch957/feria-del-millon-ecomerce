@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, CreditCard, Mail, QrCode, Sparkles, Ticket as TicketIcon, User } from "lucide-react";
+import { CreditCard, Mail, Ticket as TicketIcon, User } from "lucide-react";
 import toast from "react-hot-toast";
 
-import { TicketDay, TicketsUIProps, classNames, TICKET_TYPE_OPTIONS } from "./ticketTypes";
-import { Pill, QtyStepper, LabeledInput } from "./TicketAtoms";
+import { TicketDay, TicketsUIProps, TICKET_TYPE_OPTIONS } from "./ticketTypes";
+import { EYEBROW, Pill, QtyStepper, LabeledInput } from "./TicketAtoms";
 import { DayCard } from "./DayCard";
 import { TicketsPreviewModal } from "./TicketsPreviewModal";
 
@@ -17,6 +17,63 @@ import { useQuery } from "@tanstack/react-query";
 import { uploadImage } from "@services/upload.service";
 import { useEdition } from "@provider/editionProvider";
 import { ColombianPhoneInput } from "@components/ColombianInput";
+
+/* ──────────────────────────────────────────────────────────────
+   Entradas — diseño editorial v2 (mismos tokens que catálogo, obra
+   y checkout: --bg/--fg/--acc/--panel del layout, Jost, versalitas).
+   Cada tipo de entrada puede traer su propio banner (lo sube el
+   panel, tarjeta por tarjeta); sin banner, la tarjeta es tipográfica.
+   ────────────────────────────────────────────────────────────── */
+
+const mix = (pct: number) => `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
+
+const PAGE_CSS = `
+  .fdm-tix { --on-panel: var(--fdm-on-dark,#F5F4EF); }
+  .fdm-tix *, .fdm-tix *::before, .fdm-tix *::after { box-sizing: border-box; }
+  .fdm-tix-wrap { max-width: 1180px; margin: 0 auto; padding: clamp(22px,3vw,44px) clamp(16px,3vw,32px) clamp(48px,6vw,88px); display: flex; flex-direction: column; gap: clamp(34px,4vw,56px); }
+  .fdm-tix-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px 32px; padding-bottom: clamp(18px,2vw,26px); border-bottom: 1px solid ${mix(14)}; }
+  .fdm-tix-h1 { margin: 0; font-weight: 200; font-size: clamp(40px,6vw,76px); line-height: .98; letter-spacing: -0.02em; text-wrap: balance; }
+  .fdm-tix-h1 em { font-style: normal; color: var(--acc); }
+  .fdm-tix-sec { display: flex; flex-direction: column; gap: 18px; }
+  .fdm-tix-sec-h { display: flex; align-items: baseline; gap: 14px; }
+  .fdm-tix-sec-h h2 { margin: 0; font-weight: 300; font-size: clamp(22px,2.4vw,30px); letter-spacing: -0.01em; }
+  .fdm-tix-sec-h .n { ${Object.entries(EYEBROW).map(([k, v]) => `${k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase())}:${typeof v === "number" ? v + "px" : v}`).join(";")}; color: var(--acc); }
+  .fdm-tix-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%,250px), 1fr)); gap: 14px; }
+  .fdm-tix-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%,200px), 1fr)); gap: 14px; }
+  .fdm-tix-card { position: relative; width: 100%; background: transparent; color: inherit; border: 1px solid ${mix(16)}; border-radius: 0; font-family: inherit; transition: border-color .3s ease, background-color .3s ease, color .3s ease, transform .3s ease; }
+  .fdm-tix-card:hover:not(:disabled) { border-color: var(--fg); }
+  .fdm-tix-card.is-selected { background: var(--panel); color: var(--on-panel); border-color: var(--panel); }
+  .fdm-tix-card:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+  .fdm-tix-type { display: flex; flex-direction: column; text-align: left; cursor: pointer; overflow: hidden; }
+  .fdm-tix-type:disabled { cursor: not-allowed; opacity: .5; }
+  .fdm-tix-type .banner { aspect-ratio: 3 / 2; width: 100%; overflow: hidden; background: ${mix(6)}; }
+  .fdm-tix-type .banner img { width: 100%; height: 100%; object-fit: cover; display: block; filter: grayscale(1) contrast(1.05); transition: filter .45s ease, transform .6s ease; }
+  .fdm-tix-type:hover .banner img, .fdm-tix-type.is-selected .banner img { filter: none; }
+  .fdm-tix-type:hover .banner img { transform: scale(1.03); }
+  .fdm-tix-type .body { display: flex; flex-direction: column; gap: 10px; padding: 18px 18px 16px; flex: 1; }
+  .fdm-tix-type .check { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border-radius: 999px; border: 1px solid ${mix(30)}; display: inline-flex; align-items: center; justify-content: center; transition: all .3s ease; background: var(--bg); }
+  .fdm-tix-type.is-selected .check { background: var(--acc); border-color: var(--acc); color: #0B0B0A; }
+  .fdm-tix-two { display: grid; grid-template-columns: minmax(0,3fr) minmax(0,2fr); gap: clamp(18px,2.4vw,36px); align-items: start; }
+  .fdm-tix-form { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+  .fdm-tix-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,220px), 1fr)); gap: 22px 28px; }
+  .fdm-tix-aside { position: sticky; top: 92px; background: var(--panel); color: var(--on-panel); padding: clamp(20px,2.4vw,30px); display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+  .fdm-tix-aside .line { display: flex; justify-content: space-between; gap: 12px; font-size: 14.5px; padding: 9px 0; border-bottom: 1px solid rgba(245,244,239,.14); }
+  .fdm-tix-btn { display: inline-flex; align-items: center; justify-content: center; height: 52px; padding: 0 30px; border-radius: 999px; border: 1px solid var(--fg); background: var(--fg); color: var(--bg); font-family: inherit; cursor: pointer; transition: all .3s ease; width: 100%; }
+  .fdm-tix-btn:hover:not(:disabled) { background: var(--acc); border-color: var(--acc); color: #0B0B0A; }
+  .fdm-tix-btn:disabled { cursor: not-allowed; opacity: .35; }
+  .fdm-tix-aside .fdm-tix-btn { background: var(--on-panel); border-color: var(--on-panel); color: #0B0B0A; }
+  .fdm-tix-aside .fdm-tix-btn:hover:not(:disabled) { background: var(--acc); border-color: var(--acc); }
+  .fdm-in:focus-within { border-color: var(--acc) !important; }
+  .fdm-step button:disabled { opacity: .3; cursor: not-allowed; }
+  .fdm-tix select { background: transparent; border: 0; border-bottom: 1px solid ${mix(25)}; color: inherit; font: inherit; font-size: 16px; padding: 6px 0 8px; outline: none; }
+  .fdm-tix select:focus { border-color: var(--acc); }
+  .fdm-tix input[type=file] { font-size: 13px; color: inherit; }
+  .fdm-tix input[type=file]::file-selector-button { ${Object.entries(EYEBROW).map(([k, v]) => `${k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase())}:${typeof v === "number" ? v + "px" : v}`).join(";")}; margin-right: 12px; height: 38px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--fg); background: transparent; color: inherit; cursor: pointer; font-family: inherit; }
+  .fdm-tix input[type=file]::file-selector-button:hover { background: var(--fg); color: var(--bg); }
+  #mp-card-form { margin-top: 10px; }
+  @media (max-width: 900px) { .fdm-tix-two { grid-template-columns: 1fr; } .fdm-tix-aside { position: static; } }
+  @media (prefers-reduced-motion: reduce) { .fdm-tix * { transition: none !important; } }
+`;
 
 /** Si la config del evento no carga, se muestran los tipos del documento. */
 const FALLBACK_TYPES: TicketTypeOption[] = TICKET_TYPE_OPTIONS.map((t, i) => ({
@@ -64,6 +121,17 @@ type MercadoPagoCardFormData = {
   };
   transaction_amount: number; // no lo vamos a confiar, solo lo recibimos
 };
+
+function SectionHead({ n, title, children }: { n: string; title: string; children?: React.ReactNode }) {
+  return (
+    <div className="fdm-tix-sec-h">
+      <span className="n">{n}</span>
+      <h2>{title}</h2>
+      {children}
+    </div>
+  );
+}
+
 export default function TicketsUI({
   eventId: eventIdProp,
   eventName: eventNameProp,
@@ -81,10 +149,10 @@ export default function TicketsUI({
   const [qty, setQty] = useState<number>(initialQty);
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
-  const [buyerPhone, setBuyerPhone] = useState(""); // nuevo estado teléfono
+  const [buyerPhone, setBuyerPhone] = useState("");
   const [ticketType, setTicketType] = useState<TicketTypeKey>("general");
 
-  // Preventa: el backend manda precio, cupo y ventana de venta de cada tipo.
+  // Preventa: el backend manda precio, cupo, ventana de venta y banner de cada tipo.
   const { data: config } = useQuery({
     queryKey: ["ticketTypes", eventId],
     queryFn: () => getTicketTypes(eventId!),
@@ -142,7 +210,7 @@ export default function TicketsUI({
   const isPhoneValid =
     buyerPhone === "" || /^3\d{9}$/.test(buyerPhone); // 10 dígitos, empieza en 3
 
-  // Pases multi-día / preview no consumen cupo de un día: tienen su propio cupo.
+  // Pases multi-día no consumen cupo de un día: tienen su propio cupo.
   const remaining = useMemo(() => {
     if (!spec.pickDay) return spec.remaining ?? Infinity;
     if (!selectedDay) return 0;
@@ -257,7 +325,6 @@ export default function TicketsUI({
       icon: <CreditCard size={16} />,
     });
 
-    // Opcional: hacer scroll al formulario
     const el = document.getElementById("mp-card-form");
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -296,12 +363,9 @@ export default function TicketsUI({
           initialization: {
             amount: total, // toma el 100% del total
           },
-          customization: {
-            // Aquí puedes meter opciones de estilo/labels si quieres
-          },
+          customization: {},
           callbacks: {
             onReady: () => {
-              console.log("Mercado Pago Card Brick listo");
               toast.success("Listo para pagar con Mercado Pago");
             },
             onError: (error: unknown) => {
@@ -336,7 +400,6 @@ export default function TicketsUI({
                 submittingRef.current = false;
               }
             },
-
           },
         });
       } catch (err) {
@@ -348,7 +411,6 @@ export default function TicketsUI({
     renderCardBrick();
 
     return () => {
-      // Limpieza al desmontar o cambiar dependencia
       try {
         bricksBuilder.unmount("mp-card-form");
       } catch {
@@ -371,301 +433,206 @@ export default function TicketsUI({
     nit,
   ]);
 
+  const firstDay = days[0];
+  const lastDay = days[days.length - 1];
+  const dateRange = firstDay && lastDay
+    ? firstDay.date === lastDay.date ? firstDay.display : `${firstDay.display.split(" ").slice(1).join(" ")} – ${lastDay.display.split(" ").slice(1).join(" ")}`
+    : "";
+  const priceLabel = (t: TicketTypeOption) =>
+    t.price === null ? "según el día" : t.price === 0 ? "Gratis" : formatMoney(t.price, currency);
+  const stepDatos = spec.pickDay ? "03" : "02";
+
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 pb-8 pt-4 sm:px-6 md:space-y-8 md:pb-10 md:pt-6">
-      {/* Header */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 md:p-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900/5">
-              <Sparkles className="size-5 text-slate-900" />
-            </span>
-            <div>
-              <h2 className="text-lg font-bold leading-tight sm:text-xl md:text-2xl">
-                {eventName}
-              </h2>
-              <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-                Elige tu día, completa tus datos y paga con tarjeta. Recibirás
-                tus boletos con QR por correo.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tipo de entrada */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-slate-800 sm:text-base">Tipo de entrada</h3>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {typeOptions.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              disabled={!t.open}
-              onClick={() => setTicketType(t.key)}
-              className={classNames(
-                "rounded-2xl border p-4 text-left transition-all",
-                !t.open
-                  ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400"
-                  : ticketType === t.key
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-white hover:border-slate-400",
-              )}
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="font-semibold">{t.label}</span>
-                <span className="text-sm">
-                  {t.price === null ? "según el día" : t.price === 0 ? "Gratis" : formatMoney(t.price, currency)}
-                </span>
-              </div>
-              <p className={classNames("mt-1 text-xs", ticketType === t.key && t.open ? "text-white/70" : "text-slate-500")}>{t.desc}</p>
-              {!t.open ? (
-                <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                  {CLOSED_LABEL[t.closedReason || ""] || "No disponible"}
-                  {t.closedReason === "not_started" && t.salesFrom ? ` · abre el ${fmtDate(t.salesFrom)}` : ""}
-                </p>
-              ) : (
-                <>
-                  {t.remaining !== null && t.remaining <= 20 && (
-                    <p className={classNames("mt-2 text-[11px] font-medium", ticketType === t.key ? "text-white/80" : "text-amber-600")}>
-                      Quedan {t.remaining} cupos
-                    </p>
-                  )}
-                  {t.salesTo && (
-                    <p className={classNames("mt-1 text-[11px]", ticketType === t.key ? "text-white/60" : "text-slate-400")}>
-                      Preventa hasta el {fmtDate(t.salesTo)}
-                    </p>
-                  )}
-                </>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Days */}
-      {spec.pickDay && (
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-slate-800 sm:text-base">
-          Elige el día
-        </h3>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {days.map((d) => (
-            <DayCard
-              key={d.date}
-              day={d}
-              selected={selectedDay?.date === d.date}
-              onSelect={setSelectedDay}
-              currency={currency}
-            />
-          ))}
-        </div>
-      </div>
-      )}
-
-      {/* Order + Summary */}
-      <div className="grid gap-5 md:gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        {/* Compra */}
-        <div className="space-y-5 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 md:p-6">
-          <div className="flex items-center gap-2">
-            <BadgeCheck className="size-5 text-slate-800" />
-            <h3 className="text-base font-semibold sm:text-lg">
-              Completar datos de compra
-            </h3>
-          </div>
-
-          {/* Inputs */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <LabeledInput
-              label="Nombre"
-              placeholder="Tu nombre completo"
-              value={buyerName}
-              onChange={setBuyerName}
-              icon={<User className="size-4 text-slate-500" />}
-            />
-
-            <LabeledInput
-              label="Email"
-              placeholder="tucorreo@dominio.com"
-              value={buyerEmail}
-              onChange={setBuyerEmail}
-              icon={<Mail className="size-4 text-slate-500" />}
-              type="email"
-            />
-          </div>
-          {/* Teléfono opcional (colombiano) */}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <ColombianPhoneInput
-              value={buyerPhone}
-              onChange={setBuyerPhone}
-            />
-            {/* espacio para que se mantenga alineado en desktop */}
-            <div className="hidden sm:block" />
-          </div>
-          {buyerPhone && !isPhoneValid && (
-            <p className="text-[11px] text-red-500 sm:text-xs">
-              Ingresa un celular colombiano válido
+    <div className="fdm-tix">
+      <style>{PAGE_CSS}</style>
+      <div className="fdm-tix-wrap">
+        {/* Cabecera */}
+        <header className="fdm-tix-head">
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
+            <span style={{ ...EYEBROW, opacity: 0.65 }}>Entradas · {eventName}</span>
+            <h1 className="fdm-tix-h1">Elige tu <em>entrada</em>.</h1>
+            <p style={{ margin: 0, maxWidth: "52ch", fontSize: 15.5, lineHeight: 1.6, opacity: 0.8 }}>
+              Compra en línea y recibe tus códigos QR por correo. Un QR por persona: preséntalo en la entrada, impreso o en el celular.
             </p>
-          )}
-
-          {ticketType === "empresa" && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <LabeledInput label="Empresa" placeholder="Razón social" value={company} onChange={setCompany} />
-              <LabeledInput label="NIT" placeholder="900123456-7" value={nit} onChange={setNit} />
+          </div>
+          {dateRange && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, textAlign: "right" }}>
+              <span style={{ ...EYEBROW, opacity: 0.65 }}>Días de feria</span>
+              <span style={{ fontSize: "clamp(18px,2vw,24px)", fontWeight: 300, whiteSpace: "nowrap" }}>{dateRange}</span>
             </div>
           )}
+        </header>
 
-          {ticketType === "estudiante" && (
-            <div className="space-y-1">
-              <div className="text-xs text-slate-500">Foto del carné estudiantil vigente 2026</div>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => onStudentId(e.target.files?.[0])}
-                className="block w-full text-sm file:mr-3 file:rounded-xl file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-white"
-              />
-              <p className="text-[11px] text-slate-500">
-                {uploadingId ? "Subiendo…" : studentIdUrl ? "Carné cargado ✓. Preséntalo también en la entrada." : "Obligatorio. Lo verificamos en la entrada."}
-              </p>
-            </div>
-          )}
+        {/* 01 · Tipo de entrada */}
+        <section className="fdm-tix-sec">
+          <SectionHead n="01" title="Tipo de entrada" />
+          <div className="fdm-tix-grid">
+            {typeOptions.map((t) => {
+              const selected = ticketType === t.key;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  disabled={!t.open}
+                  onClick={() => setTicketType(t.key)}
+                  aria-pressed={selected}
+                  className={`fdm-tix-card fdm-tix-type${selected ? " is-selected" : ""}`}
+                >
+                  {t.image && (
+                    <div className="banner">
+                      <img src={t.image} alt="" loading="lazy" />
+                    </div>
+                  )}
+                  <span className="check" aria-hidden="true">
+                    {selected && <svg width="11" height="9" viewBox="0 0 11 9" fill="none"><path d="M1 4.5 4 7.5 10 1" stroke="currentColor" strokeWidth="1.6" /></svg>}
+                  </span>
+                  <div className="body">
+                    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, paddingRight: t.image ? 0 : 28 }}>
+                      <span style={{ fontSize: 19, fontWeight: 400, lineHeight: 1.2 }}>{t.label}</span>
+                      <span style={{ fontSize: 14, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", opacity: t.price === null ? 0.7 : 1 }}>{priceLabel(t)}</span>
+                    </div>
+                    {t.desc && <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, opacity: 0.72 }}>{t.desc}</p>}
+                    <div style={{ marginTop: "auto", paddingTop: 6, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", ...EYEBROW, fontSize: 9.5, opacity: 0.7 }}>
+                      {!t.open ? (
+                        <span>
+                          {CLOSED_LABEL[t.closedReason || ""] || "No disponible"}
+                          {t.closedReason === "not_started" && t.salesFrom ? ` · abre el ${fmtDate(t.salesFrom)}` : ""}
+                        </span>
+                      ) : (
+                        <>
+                          {t.remaining !== null && t.remaining <= 20 && <span style={{ color: "var(--acc)", opacity: 1 }}>Quedan {t.remaining}</span>}
+                          {t.salesTo && <span>Preventa hasta el {fmtDate(t.salesTo)}</span>}
+                          {!t.salesTo && t.remaining === null && <span>En venta</span>}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
-          {/* Qty + total */}
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <div className="text-xs text-slate-500">Cantidad</div>
-              <div className="mt-1">
-                {spec.quantities ? (
-                  <select
-                    value={qty}
-                    onChange={(e) => setQty(Number(e.target.value))}
-                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                  >
-                    {spec.quantities.map((q) => <option key={q} value={q}>{q} entradas</option>)}
-                  </select>
+        {/* 02 · Día */}
+        {spec.pickDay && (
+          <section className="fdm-tix-sec">
+            <SectionHead n="02" title="Elige el día" />
+            {days.length ? (
+              <div className="fdm-tix-days">
+                {days.map((d) => (
+                  <DayCard key={d.date} day={d} selected={selectedDay?.date === d.date} onSelect={setSelectedDay} currency={currency} />
+                ))}
+              </div>
+            ) : (
+              <p style={{ margin: 0, fontSize: 14, opacity: 0.7 }}>Los días de la feria se anuncian pronto.</p>
+            )}
+          </section>
+        )}
+
+        {/* 03 · Datos + resumen */}
+        <section className="fdm-tix-sec">
+          <SectionHead n={stepDatos} title="Tus datos" />
+          <div className="fdm-tix-two">
+            <div className="fdm-tix-form">
+              <div className="fdm-tix-row">
+                <LabeledInput label="Nombre completo" placeholder="Como aparece en tu documento" value={buyerName} onChange={setBuyerName} icon={<User size={16} />} />
+                <LabeledInput label="Correo" placeholder="tucorreo@dominio.com" value={buyerEmail} onChange={setBuyerEmail} icon={<Mail size={16} />} type="email" hint="Ahí llegan los QR." />
+              </div>
+              <div className="fdm-tix-row">
+                <ColombianPhoneInput value={buyerPhone} onChange={setBuyerPhone} />
+                {ticketType === "empresa" ? (
+                  <LabeledInput label="Empresa" placeholder="Razón social" value={company} onChange={setCompany} />
                 ) : (
-                  <QtyStepper
-                    value={qty}
-                    min={1}
-                    max={Math.min(spec.maxQty ?? 10, Math.max(1, remaining))}
-                    onChange={setQty}
-                  />
+                  <div />
                 )}
               </div>
-
-              {!!selectedDay && spec.pickDay && (
-                <p className="mt-1 text-[11px] text-slate-500 sm:text-xs">
-                  {remaining > 0
-                    ? `Disponibles para este día: ${remaining}`
-                    : "Capacidad completa para este día"}
-                </p>
+              {buyerPhone && !isPhoneValid && (
+                <p style={{ margin: "-14px 0 0", fontSize: 12.5, color: "#C0392B" }}>Ingresa un celular colombiano válido.</p>
               )}
-            </div>
+              {ticketType === "empresa" && (
+                <div className="fdm-tix-row">
+                  <LabeledInput label="NIT" placeholder="900123456-7" value={nit} onChange={setNit} />
+                  <div />
+                </div>
+              )}
 
-            <div className="ml-auto text-right">
-              <div className="text-xs text-slate-500">Total estimado</div>
-              <div className="mt-1 text-xl font-bold sm:text-2xl">
-                {formatMoney(total, currency)}
+              {ticketType === "estudiante" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Foto del carné vigente 2026</span>
+                  <input type="file" accept="image/*" onChange={(e) => onStudentId(e.target.files?.[0])} />
+                  <span style={{ fontSize: 12.5, opacity: 0.65 }}>
+                    {uploadingId ? "Subiendo…" : studentIdUrl ? "Carné cargado. Preséntalo también en la entrada." : "Obligatorio. Lo verificamos en la entrada."}
+                  </span>
+                </div>
+              )}
+
+              {/* Cantidad */}
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 18, paddingTop: 6, borderTop: `1px solid ${mix(12)}` }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 16 }}>
+                  <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Cantidad</span>
+                  {spec.quantities ? (
+                    <select value={qty} onChange={(e) => setQty(Number(e.target.value))}>
+                      {spec.quantities.map((q) => <option key={q} value={q}>{q} entradas</option>)}
+                    </select>
+                  ) : (
+                    <QtyStepper value={qty} min={1} max={Math.min(spec.maxQty ?? 10, Math.max(1, remaining))} onChange={setQty} />
+                  )}
+                  {!!selectedDay && spec.pickDay && (
+                    <span style={{ fontSize: 12.5, opacity: 0.65 }}>
+                      {remaining > 0 ? `${remaining.toLocaleString("es-CO")} disponibles para ese día` : "Cupo completo para ese día"}
+                    </span>
+                  )}
+                </div>
+                <div style={{ textAlign: "right", paddingTop: 16 }}>
+                  <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65, display: "block" }}>Total</span>
+                  <span style={{ fontSize: "clamp(26px,3vw,34px)", fontWeight: 300, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{formatMoney(total, currency)}</span>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <button
-            type="button"
-            disabled={!canBuy || qty > remaining}
-            onClick={handleBuy}
-            className={classNames(
-              "mt-1 w-full rounded-2xl py-3 text-sm font-semibold text-white transition-all sm:text-base",
-              canBuy && qty <= remaining
-                ? "bg-slate-900 hover:bg-slate-800 active:translate-y-[1px]"
-                : "cursor-not-allowed bg-slate-300",
-            )}
-          >
-            {total === 0 ? "Obtener mi entrada" : "Continuar al pago"}
-          </button>
+              <button type="button" className="fdm-tix-btn" disabled={!canBuy || qty > remaining} onClick={handleBuy} style={{ ...EYEBROW, fontSize: 11 }}>
+                {total === 0 ? "Obtener mi entrada" : "Continuar al pago"}
+              </button>
 
-          {/* Contenedor del Brick de Mercado Pago */}
-          {readyToPay && (
-            <div className="mt-4 space-y-2">
-              <p className="text-xs text-slate-600">
-                Completa los datos de tu tarjeta a continuación para finalizar
-                el pago:
+              {readyToPay && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Pago con tarjeta · Mercado Pago</span>
+                  <div id="mp-card-form" style={{ border: `1px solid ${mix(12)}`, padding: 12 }} />
+                </div>
+              )}
+
+              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, opacity: 0.6, maxWidth: "60ch" }}>
+                Usa un correo al que tengas acceso: ahí recibirás la confirmación y los códigos QR. No compartas tu código con desconocidos.
               </p>
-              <div
-                id="mp-card-form"
-                className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 p-3"
-              />
-            </div>
-          )}
-
-          <p className="text-[11px] leading-relaxed text-slate-500 sm:text-xs">
-            Usa un correo al que tengas acceso. Ahí recibirás la confirmación y
-            los códigos QR de tus boletos.
-          </p>
-        </div>
-
-        {/* Resumen */}
-        <div className="lg:sticky lg:top-24">
-          <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 md:p-6">
-            <div className="flex items-center gap-2">
-              <QrCode className="size-5 text-slate-800" />
-              <h3 className="text-base font-semibold sm:text-lg">
-                Resumen de tu selección
-              </h3>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white">
-                  <QrCode className="size-4 text-slate-500" />
-                </span>
-
-                <div className="min-w-[8rem] flex-1">
-                  <div className="text-sm font-semibold">
-                    {spec.label}{spec.pickDay ? ` · ${selectedDay ? selectedDay.display : "Selecciona un día"}` : ""}
-                  </div>
-                  <div className="text-xs text-slate-600">
-                    {spec.pickDay && !selectedDay
-                      ? "Elige un día para ver el detalle"
-                      : `${formatMoney(unitPrice, currency)} por boleto`}
+            {/* Resumen */}
+            <aside className="fdm-tix-aside">
+              <span style={{ ...EYEBROW, opacity: 0.6 }}>Tu selección</span>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 22, fontWeight: 300, lineHeight: 1.15 }}>{spec.label}</div>
+                  <div style={{ fontSize: 13.5, opacity: 0.7, marginTop: 4 }}>
+                    {spec.pickDay
+                      ? selectedDay ? `${selectedDay.display} · ${formatMoney(unitPrice, currency)} por persona` : "Elige un día para ver el detalle"
+                      : spec.allDays ? `Todos los días de feria · ${formatMoney(unitPrice, currency)} por persona` : `${formatMoney(unitPrice, currency)} por persona`}
                   </div>
                 </div>
-
-                <Pill className="bg-slate-900 text-[11px] text-white sm:text-xs">
-                  {qty} boleto{qty !== 1 ? "s" : ""}
-                </Pill>
+                <Pill tone="acc">{qty} {qty === 1 ? "boleto" : "boletos"}</Pill>
               </div>
-
-              <div className="mt-4 space-y-1.5 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Subtotal</span>
-                  <span className="font-semibold">
-                    {formatMoney(total, currency)}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-600">Cargos</span>
-                  <span className="font-semibold">—</span>
-                </div>
-
-                <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2">
-                  <span className="text-sm font-medium">Total a pagar</span>
-                  <span className="text-lg font-bold">
-                    {formatMoney(total, currency)}
-                  </span>
+              <div>
+                <div className="line"><span style={{ opacity: 0.7 }}>Subtotal</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{formatMoney(total, currency)}</span></div>
+                <div className="line"><span style={{ opacity: 0.7 }}>Cargos</span><span>—</span></div>
+                <div className="line" style={{ borderBottom: 0, paddingTop: 14 }}>
+                  <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.7, alignSelf: "center" }}>Total a pagar</span>
+                  <span style={{ fontSize: 26, fontWeight: 300, fontVariantNumeric: "tabular-nums" }}>{formatMoney(total, currency)}</span>
                 </div>
               </div>
-            </div>
-
-            <div className="text-[11px] leading-relaxed text-slate-500 sm:text-xs">
-              Al continuar aceptas los términos del evento. El pago se procesa
-              con Mercado Pago y tus QR se enviarán a tu correo. No compartas tu
-              código con personas desconocidas.
-            </div>
+              <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, opacity: 0.55 }}>
+                Al continuar aceptas los términos del evento. El pago se procesa con Mercado Pago y tus QR llegan a tu correo.
+              </p>
+            </aside>
           </div>
-        </div>
+        </section>
       </div>
 
       {/* Preview modal con tickets reales */}

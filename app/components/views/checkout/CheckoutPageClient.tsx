@@ -223,8 +223,16 @@ export default function CheckoutPageClient() {
 
             setCurrentOrder(newOrder);
             setStep(2);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error creando la orden:", error);
+            const code = error?.response?.data?.error;
+            setArtworkUnavailable(
+                code === "sin_stock"
+                    ? "Una de las obras del carrito se vendió hace un momento. No se hizo ningún cobro."
+                    : code === "sales_paused"
+                    ? salesPause.message || "Durante la feria las obras se compran en el recinto."
+                    : error?.response?.data?.error || "No pudimos crear la orden. Intenta de nuevo."
+            );
         } finally {
             setIsProcessing(false);
         }

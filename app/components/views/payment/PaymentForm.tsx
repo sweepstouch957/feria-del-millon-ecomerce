@@ -117,11 +117,13 @@ export default function PaymentForm({
                     "No se pudo aprobar el pago. Revisa los datos o intenta con otra tarjeta."
                   );
                 }
-              } catch (err) {
+              } catch (err: any) {
                 console.error("Error cobrando con Mercado Pago:", err);
                 toast.dismiss(loadingId);
+                // 409 del backend: "ya se está procesando" o "la obra se vendió" (sin cobro).
                 toast.error(
-                  "Ocurrió un error procesando el pago. Intenta de nuevo."
+                  err?.response?.data?.message ||
+                    "Ocurrió un error procesando el pago. Intenta de nuevo."
                 );
               }
             },

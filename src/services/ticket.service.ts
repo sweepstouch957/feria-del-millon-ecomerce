@@ -134,6 +134,14 @@ export const downloadQrPng = (ticket: Ticket, filename?: string) => {
   document.body.removeChild(a);
 };
 
+/** Todos los días de la feria (configurados o derivados de las fechas del evento). */
+export const getTicketDays = async (eventId: string) => {
+  const { data } = await apiClient.get<{ eventId: string; days: TicketDaySummary[] }>(
+    `/ticket/tickets/events/${encodeURIComponent(eventId)}/days`
+  );
+  return (data?.days ?? []).map(normalizeId);
+};
+
 export const getTodayTicketDay = async (eventId: string) => {
   const { data } = await apiClient.get<TodayTicketDayResponse>(
     `/ticket/tickets/events/${encodeURIComponent(eventId)}/days/today`,

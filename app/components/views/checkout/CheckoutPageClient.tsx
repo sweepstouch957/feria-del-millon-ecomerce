@@ -39,11 +39,6 @@ import { getArtworkByIdOrSlug } from "@services/artworks.service";
 import { pickSrc } from "@lib/utils";
 
 // Validación simple para documento colombiano
-const isValidColDocument = (doc: string) => {
-    const trimmed = doc.trim();
-    const re = /^\d{6,10}(-\d)?$/;
-    return re.test(trimmed);
-};
 
 export default function CheckoutPageClient() {
     const { eventId } = useEdition();
@@ -173,14 +168,6 @@ export default function CheckoutPageClient() {
     const handleSubmitInfo = handleSubmit(async (values) => {
         if (!items.length) return;
 
-        if (!isValidColDocument(values.documentNumber)) {
-            setError("documentNumber", {
-                type: "validate",
-                message: "Documento inválido (6 a 10 dígitos).",
-            });
-            return;
-        }
-
         if (!values.cityId) {
             setError("cityId", {
                 type: "required",
@@ -207,7 +194,6 @@ export default function CheckoutPageClient() {
                     name: `${values.firstName} ${values.lastName}`,
                     email: values.email,
                     phone: values.phone,
-                    document: values.documentNumber,
                     address: {
                         line1: values.address,
                         line2: values.notes ?? "",

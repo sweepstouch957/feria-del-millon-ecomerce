@@ -136,18 +136,6 @@ export function CheckoutPersonalForm({ cities, loadingCities, isProcessing, onSu
           </Field>
         </div>
         <div className="fdm-f-row">
-          <Field label="Documento (CC / NIT)" error={err("documentNumber")}>
-            <input
-              {...register("documentNumber", {
-                required: "El documento es obligatorio",
-                validate: (value) =>
-                  /^\d{6,10}(-\d)?$/.test(value.trim()) || "Documento colombiano: 6 a 10 dígitos, con dígito de verificación opcional.",
-              })}
-              placeholder="123456789"
-              inputMode="numeric"
-              disabled={isProcessing}
-            />
-          </Field>
           <Field label="Correo" error={err("email")} hint="Ahí llega la confirmación de compra.">
             <input
               type="email"

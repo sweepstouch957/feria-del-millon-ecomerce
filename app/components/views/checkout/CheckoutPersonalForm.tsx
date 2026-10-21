@@ -40,7 +40,9 @@ type Props = {
 export const FORM_CSS = `
   .fdm-f { display: flex; flex-direction: column; gap: 30px; }
   .fdm-f-sec { display: flex; flex-direction: column; gap: 22px; }
-  .fdm-f-h { display: flex; align-items: baseline; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid ${mix(12)}; }
+  .fdm-f-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; padding-bottom: 10px; border-bottom: 1px solid ${mix(12)}; }
+  .fdm-f-h > span { flex: 1 1 100%; }
+  @media (min-width: 720px) { .fdm-f-h > span { flex: 0 1 auto; } }
   .fdm-f-h h2 { margin: 0; font-weight: 300; font-size: clamp(20px,2.2vw,26px); letter-spacing: -0.01em; }
   .fdm-f-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,210px), 1fr)); gap: 22px 28px; }
   .fdm-f-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -124,8 +126,8 @@ export function CheckoutPersonalForm({ cities, loadingCities, isProcessing, onSu
 
       <section className="fdm-f-sec">
         <div className="fdm-f-h">
-          <span style={{ ...EYEBROW, color: "var(--acc)" }}>01</span>
-          <h2>Tus datos</h2>
+          <h2>Quién compra</h2>
+          <span style={{ fontSize: 13, opacity: 0.6, marginLeft: "auto" }}>Sin cuenta ni contraseña.</span>
         </div>
         <div className="fdm-f-row">
           <Field label="Nombre" error={err("firstName")}>
@@ -156,7 +158,6 @@ export function CheckoutPersonalForm({ cities, loadingCities, isProcessing, onSu
 
       <section className="fdm-f-sec">
         <div className="fdm-f-h">
-          <span style={{ ...EYEBROW, color: "var(--acc)" }}>02</span>
           <h2>Entrega</h2>
           <span style={{ fontSize: 13, opacity: 0.6, marginLeft: "auto" }}>El artista coordina la entrega con estos datos.</span>
         </div>

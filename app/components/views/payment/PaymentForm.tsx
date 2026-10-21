@@ -179,8 +179,7 @@ export default function PaymentForm({
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 26 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, paddingBottom: 10, borderBottom: `1px solid ${mix(12)}` }}>
-        <span style={{ ...EYEBROW, color: "var(--acc)" }}>03</span>
-        <h2 style={{ margin: 0, fontWeight: 300, fontSize: "clamp(20px,2.2vw,26px)", letterSpacing: "-0.01em" }}>Pago</h2>
+        <h2 style={{ margin: 0, fontWeight: 300, fontSize: "clamp(20px,2.2vw,26px)", letterSpacing: "-0.01em" }}>Cómo pagas</h2>
         <span style={{ marginLeft: "auto", fontSize: 14, fontVariantNumeric: "tabular-nums" }}>
           <span style={{ opacity: 0.6, marginRight: 8 }}>Total</span>
           <b style={{ fontWeight: 500 }}>{formatMoney(total)}</b>

@@ -166,6 +166,7 @@ export default function CheckoutPageClient() {
     );
 
     // React Query
+    const count = items.reduce((a, i) => a + Number(i.quantity ?? 1), 0);
     const createOrderMutation = useMutation({ mutationFn: createOrder });
 
     const handleSubmitInfo = handleSubmit(async (values) => {
@@ -310,9 +311,13 @@ export default function CheckoutPageClient() {
     return (
         <div style={ROOT_VARS}>
             <style>{CHECKOUT_CSS}</style>
+            <style>{`
+              .fdm-check-grid { display: grid; grid-template-columns: minmax(0,1fr) 380px; gap: clamp(24px,4vw,64px); align-items: start; padding-bottom: clamp(40px,6vw,88px); }
+              @media (max-width: 960px) { .fdm-check-grid { grid-template-columns: 1fr; } .fdm-check-grid > aside { position: static !important; } }
+            `}</style>
             <main
                 className="fdm-check"
-                style={{ maxWidth: 1600, margin: "0 auto", padding: "0 clamp(20px,4vw,56px)" }}
+                style={{ maxWidth: 1180, margin: "0 auto", padding: "0 clamp(16px,3vw,32px)" }}
             >
                 <nav
                     aria-label="Migas de pan"
@@ -336,37 +341,46 @@ export default function CheckoutPageClient() {
                     <span aria-current="page" style={{ color: mix(85) }}>{steps[step - 1]}</span>
                 </nav>
 
-                <h1
+                {/* Cabecera: un solo título y los pasos en línea */}
+                <header
+                    className="fdm-check-head"
                     style={{
-                        margin: 0,
-                        padding: "clamp(20px,2.4vw,32px) 0 clamp(14px,1.6vw,20px)",
-                        fontWeight: 300,
-                        fontSize: "clamp(32px,4vw,60px)",
-                        lineHeight: 0.98,
-                        letterSpacing: "0.03em",
-                        textTransform: "uppercase",
+                        display: "flex",
+                        flexWrap: "wrap",
+                        alignItems: "flex-end",
+                        justifyContent: "space-between",
+                        gap: "18px 40px",
+                        padding: "clamp(22px,3vw,40px) 0 clamp(18px,2vw,26px)",
+                        borderBottom: `1px solid ${mix(12)}`,
+                        marginBottom: "clamp(24px,3vw,40px)",
                     }}
                 >
-                    {steps[step - 1]}
-                </h1>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+                        <span style={{ ...EYEBROW, opacity: 0.65 }}>Compra · {count} {count === 1 ? "pieza" : "piezas"}</span>
+                        <h1
+                            style={{
+                                margin: 0,
+                                fontWeight: 200,
+                                fontSize: "clamp(34px,4.6vw,56px)",
+                                lineHeight: 1,
+                                letterSpacing: "-0.02em",
+                            }}
+                        >
+                            {step === 3 ? "Listo." : step === 2 ? "Pago." : "Tus datos."}
+                        </h1>
+                    </div>
+                    <Stepper
+                        steps={steps}
+                        current={step}
+                        lockForward
+                        onStepChange={(next) => {
+                            if (next < step) setStep(next as 1 | 2 | 3);
+                        }}
+                    />
+                </header>
 
-                <Stepper
-                    steps={steps}
-                    current={step}
-                    descriptions={[
-                        "Completa tu información y dirección de envío.",
-                        "Método de pago.",
-                        "¡Listo! Confirmación.",
-                    ]}
-                    lockForward
-                    onStepChange={(next) => {
-                        if (next < step) setStep(next as 1 | 2 | 3);
-                    }}
-                    className="mb-8"
-                />
-
-                <div className="grid lg:grid-cols-3 gap-8" style={{ paddingBottom: "clamp(32px,5vw,72px)" }}>
-                    <div className="lg:col-span-2 space-y-6" style={{ minWidth: 0 }}>
+                <div className="fdm-check-grid">
+                    <div style={{ minWidth: 0 }}>
                         {step === 1 && (
                             <CheckoutPersonalForm
                                 cities={cities}

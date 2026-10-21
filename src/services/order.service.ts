@@ -214,3 +214,15 @@ export const setArtistItemDelivery = async (
   );
   return data.item;
 };
+
+/** Llave pública de Mercado Pago: la del build (NEXT_PUBLIC_MP_PUBLIC_KEY) o,
+ *  si no está, la que sirve payments-svc (MERCADOPAGO_PUBLIC_KEY en Railway). */
+let mpKeyCache: string | null = null;
+export const getMpPublicKey = async (): Promise<string> => {
+    const fromBuild = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
+    if (fromBuild) return fromBuild;
+    if (mpKeyCache) return mpKeyCache;
+    const { data } = await apiClient.get<{ publicKey: string }>("/pay/payments/mercadopago/public-key");
+    mpKeyCache = data?.publicKey || "";
+    return mpKeyCache;
+};

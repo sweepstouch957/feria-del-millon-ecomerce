@@ -12,7 +12,7 @@ import { TrustBadges } from "./PaymentInfoBlocks";
 import {
   PaymentMethodSelector,
 } from "./PaymentMethodSelector";
-import { chargeMercadoPagoCard } from "@services/order.service";
+import { chargeMercadoPagoCard, getMpPublicKey } from "@services/order.service";
 import toast from "react-hot-toast";
 
 export type PaymentFormPayload = {
@@ -45,25 +45,27 @@ export default function PaymentForm({
     if (method !== "mercadopago") return;
     if (typeof window === "undefined") return;
 
-    // @ts-expect-error: MercadoPago viene del script global
-    const MP = window.MercadoPago as any;
-    const mpPublicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
-
-    if (!MP || !mpPublicKey) {
-      console.error(
-        "MercadoPago SDK o NEXT_PUBLIC_MP_PUBLIC_KEY no están configurados"
-      );
-      toast.error(
-        "No se pudo cargar el formulario de Mercado Pago. Intenta más tarde."
-      );
-      return;
-    }
-
-    const mp = new MP(mpPublicKey, { locale: "es-CO" });
-    const bricksBuilder = mp.bricks();
+    let bricksBuilder: any = null;
 
     const renderCardBrick = async () => {
+      // @ts-expect-error: MercadoPago viene del script global
+      const MP = window.MercadoPago as any;
+      if (!MP) {
+        console.error("MercadoPago SDK no cargó (¿bloqueador de contenido?)");
+        toast.error("No cargó el formulario de tarjeta. Desactiva el bloqueador de contenido para este sitio e intenta de nuevo.");
+        return;
+      }
+      let mpPublicKey = "";
       try {
+        mpPublicKey = await getMpPublicKey();
+      } catch { /* sin llave: se avisa abajo */ }
+      if (!mpPublicKey) {
+        console.error("Falta la llave pública de Mercado Pago (MERCADOPAGO_PUBLIC_KEY)");
+        toast.error("Falta configurar Mercado Pago. Paga con un asesor por WhatsApp mientras tanto.");
+        return;
+      }
+      try {
+        bricksBuilder = new MP(mpPublicKey, { locale: "es-CO" }).bricks();
         await bricksBuilder.create("cardPayment", "mp-card-form", {
           initialization: {
             amount: total, // toma el 100% del total
@@ -139,7 +141,7 @@ export default function PaymentForm({
 
     return () => {
       try {
-        bricksBuilder.unmount("mp-card-form");
+        bricksBuilder?.unmount("mp-card-form");
       } catch {
         // ignore si ya está desmontado
       }

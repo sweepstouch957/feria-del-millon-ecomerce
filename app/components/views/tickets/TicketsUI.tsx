@@ -13,6 +13,7 @@ import { TicketsPreviewModal } from "./TicketsPreviewModal";
 import { formatMoney } from "@lib/utils";
 import type { Ticket } from "@services/ticket.service";
 import { payTicketsWithMercadoPago, getTicketTypes, type PayWithMercadoPagoPayload, type TicketTypeKey, type TicketTypeOption } from "@services/ticket.service";
+import { getMpPublicKey } from "@services/order.service";
 import { useQuery } from "@tanstack/react-query";
 import { uploadImage } from "@services/upload.service";
 import { useEdition } from "@provider/editionProvider";
@@ -340,25 +341,27 @@ export default function TicketsUI({
     if (typeof window === "undefined") return;
     if (!canBuy || total === 0) return;
 
-    // @ts-expect-error: MercadoPago viene del script global
-    const MP = window.MercadoPago as any;
-    const mpPublicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
-
-    if (!MP || !mpPublicKey) {
-      console.error(
-        "MercadoPago SDK o NEXT_PUBLIC_MP_PUBLIC_KEY no están configurados",
-      );
-      toast.error(
-        "No se pudo cargar el formulario de Mercado Pago. Intenta más tarde.",
-      );
-      return;
-    }
-
-    const mp = new MP(mpPublicKey, { locale: "es-CO" });
-    const bricksBuilder = mp.bricks();
+    let bricksBuilder: any = null;
 
     const renderCardBrick = async () => {
+      // @ts-expect-error: MercadoPago viene del script global
+      const MP = window.MercadoPago as any;
+      if (!MP) {
+        console.error("MercadoPago SDK no cargó (¿bloqueador de contenido?)");
+        toast.error("No cargó el formulario de tarjeta. Desactiva el bloqueador de contenido para este sitio e intenta de nuevo.");
+        return;
+      }
+      let mpPublicKey = "";
       try {
+        mpPublicKey = await getMpPublicKey();
+      } catch { /* sin llave: se avisa abajo */ }
+      if (!mpPublicKey) {
+        console.error("Falta la llave pública de Mercado Pago (MERCADOPAGO_PUBLIC_KEY)");
+        toast.error("Falta configurar Mercado Pago. Intenta más tarde.");
+        return;
+      }
+      try {
+        bricksBuilder = new MP(mpPublicKey, { locale: "es-CO" }).bricks();
         await bricksBuilder.create("cardPayment", "mp-card-form", {
           initialization: {
             amount: total, // toma el 100% del total
@@ -412,7 +415,7 @@ export default function TicketsUI({
 
     return () => {
       try {
-        bricksBuilder.unmount("mp-card-form");
+        bricksBuilder?.unmount("mp-card-form");
       } catch {
         // ignorar si ya está desmontado
       }

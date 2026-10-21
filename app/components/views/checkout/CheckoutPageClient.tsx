@@ -15,6 +15,7 @@ import SiteFooter from "@components/SiteFooter";
 import { CHECKOUT_CSS, EYEBROW, ROOT_VARS, mix } from "@components/views/checkout/checkoutTheme";
 
 import useCart from "@store/useCart";
+import { useMounted } from "@hooks/useMounted";
 import { useCities } from "@hooks/queries/useCities";
 
 import {
@@ -43,7 +44,9 @@ import { pickSrc } from "@lib/utils";
 export default function CheckoutPageClient() {
     const { eventId } = useEdition();
     // Zustand
-    const items = useCart((s) => s.items) as CartViewItem[];
+    const mounted = useMounted();
+    const storedItems = useCart((s) => s.items) as CartViewItem[];
+    const items = mounted ? storedItems : [];
     const clear = useCart((s) => s.clear);
     const add = useCart((s) => s.add);
     const searchParams = useSearchParams();
@@ -247,7 +250,7 @@ export default function CheckoutPageClient() {
     };
 
     // Carrito vacío
-    if (items.length === 0 && step !== 3) {
+    if (mounted && items.length === 0 && step !== 3) {
         return (
             <div style={ROOT_VARS}>
                 <style>{CHECKOUT_CSS}</style>

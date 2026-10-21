@@ -26,7 +26,7 @@ const useCart = create<CartState>()(
       items: [],
       add: (artwork, qty = 1) => {
         const items = [...get().items];
-        const i = items.findIndex((it) => it.id === artwork.id);
+        const i = items.findIndex((it) => String(it.id) === String(artwork.id));
         if (i >= 0)
           items[i] = { ...items[i], quantity: items[i].quantity + qty };
         else items.push({ ...artwork, quantity: qty });
@@ -35,11 +35,11 @@ const useCart = create<CartState>()(
       updateQty: (id, quantity) => {
         if (quantity <= 0) return get().remove(id);
         set((state) => ({
-          items: state.items.map((i) => (i.id === id ? { ...i, quantity } : i)),
+          items: state.items.map((i) => (String(i.id) === String(id) ? { ...i, quantity } : i)),
         }));
       },
       remove: (id) =>
-        set((state) => ({ items: state.items.filter((i) => i.id !== id) })),
+        set((state) => ({ items: state.items.filter((i) => String(i.id) !== String(id)) })),
       clear: () => set({ items: [] }),
       totalItems: () => get().items.reduce((a, i) => a + i.quantity, 0),
       subtotal: () =>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShoppingCart, LogOut, ChevronDown, LayoutDashboard, BadgeCheck } from "lucide-react";
 import useCart from "@store/useCart";
+import { useMounted } from "@hooks/useMounted";
 import { useAuth } from "@provider/authProvider";
 import { useSiteContent, useSiteNav } from "@provider/siteConfigProvider";
 import ThemeToggle from "@components/views/home/v2/ThemeToggle";
@@ -28,7 +29,8 @@ export default function Navigation() {
   const items = nav.items.filter((i) => i.visible);
 
   const cart = useCart((s) => s.items);
-  const cartCount = useMemo(() => cart.reduce((a, i) => a + (i.quantity ?? 1), 0), [cart]);
+  const mounted = useMounted();
+  const cartCount = useMemo(() => (mounted ? cart.reduce((a, i) => a + (i.quantity ?? 1), 0) : 0), [cart, mounted]);
 
   useEffect(() => {
     const handler = () => {

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import useCart from "@store/useCart";
+import { useMounted } from "@hooks/useMounted";
 import SmartImage from "@components/ui/SmartImage";
 import SiteFooter from "@components/SiteFooter";
 import { formatCOP } from "@lib/money";
@@ -102,7 +103,10 @@ function QtyButton({
 }
 
 export default function CartPage() {
-  const items = useCart((s) => s.items) as CartViewItem[];
+  const mounted = useMounted();
+  const stored = useCart((s) => s.items) as CartViewItem[];
+  // Antes de hidratar, el carrito se pinta vacío igual que en el servidor.
+  const items = mounted ? stored : [];
   const updateQty = useCart((s) => s.updateQty);
   const remove = useCart((s) => s.remove);
   const reduce = useReducedMotion();
@@ -175,7 +179,7 @@ export default function CartPage() {
           </span>
         </div>
 
-        {items.length === 0 ? (
+        {(mounted && items.length === 0) ? (
           <div
             style={{
               borderTop: `1px solid ${mix(22)}`,
@@ -285,7 +289,7 @@ export default function CartPage() {
                           )}
                           <button
                             type="button"
-                            onClick={() => remove(item.id)}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); remove(String(item.id)); }}
                             className="fdm-cart-link"
                             style={{
                               alignSelf: "flex-start",

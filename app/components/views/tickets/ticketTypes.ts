@@ -34,13 +34,14 @@ export const TICKET_TYPE_OPTIONS: {
   price?: number; // sin precio = el del día elegido
   pickDay?: boolean;
   quantities?: number[];
+  packPrices?: Record<string, number>;
   maxQty?: number;
 }[] = [
   { key: "general", label: "General", desc: "Un día a elección.", pickDay: true },
   { key: "allpass", label: "All pass 4 días", desc: "Entra los cuatro días de feria.", price: 80000 },
   { key: "2x1", label: "Promoción 2x1", desc: "Compra una entrada y recibe otra para el viernes de 12:00 a 6:00 p.m.", pickDay: true },
   { key: "estudiante", label: "Estudiantes", desc: "Gratis con carné vigente 2026 de arte, diseño o arquitectura.", price: 0, pickDay: true, maxQty: 1 },
-  { key: "empresa", label: "Empresas", desc: "50 o 100 entradas con 20% de descuento, válidas los cuatro días.", price: 64000, quantities: [50, 100] },
+  { key: "empresa", label: "Empresas", desc: "Paquetes de 20, 50 o 100 entradas para un día. 20% de descuento desde 50.", price: 55000, pickDay: true, quantities: [20, 50, 100], packPrices: { 20: 55000, 50: 44000, 100: 44000 } },
 ];
 
 export const capPct = (sold: number, cap: number) =>

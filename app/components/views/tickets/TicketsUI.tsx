@@ -85,6 +85,7 @@ const FALLBACK_TYPES: TicketTypeOption[] = TICKET_TYPE_OPTIONS.map((t, i) => ({
   pickDay: !!t.pickDay,
   allDays: !t.pickDay,
   quantities: t.quantities ?? null,
+  packPrices: t.packPrices ?? null,
   maxQty: t.maxQty ?? null,
   cap: null,
   sold: 0,
@@ -186,7 +187,8 @@ export default function TicketsUI({
     if (next && next.key !== ticketType) setTicketType(next.key);
   }, [spec?.open, typeOptions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const unitPrice = spec.price ?? selectedDay?.price ?? 0;
+  // Paquetes (empresas): el precio por persona depende de la cantidad elegida.
+  const unitPrice = spec.packPrices?.[qty] ?? spec.price ?? selectedDay?.price ?? 0;
   const total = unitPrice * qty;
 
   useEffect(() => {
@@ -441,8 +443,11 @@ export default function TicketsUI({
   const dateRange = firstDay && lastDay
     ? firstDay.date === lastDay.date ? firstDay.display : `${firstDay.display.split(" ").slice(1).join(" ")} – ${lastDay.display.split(" ").slice(1).join(" ")}`
     : "";
-  const priceLabel = (t: TicketTypeOption) =>
-    t.price === null ? "según el día" : t.price === 0 ? "Gratis" : formatMoney(t.price, currency);
+  const priceLabel = (t: TicketTypeOption) => {
+    const packs = t.packPrices ? Object.values(t.packPrices).filter((n) => typeof n === "number") : [];
+    if (packs.length && Math.min(...packs) < Math.max(...packs)) return `desde ${formatMoney(Math.min(...packs), currency)}`;
+    return t.price === null ? "según el día" : t.price === 0 ? "Gratis" : formatMoney(t.price, currency);
+  };
   const stepDatos = spec.pickDay ? "03" : "02";
 
   return (
@@ -575,7 +580,16 @@ export default function TicketsUI({
                   <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Cantidad</span>
                   {spec.quantities ? (
                     <select value={qty} onChange={(e) => setQty(Number(e.target.value))}>
-                      {spec.quantities.map((q) => <option key={q} value={q}>{q} entradas</option>)}
+                      {spec.quantities.map((q) => {
+                        const u = spec.packPrices?.[q] ?? spec.price ?? selectedDay?.price ?? 0;
+                        const full = spec.price ?? u;
+                        const off = full > u ? Math.round((1 - u / full) * 100) : 0;
+                        return (
+                          <option key={q} value={q}>
+                            {q} entradas · {formatMoney(u * q, currency)}{off ? ` (${off}% dto.)` : ""}
+                          </option>
+                        );
+                      })}
                     </select>
                   ) : (
                     <QtyStepper value={qty} min={1} max={Math.min(spec.maxQty ?? 10, Math.max(1, remaining))} onChange={setQty} />

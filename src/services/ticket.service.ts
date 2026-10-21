@@ -171,6 +171,8 @@ export interface TicketTypeOption {
   pickDay: boolean;
   allDays: boolean;
   quantities: number[] | null;
+  /** Precio por persona según el paquete elegido (empresas: 20 → 55.000, 50/100 → 44.000). */
+  packPrices?: Record<string, number> | null;
   maxQty: number | null;
   cap: number | null;
   sold: number;

@@ -1,52 +1,61 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@components/ui/button";
-import { CheckCircle, Shield, Truck } from "lucide-react";
+import { EYEBROW, mix } from "./checkoutTheme";
 
 type Props = {
   orderNumber: string;
 };
 
+/* Confirmación, sistema editorial v2: número de pedido grande, qué sigue en
+   tres líneas, dos botones píldora. */
 export function CheckoutConfirmation({ orderNumber }: Props) {
+  const pill = (solid: boolean): React.CSSProperties => ({
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 50,
+    padding: "0 30px",
+    borderRadius: 999,
+    border: "1px solid var(--fg)",
+    background: solid ? "var(--fg)" : "transparent",
+    color: solid ? "var(--bg)" : "var(--fg)",
+    ...EYEBROW,
+    fontSize: 11,
+    textDecoration: "none",
+  });
+  const steps = [
+    ["Correo", "Te llega la confirmación con la ficha de cada obra."],
+    ["Entrega", "El artista te contacta para coordinar la entrega."],
+    ["Autenticidad", "Cada obra va con su certificado."],
+  ];
   return (
-    <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-8 text-center">
-      <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-6" />
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">
-        ¡Pedido Confirmado!
-      </h2>
-      <p className="text-lg text-gray-600 mb-6">
-        Tu pedido #{orderNumber} ha sido registrado correctamente.
-      </p>
-
-      <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left max-w-lg mx-auto">
-        <h3 className="font-semibold mb-2">¿Qué sigue?</h3>
-        <div className="text-sm text-gray-600 space-y-2">
-          <div className="flex items-center">
-            <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-            <span>Recibirás un email de confirmación</span>
-          </div>
-          <div className="flex items-center">
-            <Truck className="h-4 w-4 text-blue-600 mr-2" />
-            <span>Preparamos tu pedido en 2-3 días hábiles</span>
-          </div>
-          <div className="flex items-center">
-            <Shield className="h-4 w-4 text-purple-600 mr-2" />
-            <span>Incluimos certificado de autenticidad</span>
-          </div>
-        </div>
+    <section style={{ display: "flex", flexDirection: "column", gap: 28, padding: "clamp(8px,1vw,12px) 0 24px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <span style={{ ...EYEBROW, color: "var(--acc)" }}>Pedido confirmado</span>
+        <h2 style={{ margin: 0, fontWeight: 200, fontSize: "clamp(36px,5vw,64px)", lineHeight: 1, letterSpacing: "-0.02em" }}>
+          Gracias por tu compra.
+        </h2>
+        <p style={{ margin: 0, fontSize: 16, lineHeight: 1.6, maxWidth: "52ch", color: mix(75) }}>
+          Tu pedido quedó registrado con el número <b style={{ fontWeight: 500, color: "var(--fg)", fontVariantNumeric: "tabular-nums" }}>{orderNumber}</b>. Guárdalo por si necesitas escribirnos.
+        </p>
       </div>
 
-      <div className="space-y-4 max-w-sm mx-auto">
-        <Link href="/catalogo">
-          <Button className="w-full">Continuar Comprando</Button>
-        </Link>
-        <Link href="/">
-          <Button variant="outline" className="w-full">
-            Volver al Inicio
-          </Button>
-        </Link>
+      <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%,200px), 1fr))", gap: 18, borderTop: `1px solid ${mix(12)}` }}>
+        {steps.map(([k, v], i) => (
+          <li key={k} style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 16 }}>
+            <span style={{ ...EYEBROW, color: mix(55) }}>
+              <span style={{ color: "var(--acc)" }}>0{i + 1}</span> · {k}
+            </span>
+            <span style={{ fontSize: 14.5, lineHeight: 1.55, color: mix(80) }}>{v}</span>
+          </li>
+        ))}
+      </ol>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+        <Link href="/catalogo" style={pill(true)}>Seguir viendo obras</Link>
+        <Link href="/" style={pill(false)}>Volver al inicio</Link>
       </div>
-    </div>
+    </section>
   );
 }

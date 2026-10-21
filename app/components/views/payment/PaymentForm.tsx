@@ -3,8 +3,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Check, Hourglass, Shield } from "lucide-react";
-import { Button } from "@components/ui/button";
+import { Check, Hourglass } from "lucide-react";
+import { EYEBROW, mix } from "@components/views/checkout/checkoutTheme";
 import type { PaymentMethod } from "@services/order.service";
 import { formatMoney } from "@lib/utils";
 
@@ -169,78 +169,51 @@ export default function PaymentForm({
   const mainButtonLabel =
     method === "whatsapp" ? "Hablar con un asesor" : "Pagar con Mercado Pago";
 
+  const pill = (solid: boolean): React.CSSProperties => ({
+    display: "inline-flex", alignItems: "center", justifyContent: "center", height: 50, padding: "0 28px",
+    borderRadius: 999, border: "1px solid var(--fg)", background: solid ? "var(--fg)" : "transparent",
+    color: solid ? "var(--bg)" : "var(--fg)", fontFamily: "inherit", fontWeight: 500, fontSize: 11,
+    letterSpacing: "0.16em", textTransform: "uppercase", cursor: "pointer", transition: "all .3s ease", flex: "1 1 200px",
+  });
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-6">Método de Pago</h2>
-
-      {/* Tabs de métodos de pago: Mercado Pago / WhatsApp */}
-      <PaymentMethodSelector method={method} onChange={setMethod} />
-
-      {/* Info de seguridad */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <div className="flex items-center mb-2">
-          <Shield className="h-5 w-5 text-blue-600 mr-2" />
-          <span className="font-semibold text-blue-900">Pago seguro</span>
-        </div>
-        <p className="text-sm text-blue-700">
-          No almacenamos datos sensibles sin necesidad. El cobro se procesa a
-          través de aliados como Mercado Pago o de forma directa por WhatsApp
-          con un asesor.
-        </p>
-      </div>
-
-      {/* Encabezado con total */}
-      <div className="flex items-center justify-between mb-6">
-        <span className="text-sm text-gray-500">Total a pagar</span>
-        <span className="text-sm font-semibold text-gray-900">
-          {formatMoney(total)}
+    <section style={{ display: "flex", flexDirection: "column", gap: 26 }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 12, paddingBottom: 10, borderBottom: `1px solid ${mix(12)}` }}>
+        <span style={{ ...EYEBROW, color: "var(--acc)" }}>03</span>
+        <h2 style={{ margin: 0, fontWeight: 300, fontSize: "clamp(20px,2.2vw,26px)", letterSpacing: "-0.01em" }}>Pago</h2>
+        <span style={{ marginLeft: "auto", fontSize: 14, fontVariantNumeric: "tabular-nums" }}>
+          <span style={{ opacity: 0.6, marginRight: 8 }}>Total</span>
+          <b style={{ fontWeight: 500 }}>{formatMoney(total)}</b>
         </span>
       </div>
 
-      {/* Contenido según método */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Lado izquierdo: info / Brick */}
-        <div className="order-2 lg:order-1">
-          {method === "whatsapp" ? (
-            <p className="text-sm text-gray-700 mb-3">
-              Serás redirigido a WhatsApp para coordinar el pago con un
-              asesor de la Feria del Millón.
-            </p>
-          ) : (
-            <div className="mb-3 w-full">
-              {/* Contenedor donde se renderiza el Brick de Mercado Pago */}
-              <div id="mp-card-form" className="w-full" />
-            </div>
-          )}
-        </div>
+      <PaymentMethodSelector method={method} onChange={setMethod} />
 
-        {/* Lado derecho: botón principal + volver */}
-        <div className="order-1 lg:order-2 space-y-4">
-          <div className="pt-2">
-            <Button
-              onClick={handlePayClick}
-              disabled={
-                isProcessing ||
-                method === "mercadopago" // el pago se dispara desde el Brick
-              }
-              className="w-full bg-blue-600 hover:bg-blue-700 mb-2"
-              size="lg"
-              title={
-                method === "mercadopago"
-                  ? "Completa los datos en el formulario de Mercado Pago"
-                  : undefined
-              }
-            >
-              {isProcessing ? "Procesando..." : mainButtonLabel}
-            </Button>
-            <Button variant="outline" onClick={onBack} className="w-full mt-3">
-              Volver a Información
-            </Button>
-          </div>
+      {method === "whatsapp" ? (
+        <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: mix(75), maxWidth: "60ch" }}>
+          Te llevamos a WhatsApp para coordinar el pago con un asesor de la Feria del Millón. La obra queda reservada mientras se confirma.
+        </p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Datos de la tarjeta · Mercado Pago</span>
+          {/* Contenedor donde se renderiza el Brick de Mercado Pago */}
+          <div id="mp-card-form" style={{ border: `1px solid ${mix(12)}`, padding: 12, background: mix(3) }} />
+          <span style={{ fontSize: 12.5, opacity: 0.6 }}>El botón de pagar está dentro del formulario de la tarjeta.</span>
         </div>
+      )}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+        {method === "whatsapp" && (
+          <button type="button" onClick={handlePayClick} disabled={isProcessing} style={pill(true)}>
+            {isProcessing ? "Procesando…" : mainButtonLabel}
+          </button>
+        )}
+        <button type="button" onClick={onBack} style={pill(false)}>
+          Volver a mis datos
+        </button>
       </div>
 
       <TrustBadges />
-    </div>
+    </section>
   );
 }

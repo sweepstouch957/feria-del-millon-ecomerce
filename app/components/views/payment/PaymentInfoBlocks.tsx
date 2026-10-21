@@ -1,22 +1,25 @@
-// components/Payment/PaymentInfoBlocks.tsx
+// components/Payment/PaymentInfoBlocks.tsx — sistema editorial v2.
+"use client";
 
-'use client';
+import React from "react";
+import { CheckCircle2, Lock, ShieldCheck } from "lucide-react";
 
-import React from 'react';
-import { CheckCircle2, Lock, ShieldCheck } from 'lucide-react';
+const mix = (pct: number) => `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
 
 export function TrustBadges() {
+  const items: [React.ReactNode, string][] = [
+    [<Lock key="l" size={14} />, "Pago cifrado"],
+    [<ShieldCheck key="s" size={14} />, "Prevención de fraude"],
+    [<CheckCircle2 key="c" size={14} />, "Certificado de autenticidad"],
+  ];
   return (
-    <div className="mt-6 grid sm:grid-cols-3 gap-3 text-sm text-gray-600">
-      <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
-        <Lock size={16} style={{ verticalAlign: '-2px' }} /> Cifrado TLS 1.2+
-      </div>
-      <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
-        <ShieldCheck size={16} style={{ verticalAlign: '-2px' }} /> Prevención de fraude
-      </div>
-      <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
-        <CheckCircle2 size={16} style={{ verticalAlign: '-2px' }} /> Garantía de autenticidad
-      </div>
-    </div>
+    <ul style={{ listStyle: "none", margin: 0, padding: "14px 0 0", display: "flex", flexWrap: "wrap", gap: "8px 22px", borderTop: `1px solid ${mix(12)}` }}>
+      {items.map(([icon, text]) => (
+        <li key={text} style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12.5, color: mix(60) }}>
+          <span style={{ color: "var(--acc)", display: "inline-flex" }}>{icon}</span>
+          {text}
+        </li>
+      ))}
+    </ul>
   );
 }

@@ -1,58 +1,56 @@
-// components/Payment/PaymentMethodSelector.tsx
-
+// components/Payment/PaymentMethodSelector.tsx — sistema editorial v2.
 "use client";
 
 import React from "react";
 import { CreditCard, MessageCircle } from "lucide-react";
 import { PaymentMethod } from "@services/order.service";
 
-
 export type PaymentMethodSelectorProps = {
   method: PaymentMethod;
   onChange: (m: PaymentMethod) => void;
 };
 
-export function PaymentMethodSelector({
-  method,
-  onChange,
-}: PaymentMethodSelectorProps) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-      {/* MÉTODO 1: MERCADO PAGO */}
-      <button
-        type="button"
-        onClick={() => onChange("mercadopago")}
-        className={`border rounded-lg px-4 py-3 text-sm flex flex-col items-start gap-1 transition ${method === "mercadopago"
-            ? "border-blue-600 bg-blue-50"
-            : "border-gray-200 bg-white"
-          }`}
-      >
-        <span className="font-semibold flex items-center gap-2">
-          <CreditCard className="h-4 w-4 text-blue-600" />
-          Mercado Pago
-        </span>
-        <span className="text-xs text-gray-600 leading-4">
-          Tarjeta de crédito, débito o cuenta de Mercado Pago.
-        </span>
-      </button>
+const mix = (pct: number) => `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
 
-      {/* MÉTODO 2: WHATSAPP */}
-      <button
-        type="button"
-        onClick={() => onChange("whatsapp")}
-        className={`border rounded-lg px-4 py-3 text-sm flex flex-col items-start gap-1 transition ${method === "whatsapp"
-            ? "border-green-600 bg-green-50"
-            : "border-gray-200 bg-white"
-          }`}
-      >
-        <span className="font-semibold flex items-center gap-2">
-          <MessageCircle className="h-4 w-4 text-green-600" />
-          WhatsApp
-        </span>
-        <span className="text-xs text-gray-600 leading-4">
-          Habla con un asesor y completa el pago manualmente.
-        </span>
-      </button>
+const OPTIONS: { key: PaymentMethod; label: string; desc: string; icon: React.ReactNode }[] = [
+  { key: "mercadopago", label: "Tarjeta", desc: "Crédito o débito, con Mercado Pago. Aprobación al instante.", icon: <CreditCard size={16} /> },
+  { key: "whatsapp", label: "Con un asesor", desc: "Coordinas el pago por WhatsApp con la feria.", icon: <MessageCircle size={16} /> },
+];
+
+export function PaymentMethodSelector({ method, onChange }: PaymentMethodSelectorProps) {
+  return (
+    <div role="radiogroup" aria-label="Método de pago" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%,220px), 1fr))", gap: 12 }}>
+      {OPTIONS.map((o) => {
+        const selected = method === o.key;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(o.key)}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              textAlign: "left",
+              padding: "16px 18px",
+              border: `1px solid ${selected ? "var(--fg)" : mix(16)}`,
+              background: selected ? "var(--panel)" : "transparent",
+              color: selected ? "var(--fdm-on-dark,#F5F4EF)" : "inherit",
+              font: "inherit",
+              cursor: "pointer",
+              transition: "all .3s ease",
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, fontWeight: 400 }}>
+              <span style={{ color: selected ? "var(--acc)" : "inherit", display: "inline-flex" }}>{o.icon}</span>
+              {o.label}
+            </span>
+            <span style={{ fontSize: 13, lineHeight: 1.5, opacity: 0.7 }}>{o.desc}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

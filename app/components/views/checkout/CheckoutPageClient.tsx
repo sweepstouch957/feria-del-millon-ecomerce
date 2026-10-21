@@ -57,7 +57,7 @@ export default function CheckoutPageClient() {
     const { data: cities = [], isLoading: loadingCities } = useCities();
 
     const [step, setStep] = useState<1 | 2 | 3>(1);
-    const steps = ["Dirección", "Pago", "Confirmación"];
+    const steps = ["Tus datos", "Pago", "Confirmación"];
 
     const { user } = useAuth();
     const salesPause = useCatalogSalesPaused();
@@ -376,8 +376,8 @@ export default function CheckoutPageClient() {
                     className="mb-8"
                 />
 
-                <div className="grid lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-6">
+                <div className="grid lg:grid-cols-3 gap-8" style={{ paddingBottom: "clamp(32px,5vw,72px)" }}>
+                    <div className="lg:col-span-2 space-y-6" style={{ minWidth: 0 }}>
                         {step === 1 && (
                             <CheckoutPersonalForm
                                 cities={cities}
@@ -390,15 +390,13 @@ export default function CheckoutPageClient() {
                         )}
 
                         {step === 2 && currentOrder && (
-                            <div style={{ background: mix(3), border: `1px solid ${mix(12)}`, padding: "clamp(18px,2vw,26px)" }}>
-                                <PaymentForm
-                                    total={subtotal}
-                                    isProcessing={isProcessing}
-                                    onPay={handlePayment}
-                                    onBack={() => setStep(1)}
-                                    orderId={currentOrder.id} 
-                                />
-                            </div>
+                            <PaymentForm
+                                total={subtotal}
+                                isProcessing={isProcessing}
+                                onPay={handlePayment}
+                                onBack={() => setStep(1)}
+                                orderId={currentOrder.id}
+                            />
                         )}
 
                         {step === 3 && (

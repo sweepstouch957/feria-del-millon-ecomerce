@@ -139,7 +139,7 @@ export const chargeMercadoPagoCard = async (payload: {
         ok: boolean;
         status: string;
         payment: any;
-    }>("/pay/payments/mercadopago/card-charge", payload, {
+    }>("/payment/payments/mercadopago/card-charge", payload, {
         withCredentials: true,
     });
     return data;
@@ -222,7 +222,7 @@ export const getMpPublicKey = async (): Promise<string> => {
     const fromBuild = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
     if (fromBuild) return fromBuild;
     if (mpKeyCache) return mpKeyCache;
-    const { data } = await apiClient.get<{ publicKey: string }>("/pay/payments/mercadopago/public-key");
+    const { data } = await apiClient.get<{ publicKey: string }>("/payment/payments/mercadopago/public-key");
     mpKeyCache = data?.publicKey || "";
     return mpKeyCache;
 };

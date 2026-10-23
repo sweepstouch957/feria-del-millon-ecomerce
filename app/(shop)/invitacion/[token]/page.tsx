@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm, useFieldArray, type FieldError } from "react-hook-form";
 import toast from "react-hot-toast";
 import {
   getInvitation,
@@ -14,14 +15,18 @@ import {
 
 /* Confirmación de invitación: llega desde el botón del correo. Es la
    inscripción del invitado (los mismos datos que pide ARTBO) y al confirmar se
-   emite el QR, válido para `admits` personas, que llega al correo que deje acá
-   y por la línea oficial de WhatsApp. */
+   emite un QR por persona, que llega al correo que deje acá y por WhatsApp.
+
+   Formulario con react-hook-form: cada campo dice qué está mal (en español e
+   inglés) al salir de él o al enviar, el envío lleva el foco al primer error y
+   los errores del servidor se pintan en el campo que corresponde. */
 
 const fmtDay = (iso: string) =>
   new Date(iso).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 
 const DOC_TYPES = ["CC", "CE", "NIT", "Pasaporte", "TI", "PPT"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const digits = (v: string) => String(v || "").replace(/\D/g, "");
 
 // ponytail: responsable y canal de datos escritos acá; mover a site-config si la organización los cambia seguido.
 const DATA_CONTACT = "info@sweepstouch.com";
@@ -30,23 +35,55 @@ const WHATSAPP = "+57 300 748 5406";
 const BANNER_INVITE = "https://res.cloudinary.com/dg9gzic4s/image/upload/w_1400,q_auto,f_auto/v1792793981/feria-del-millon/invitaciones/j4qipbaaiqle8vvaoenm.jpg";
 const BANNER_PASS = "https://res.cloudinary.com/dg9gzic4s/image/upload/w_1120,q_auto,f_auto/v1792785037/feria-del-millon/invitaciones/nrqpko0zuilfgouwfp0n.jpg";
 
-type Form = Omit<InvitationRegistration, "dataConsent" | "companions"> & { dataConsent: "" | "yes" | "no" };
-
-const EMPTY: Form = {
-  firstName: "", lastName: "", documentType: "", documentNumber: "", country: "Colombia", city: "",
-  address: "", phone: "", email: "", company: "", position: "", corporateEmail: "",
-  dataConsent: "",
+type FormValues = Omit<InvitationRegistration, "dataConsent" | "companions"> & {
+  dataConsent: "" | "yes" | "no";
+  companions: InvitationCompanion[];
 };
 
 const EMPTY_COMPANION: InvitationCompanion = { firstName: "", lastName: "", email: "", phone: "", documentType: "", documentNumber: "" };
 
-/** Un acompañante se deja vacío (su cupo queda en el QR del invitado) o completo. */
-const companionState = (c: InvitationCompanion) => {
-  const filled = Object.values(c).some((v) => String(v ?? "").trim());
-  if (!filled) return "empty";
-  const ok = c.firstName.trim() && c.lastName.trim() && c.phone.trim() && EMAIL_RE.test(c.email.trim());
-  return ok ? "ok" : "incomplete";
+const isBlank = (c?: InvitationCompanion) => !c || !Object.values(c).some((v) => String(v ?? "").trim());
+
+/** Mensajes bilingües: "Escriba su nombre / Enter your name". */
+const MSG = {
+  required: (es: string, en: string) => `${es} / ${en}`,
+  email: "Correo no válido, ej.: nombre@correo.com / Invalid e-mail",
+  phone: "Celular de 10 dígitos, ej.: 300 123 4567 / 10-digit mobile number",
+  doc: "Solo números y letras, de 5 a 15 caracteres / 5–15 letters or digits",
 };
+
+const validPhone = (v: string) => {
+  const d = digits(v);
+  const local = d.startsWith("57") && d.length === 12 ? d.slice(2) : d;
+  return (local.length === 10 && local.startsWith("3")) || (d.length >= 8 && d.length <= 15 && String(v).trim().startsWith("+"));
+};
+
+/* ── Campo con etiqueta, error y ayuda ───────────────────────────────── */
+function Field({
+  label, en, error, hint, className = "", children,
+}: { label: string; en?: string; error?: FieldError; hint?: string; className?: string; children: React.ReactNode }) {
+  return (
+    <label className={`block text-sm font-medium text-slate-800 ${className}`}>
+      <span>
+        {label} {en && <span className="font-normal text-slate-400">/ {en}</span>}
+      </span>
+      {children}
+      {error?.message ? (
+        <span role="alert" className="mt-1 flex items-start gap-1 text-xs font-normal text-red-600">
+          <span aria-hidden>●</span>
+          {error.message}
+        </span>
+      ) : hint ? (
+        <span className="mt-1 block text-xs font-normal text-slate-500">{hint}</span>
+      ) : null}
+    </label>
+  );
+}
+
+const inputCls = (err?: FieldError) =>
+  `mt-1 w-full rounded-lg border bg-white px-3 py-2.5 text-[15px] outline-none transition-colors ${
+    err ? "border-red-500 bg-red-50/40 focus:border-red-600" : "border-slate-300 focus:border-slate-900"
+  }`;
 
 export default function InvitationPage() {
   const { token } = useParams<{ token: string }>();
@@ -57,25 +94,47 @@ export default function InvitationPage() {
     retry: false,
   });
 
-  const [f, setF] = useState<Form>(EMPTY);
-  const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setF((p) => ({ ...p, [k]: e.target.value }));
+  const {
+    register, handleSubmit, control, reset, setError, getValues, watch, trigger,
+    formState: { errors, isSubmitted, submitCount },
+  } = useForm<FormValues>({
+    mode: "onTouched",
+    reValidateMode: "onChange",
+    shouldFocusError: true,
+    defaultValues: {
+      firstName: "", lastName: "", documentType: "", documentNumber: "", country: "Colombia", city: "",
+      address: "", phone: "", email: "", company: "", position: "", corporateEmail: "",
+      dataConsent: "", companions: [],
+    },
+  });
+  const { fields: companionFields, replace: replaceCompanions } = useFieldArray({ control, name: "companions" });
 
   // Invitación doble = 2 QR: un bloque por acompañante.
   const seats = Math.max((inv?.admits || 1) - 1, 0);
-  const [companions, setCompanions] = useState<InvitationCompanion[]>([]);
+
+  // Nombre y correo llegan de la invitación; se pueden corregir.
   useEffect(() => {
-    setCompanions((cs) => Array.from({ length: seats }, (_, i) => cs[i] || { ...EMPTY_COMPANION }));
-  }, [seats]);
-  const setC = (i: number, k: keyof InvitationCompanion) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setCompanions((cs) => cs.map((c, j) => (j === i ? { ...c, [k]: e.target.value } : c)));
+    if (!inv) return;
+    const [first = "", ...rest] = String(inv.name || "").trim().split(/\s+/);
+    const cur = getValues();
+    reset({
+      ...cur,
+      firstName: cur.firstName || inv.firstName || first,
+      lastName: cur.lastName || inv.lastName || rest.join(" "),
+      email: cur.email || inv.email || "",
+      companions: Array.from({ length: seats }, (_, i) => cur.companions?.[i] || { ...EMPTY_COMPANION }),
+    });
+  }, [inv, seats]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (companionFields.length !== seats) replaceCompanions(Array.from({ length: seats }, () => ({ ...EMPTY_COMPANION })));
+  }, [seats]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // "Declinar" llega del botón del correo (?declinar=1). Sin useSearchParams: pide Suspense en el build.
   const [declining, setDeclining] = useState(false);
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("declinar") === "1") setDeclining(true);
   }, []);
-  // Quien declinó puede cambiar de opinión y volver al formulario.
   const [reconsider, setReconsider] = useState(false);
 
   const decline = useMutation({
@@ -92,59 +151,41 @@ export default function InvitationPage() {
       ),
   });
 
-  // Nombre y correo llegan de la invitación; se pueden corregir.
-  useEffect(() => {
-    if (!inv) return;
-    const [first = "", ...rest] = String(inv.name || "").trim().split(/\s+/);
-    setF((p) => ({
-      ...p,
-      firstName: p.firstName || inv.firstName || first,
-      lastName: p.lastName || inv.lastName || rest.join(" "),
-      email: p.email || inv.email || "",
-    }));
-  }, [inv]);
-
-  const required: (keyof Form)[] = ["firstName", "lastName", "documentType", "documentNumber", "country", "city", "address", "phone", "email"];
-  const missing = required.filter((k) => !String(f[k] ?? "").trim());
-  const emailOk = EMAIL_RE.test(f.email.trim());
-  const corpOk = !f.corporateEmail?.trim() || EMAIL_RE.test(f.corporateEmail.trim());
-  const companionsOk = companions.every((c) => companionState(c) !== "incomplete");
-  const complete = !missing.length && emailOk && corpOk && companionsOk && f.dataConsent === "yes";
-
   const confirm = useMutation({
-    mutationFn: () => {
+    mutationFn: (v: FormValues) => {
       const trim = <T extends object>(o: T) =>
-        Object.fromEntries(Object.entries(o).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v])) as T;
+        Object.fromEntries(Object.entries(o).map(([k, x]) => [k, typeof x === "string" ? x.trim() : x])) as T;
+      const { companions, dataConsent, ...rest } = v;
       return confirmInvitation(token, {
-        ...(trim(f) as any),
-        companions: companions.filter((c) => companionState(c) === "ok").map(trim),
-        dataConsent: f.dataConsent === "yes",
+        ...(trim(rest) as any),
+        companions: companions.filter((c) => !isBlank(c)).map(trim),
+        dataConsent: dataConsent === "yes",
       });
     },
     onSuccess: (data) => {
       qc.setQueryData(["invitation", token], data);
-      toast.success("Listo. Te enviamos el pase a tu correo y a WhatsApp.");
+      toast.success("Listo. Le enviamos el pase a su correo y a WhatsApp.");
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
     onError: (e: any) => {
-      const code = e?.response?.data?.error;
-      toast.error(
-        code === "data_consent_required"
-          ? "Debe aceptar el tratamiento de datos para inscribirse."
-          : code === "email_invalid"
-            ? "Revise el correo electrónico."
-            : code === "companion_same_email"
-              ? "Su acompañante necesita un correo distinto al suyo: allí le llega su propio pase."
-              : String(code || "").startsWith("companion_")
-                ? "Revise los datos de su acompañante."
-                : "No pudimos confirmar su asistencia. Intente de nuevo."
-      );
+      // El servidor dice qué campo falló: se pinta en ese campo.
+      const code: string = e?.response?.data?.error || "";
+      const field = (name: any, message: string) => setError(name, { type: "server", message }, { shouldFocus: true });
+      if (code === "data_consent_required") return field("dataConsent", "Debe aceptar el tratamiento de datos / Consent required");
+      if (code === "companion_same_email") return field("companions.0.email", "Use un correo distinto al suyo: allí le llega su propio pase / Must differ from yours");
+      const m = code.match(/^(companion_)?(\w+?)_(required|invalid)$/);
+      if (m) {
+        const name = m[1] ? `companions.0.${m[2]}` : m[2];
+        return field(name, m[3] === "invalid" ? MSG.email : "Este dato es obligatorio / Required");
+      }
+      if (code === "invitation_canceled") return toast.error("Esta invitación fue anulada.");
+      toast.error("No pudimos confirmar su asistencia. Intente de nuevo.");
     },
   });
 
-  const input = "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-slate-900";
-  const lbl = "block text-sm font-medium text-slate-800";
-  const en = "font-normal text-slate-400";
+  const onInvalid = () => {
+    toast.error("Revise los campos marcados en rojo.");
+  };
 
   if (isLoading) return <main className="mx-auto max-w-2xl px-4 py-24 text-center text-sm text-slate-500">Cargando invitación…</main>;
   if (isError || !inv) {
@@ -162,7 +203,6 @@ export default function InvitationPage() {
     const f = (x: Date, month: boolean) => x.toLocaleDateString("es-CO", { day: "numeric", ...(month ? { month: "short" } : {}), timeZone: "UTC" }).replace(".", "");
     return `${f(d(inv.validFrom), false)} al ${f(d(inv.validTo), true)}`;
   })();
-  // La invitación completa: el titular más los acompañantes que ya tienen su QR.
   const totalPeople = (inv.admits || 1) + (inv.companions?.length || 0);
   const when = inv.allDays
     ? "todos los días de la feria"
@@ -173,11 +213,39 @@ export default function InvitationPage() {
     ? new Date(inv.deadline).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Bogota" })
     : "";
   const showForm = inv.status === "pending" || (inv.status === "declined" && reconsider);
+  const consent = watch("dataConsent");
+  // Cuántos campos tienen error (cuenta también los de cada acompañante).
+  const countErrors = (e: any): number =>
+    !e || typeof e !== "object" ? 0 : "message" in e && "type" in e ? 1 : Object.values(e).reduce<number>((a, x) => a + countErrors(x), 0);
+  const errorCount = countErrors(errors);
+
+  /** Validación de un campo del acompañante: obligatorio solo si el bloque tiene algo. */
+  const companionRule = (i: number, kind: "name" | "last" | "phone" | "email") => (v: string) => {
+    const c = getValues(`companions.${i}`);
+    if (isBlank(c)) return true;
+    if (!String(v || "").trim()) {
+      return kind === "name" ? "Escriba los nombres / Enter first name"
+        : kind === "last" ? "Escriba los apellidos / Enter last name"
+        : kind === "phone" ? "Escriba el celular / Enter mobile number"
+        : "Escriba el correo / Enter e-mail";
+    }
+    if (kind === "phone" && !validPhone(v)) return MSG.phone;
+    if (kind === "email") {
+      if (!EMAIL_RE.test(v.trim())) return MSG.email;
+      if (v.trim().toLowerCase() === String(getValues("email") || "").trim().toLowerCase())
+        return "Use un correo distinto al suyo: allí le llega su propio pase / Must differ from yours";
+    }
+    return true;
+  };
+  // Al escribir en un bloque de acompañante, revalidar el bloque entero (los demás campos pasan a ser obligatorios).
+  const revalidateCompanion = (i: number) => {
+    if (isSubmitted) trigger([`companions.${i}.firstName`, `companions.${i}.lastName`, `companions.${i}.phone`, `companions.${i}.email`]);
+  };
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
-      {/* Una sola imagen arriba: el flyer completo mientras confirma; ya
-          confirmado, el banner "Pase de acceso". */}
+      {/* Una sola imagen arriba: banner "Invitación especial" con el
+          formulario; ya confirmado, el banner "Pase de acceso". */}
       <img
         src={inv.status === "confirmed" ? BANNER_PASS : BANNER_INVITE}
         alt={inv.eventName || "Feria del Millón"}
@@ -249,13 +317,7 @@ export default function InvitationPage() {
       )}
 
       {showForm && !declining && (
-        <form
-          className="mt-8 space-y-5"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (complete) confirm.mutate();
-          }}
-        >
+        <form className="mt-8 space-y-6" noValidate onSubmit={handleSubmit((v) => confirm.mutate(v), onInvalid)}>
           <div className="space-y-2 text-[15px] leading-relaxed text-slate-800">
             <p className="text-xl font-semibold">Confirme su asistencia</p>
             <p>
@@ -274,118 +336,152 @@ export default function InvitationPage() {
               To complete your registration, please make sure your information is up to date — especially your email address, as
               your personalized entry pass for the Fair will be sent there.
             </p>
+            <p className="text-xs text-slate-500">Los campos con <span className="text-red-600">*</span> son obligatorios / Required fields.</p>
           </div>
+
+          {/* Resumen de errores tras intentar enviar */}
+          {submitCount > 0 && errorCount > 0 && (
+            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              Faltan o hay errores en <b>{errorCount}</b> {errorCount === 1 ? "campo" : "campos"}. Están marcados en rojo abajo.
+              <span className="block text-xs text-red-600/80">Please review the fields marked in red.</span>
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className={lbl}>Nombres <span className={en}>/ Name</span>
-              <input className={input} value={f.firstName} onChange={set("firstName")} autoComplete="given-name" required />
-            </label>
-            <label className={lbl}>Apellidos <span className={en}>/ Last name</span>
-              <input className={input} value={f.lastName} onChange={set("lastName")} autoComplete="family-name" required />
-            </label>
-            <label className={lbl}>Tipo de documento <span className={en}>/ ID type</span>
-              <select className={input} value={f.documentType} onChange={set("documentType")} required>
-                <option value="">NIT, CC, CE, Pasaporte…</option>
+            <Field label="Nombres *" en="Name" error={errors.firstName}>
+              <input className={inputCls(errors.firstName)} autoComplete="given-name" aria-invalid={!!errors.firstName}
+                {...register("firstName", { validate: (v) => !!v.trim() || MSG.required("Escriba sus nombres", "Enter your first name") })} />
+            </Field>
+            <Field label="Apellidos *" en="Last name" error={errors.lastName}>
+              <input className={inputCls(errors.lastName)} autoComplete="family-name" aria-invalid={!!errors.lastName}
+                {...register("lastName", { validate: (v) => !!v.trim() || MSG.required("Escriba sus apellidos", "Enter your last name") })} />
+            </Field>
+            <Field label="Tipo de documento *" en="ID type" error={errors.documentType}>
+              <select className={inputCls(errors.documentType)} aria-invalid={!!errors.documentType}
+                {...register("documentType", { required: MSG.required("Elija el tipo de documento", "Choose an ID type") })}>
+                <option value="">Seleccione…</option>
                 {DOC_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
               </select>
-            </label>
-            <label className={lbl}>Número de documento <span className={en}>/ ID number</span>
-              <input className={input} value={f.documentNumber} onChange={set("documentNumber")} required />
-            </label>
-            <label className={lbl}>País <span className={en}>/ Country</span>
-              <input className={input} value={f.country} onChange={set("country")} autoComplete="country-name" placeholder="País de residencia" required />
-            </label>
-            <label className={lbl}>Ciudad <span className={en}>/ City</span>
-              <input className={input} value={f.city} onChange={set("city")} autoComplete="address-level2" required />
-            </label>
-            <label className={`${lbl} sm:col-span-2`}>Dirección <span className={en}>/ Address</span>
-              <input className={input} value={f.address} onChange={set("address")} autoComplete="street-address" placeholder="Calle 00 #00-00" required />
-            </label>
-            <label className={lbl}>Número de celular (WhatsApp) <span className={en}>/ Phone number</span>
-              <input className={input} value={f.phone} onChange={set("phone")} inputMode="tel" autoComplete="tel" placeholder="300 000 0000" required />
-            </label>
-            <label className={lbl}>Correo electrónico <span className={en}>/ E-mail</span>
-              <input className={input} type="email" value={f.email} onChange={set("email")} autoComplete="email" required />
-            </label>
-            <label className={lbl}>Nombre de la compañía <span className={en}>/ Company name</span>
-              <input className={input} value={f.company} onChange={set("company")} autoComplete="organization" />
-            </label>
-            <label className={lbl}>Cargo actual <span className={en}>/ Current position</span>
-              <input className={input} value={f.position} onChange={set("position")} autoComplete="organization-title" />
-            </label>
-            <label className={`${lbl} sm:col-span-2`}>Correo electrónico institucional <span className={en}>/ Corporate e-mail</span>
-              <input className={input} type="email" value={f.corporateEmail} onChange={set("corporateEmail")} />
-            </label>
+            </Field>
+            <Field label="Número de documento *" en="ID number" error={errors.documentNumber}>
+              <input className={inputCls(errors.documentNumber)} inputMode="numeric" aria-invalid={!!errors.documentNumber}
+                {...register("documentNumber", {
+                  validate: (v) => {
+                    const s = v.trim();
+                    if (!s) return MSG.required("Escriba el número de documento", "Enter your ID number");
+                    return /^[A-Za-z0-9.\-]{5,15}$/.test(s) || MSG.doc;
+                  },
+                })} />
+            </Field>
+            <Field label="País *" en="Country" error={errors.country}>
+              <input className={inputCls(errors.country)} autoComplete="country-name" aria-invalid={!!errors.country}
+                {...register("country", { validate: (v) => !!v.trim() || MSG.required("Escriba el país", "Enter your country") })} />
+            </Field>
+            <Field label="Ciudad *" en="City" error={errors.city}>
+              <input className={inputCls(errors.city)} autoComplete="address-level2" aria-invalid={!!errors.city}
+                {...register("city", { validate: (v) => !!v.trim() || MSG.required("Escriba la ciudad", "Enter your city") })} />
+            </Field>
+            <Field label="Dirección *" en="Address" error={errors.address} className="sm:col-span-2">
+              <input className={inputCls(errors.address)} autoComplete="street-address" placeholder="Calle 00 #00-00" aria-invalid={!!errors.address}
+                {...register("address", { validate: (v) => !!v.trim() || MSG.required("Escriba la dirección", "Enter your address") })} />
+            </Field>
+            <Field label="Celular (WhatsApp) *" en="Mobile" error={errors.phone} hint="Ahí le llega el pase por WhatsApp.">
+              <input className={inputCls(errors.phone)} inputMode="tel" autoComplete="tel" placeholder="300 000 0000" aria-invalid={!!errors.phone}
+                {...register("phone", {
+                  validate: (v) => (!v.trim() ? MSG.required("Escriba su celular", "Enter your mobile number") : validPhone(v) || MSG.phone),
+                })} />
+            </Field>
+            <Field label="Correo electrónico *" en="E-mail" error={errors.email} hint="Ahí le llega su pase con el QR.">
+              <input className={inputCls(errors.email)} type="email" autoComplete="email" aria-invalid={!!errors.email}
+                {...register("email", {
+                  validate: (v) => (!v.trim() ? MSG.required("Escriba su correo", "Enter your e-mail") : EMAIL_RE.test(v.trim()) || MSG.email),
+                })} />
+            </Field>
+            <Field label="Nombre de la compañía" en="Company" error={errors.company}>
+              <input className={inputCls(errors.company)} autoComplete="organization" {...register("company")} />
+            </Field>
+            <Field label="Cargo actual" en="Position" error={errors.position}>
+              <input className={inputCls(errors.position)} autoComplete="organization-title" {...register("position")} />
+            </Field>
+            <Field label="Correo institucional" en="Corporate e-mail" error={errors.corporateEmail} className="sm:col-span-2">
+              <input className={inputCls(errors.corporateEmail)} type="email" aria-invalid={!!errors.corporateEmail}
+                {...register("corporateEmail", { validate: (v) => !v?.trim() || EMAIL_RE.test(v.trim()) || MSG.email })} />
+            </Field>
           </div>
 
-          {companions.map((c, i) => {
-            const st = companionState(c);
+          {companionFields.map((field, i) => {
+            const ce = errors.companions?.[i];
             return (
-              <fieldset key={i} className="rounded-xl border border-slate-200 p-4">
+              <fieldset key={field.id} className={`rounded-xl border p-4 ${ce ? "border-red-300" : "border-slate-200"}`}>
                 <legend className="px-1 text-sm font-semibold text-slate-800">
-                  {seats > 1 ? `Acompañante ${i + 1}` : "Su acompañante"} <span className={en}>/ Companion</span>
+                  {seats > 1 ? `Acompañante ${i + 1}` : "Su acompañante"} <span className="font-normal text-slate-400">/ Companion</span>
                 </legend>
                 <p className="mb-3 text-xs text-slate-500">
                   Recibe su propio pase con QR en su correo y su WhatsApp. Si aún no sabe quién le acompaña, déjelo en blanco:
                   ese cupo queda en su QR.
                 </p>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className={lbl}>Nombres
-                    <input className={input} value={c.firstName} onChange={setC(i, "firstName")} />
-                  </label>
-                  <label className={lbl}>Apellidos
-                    <input className={input} value={c.lastName} onChange={setC(i, "lastName")} />
-                  </label>
-                  <label className={lbl}>Celular (WhatsApp)
-                    <input className={input} value={c.phone} onChange={setC(i, "phone")} inputMode="tel" placeholder="300 000 0000" />
-                  </label>
-                  <label className={lbl}>Correo electrónico
-                    <input className={input} type="email" value={c.email} onChange={setC(i, "email")} />
-                  </label>
-                  <label className={lbl}>Tipo de documento <span className={en}>(opcional)</span>
-                    <select className={input} value={c.documentType} onChange={setC(i, "documentType")}>
+                  <Field label="Nombres" error={ce?.firstName}>
+                    <input className={inputCls(ce?.firstName)}
+                      {...register(`companions.${i}.firstName`, { validate: companionRule(i, "name"), onChange: () => revalidateCompanion(i) })} />
+                  </Field>
+                  <Field label="Apellidos" error={ce?.lastName}>
+                    <input className={inputCls(ce?.lastName)}
+                      {...register(`companions.${i}.lastName`, { validate: companionRule(i, "last"), onChange: () => revalidateCompanion(i) })} />
+                  </Field>
+                  <Field label="Celular (WhatsApp)" error={ce?.phone}>
+                    <input className={inputCls(ce?.phone)} inputMode="tel" placeholder="300 000 0000"
+                      {...register(`companions.${i}.phone`, { validate: companionRule(i, "phone"), onChange: () => revalidateCompanion(i) })} />
+                  </Field>
+                  <Field label="Correo electrónico" error={ce?.email}>
+                    <input className={inputCls(ce?.email)} type="email"
+                      {...register(`companions.${i}.email`, { validate: companionRule(i, "email"), onChange: () => revalidateCompanion(i) })} />
+                  </Field>
+                  <Field label="Tipo de documento" en="opcional">
+                    <select className={inputCls()} {...register(`companions.${i}.documentType`, { onChange: () => revalidateCompanion(i) })}>
                       <option value="">—</option>
                       {DOC_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
-                  </label>
-                  <label className={lbl}>Número de documento <span className={en}>(opcional)</span>
-                    <input className={input} value={c.documentNumber} onChange={setC(i, "documentNumber")} />
-                  </label>
+                  </Field>
+                  <Field label="Número de documento" en="opcional">
+                    <input className={inputCls()} {...register(`companions.${i}.documentNumber`, { onChange: () => revalidateCompanion(i) })} />
+                  </Field>
                 </div>
-                {st === "incomplete" && (
-                  <p className="mt-2 text-xs text-red-600">Complete nombres, apellidos, celular y un correo válido, o deje el bloque vacío.</p>
-                )}
               </fieldset>
             );
           })}
 
-          <fieldset className="rounded-xl border border-slate-200 p-4">
+          <fieldset className={`rounded-xl border p-4 ${errors.dataConsent ? "border-red-300 bg-red-50/40" : "border-slate-200"}`}>
             <legend className="px-1 text-sm font-medium text-slate-800">
-              He leído, entiendo y acepto los términos de tratamiento de datos descritos en la parte inferior de este formulario.
-              <span className={`block ${en}`}>I have read, understand and accept the terms of data processing described at the bottom of this form.</span>
+              He leído, entiendo y acepto los términos de tratamiento de datos descritos en la parte inferior de este formulario. <span className="text-red-600">*</span>
+              <span className="block font-normal text-slate-400">I have read, understand and accept the terms of data processing described at the bottom of this form.</span>
             </legend>
             <div className="mt-2 flex gap-6 text-sm">
               <label className="flex items-center gap-2">
-                <input type="radio" name="consent" checked={f.dataConsent === "yes"} onChange={() => setF((p) => ({ ...p, dataConsent: "yes" }))} /> Sí / Yes
+                <input type="radio" value="yes"
+                  {...register("dataConsent", {
+                    validate: (v) => v === "yes" || (v === "no"
+                      ? "Sin aceptar el tratamiento de datos no podemos emitir su pase / We cannot issue your pass without consent"
+                      : "Elija una opción / Choose an option"),
+                  })} /> Sí / Yes
               </label>
               <label className="flex items-center gap-2">
-                <input type="radio" name="consent" checked={f.dataConsent === "no"} onChange={() => setF((p) => ({ ...p, dataConsent: "no" }))} /> No
+                <input type="radio" value="no" {...register("dataConsent")} /> No
               </label>
             </div>
-            {f.dataConsent === "no" && (
+            {errors.dataConsent?.message ? (
+              <p role="alert" className="mt-2 text-xs text-red-600">● {errors.dataConsent.message}</p>
+            ) : consent === "no" ? (
               <p className="mt-2 text-xs text-red-600">Sin aceptar el tratamiento de datos no podemos emitir su pase de acceso.</p>
-            )}
+            ) : null}
           </fieldset>
-
-          {!emailOk && f.email && <p className="text-xs text-red-600">Revise el correo electrónico.</p>}
-          {!corpOk && <p className="text-xs text-red-600">Revise el correo institucional.</p>}
 
           <button
             type="submit"
-            disabled={confirm.isPending || !complete}
-            className="w-full rounded-lg bg-black py-3.5 text-sm font-semibold text-white disabled:bg-slate-300"
+            disabled={confirm.isPending}
+            className="w-full rounded-lg bg-black py-3.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:bg-slate-400"
           >
-            {confirm.isPending ? "Enviando…" : "Enviar / Submit"}
+            {confirm.isPending ? "Enviando…" : "Confirmar asistencia / Submit"}
           </button>
           {inv.status === "pending" && (
             <p className="text-center text-sm">

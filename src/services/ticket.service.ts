@@ -224,6 +224,10 @@ export interface InvitationView {
   eventName?: string;
   eventDay: string;
   allDays: boolean;
+  /** Un día a elección entre validFrom y validTo. */
+  anyDay?: boolean;
+  validFrom?: string | null;
+  validTo?: string | null;
   admits: number;
   status: "pending" | "confirmed" | "canceled" | "declined";
   companionName?: string;

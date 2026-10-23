@@ -153,7 +153,19 @@ export default function InvitationPage() {
     );
   }
 
-  const when = inv.allDays ? "todos los días de la feria" : fmtDay(inv.eventDay);
+  const rangeText = (() => {
+    if (!inv.validFrom || !inv.validTo) return "";
+    const d = (s: string) => new Date(`${s}T12:00:00Z`);
+    const f = (x: Date, month: boolean) => x.toLocaleDateString("es-CO", { day: "numeric", ...(month ? { month: "short" } : {}), timeZone: "UTC" }).replace(".", "");
+    return `${f(d(inv.validFrom), false)} al ${f(d(inv.validTo), true)}`;
+  })();
+  // La invitación completa: el titular más los acompañantes que ya tienen su QR.
+  const totalPeople = (inv.admits || 1) + (inv.companions?.length || 0);
+  const when = inv.allDays
+    ? "todos los días de la feria"
+    : inv.anyDay
+      ? `ingreso 1 día de la Feria${rangeText ? ` (${rangeText})` : ""}`
+      : fmtDay(inv.eventDay);
   const deadlineText = inv.deadline
     ? new Date(inv.deadline).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Bogota" })
     : "";
@@ -186,7 +198,9 @@ export default function InvitationPage() {
             </>
           )}
           <p className="mt-4 text-sm text-slate-700">
-            Pase válido para <b>{when}</b> · <b>{inv.admits > 1 ? `${inv.admits} personas` : "1 persona"}</b>.
+            Pase válido para <b>Inauguración: jueves 5 de noviembre, 5:00 p. m.</b> (entrada solo para mayores de edad).
+            {" "}<b>{when}</b>
+            {totalPeople > 1 ? <>, <b>{totalPeople} personas y un QR para cada una</b></> : <>, <b>1 persona</b></>}.
           </p>
           {!!inv.companions?.length && (
             <p className="mt-1 text-sm text-slate-500">
@@ -242,8 +256,14 @@ export default function InvitationPage() {
             <p className="text-xl font-semibold">Confirme su asistencia</p>
             <p>
               Para completar su registro, le solicitamos actualizar sus datos, especialmente su correo electrónico, ya que allí
-              recibirá su Pase de Acceso personalizado para ingresar a la Feria. Pase válido para <b>{when}</b>
-              {inv.admits > 1 ? <> · <b>{inv.admits} personas, un QR para cada una</b></> : null}.
+              recibirá su Pase de Acceso personalizado para ingresar a la Feria.
+            </p>
+            <p>
+              <b>Inauguración:</b> jueves 5 de noviembre, 5:00 p. m. (entrada solo para mayores de edad).
+            </p>
+            <p>
+              Pase válido para <b>{when}</b>
+              {inv.admits > 1 ? <>, <b>{inv.admits} personas y un QR para cada una</b></> : null}.
             </p>
             {deadlineText && <p>Le agradecemos confirmar antes del <b>{deadlineText}</b>.</p>}
             <p className="text-sm text-slate-500">

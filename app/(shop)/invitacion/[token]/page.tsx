@@ -27,7 +27,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATA_CONTACT = "info@sweepstouch.com";
 const WHATSAPP = "+57 300 748 5406";
 
-const BANNER_INVITE = "https://res.cloudinary.com/dg9gzic4s/image/upload/w_1120,q_auto,f_auto/v1792785034/feria-del-millon/invitaciones/sw91teujhzys7ezgffby.jpg";
+const BANNER_INVITE = "https://res.cloudinary.com/dg9gzic4s/image/upload/w_1400,q_auto,f_auto/v1792793981/feria-del-millon/invitaciones/j4qipbaaiqle8vvaoenm.jpg";
 const BANNER_PASS = "https://res.cloudinary.com/dg9gzic4s/image/upload/w_1120,q_auto,f_auto/v1792785037/feria-del-millon/invitaciones/nrqpko0zuilfgouwfp0n.jpg";
 
 type Form = Omit<InvitationRegistration, "dataConsent" | "companions"> & { dataConsent: "" | "yes" | "no" };
@@ -179,7 +179,7 @@ export default function InvitationPage() {
       {/* Una sola imagen arriba: el flyer completo mientras confirma; ya
           confirmado, el banner "Pase de acceso". */}
       <img
-        src={inv.status === "confirmed" ? BANNER_PASS : inv.image || BANNER_INVITE}
+        src={inv.status === "confirmed" ? BANNER_PASS : BANNER_INVITE}
         alt={inv.eventName || "Feria del Millón"}
         className="w-full"
       />

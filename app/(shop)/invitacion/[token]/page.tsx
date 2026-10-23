@@ -176,16 +176,13 @@ export default function InvitationPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
-      {/* Banner de la feria: "Invitación especial" mientras confirma, "Pase de acceso" ya confirmado. */}
+      {/* Una sola imagen arriba: el flyer completo mientras confirma; ya
+          confirmado, el banner "Pase de acceso". */}
       <img
-        src={inv.status === "confirmed" ? BANNER_PASS : BANNER_INVITE}
+        src={inv.status === "confirmed" ? BANNER_PASS : inv.image || BANNER_INVITE}
         alt={inv.eventName || "Feria del Millón"}
         className="w-full"
       />
-
-      {inv.image && inv.status !== "confirmed" && (
-        <img src={inv.image} alt={`${inv.eventName || "Feria del Millón"}: horarios y plano`} className="mt-6 w-full" />
-      )}
 
       {inv.status === "canceled" && (
         <p className="mt-8 rounded-2xl bg-slate-100 p-4 text-sm">Esta invitación fue anulada.</p>

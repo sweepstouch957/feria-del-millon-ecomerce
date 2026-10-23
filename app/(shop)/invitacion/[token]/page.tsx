@@ -27,6 +27,9 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATA_CONTACT = "info@sweepstouch.com";
 const WHATSAPP = "+57 300 748 5406";
 
+const BANNER_INVITE = "https://res.cloudinary.com/dg9gzic4s/image/upload/w_1120,q_auto,f_auto/v1792785034/feria-del-millon/invitaciones/sw91teujhzys7ezgffby.jpg";
+const BANNER_PASS = "https://res.cloudinary.com/dg9gzic4s/image/upload/w_1120,q_auto,f_auto/v1792785037/feria-del-millon/invitaciones/nrqpko0zuilfgouwfp0n.jpg";
+
 type Form = Omit<InvitationRegistration, "dataConsent" | "companions"> & { dataConsent: "" | "yes" | "no" };
 
 const EMPTY: Form = {
@@ -173,12 +176,16 @@ export default function InvitationPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
-      <div className="flex items-end justify-between border-b-[3px] border-black pb-3">
-        <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">{inv.eventName || "Feria del Millón"}</p>
-        <p className="text-right text-2xl font-bold leading-none">Invitación<br />especial</p>
-      </div>
+      {/* Banner de la feria: "Invitación especial" mientras confirma, "Pase de acceso" ya confirmado. */}
+      <img
+        src={inv.status === "confirmed" ? BANNER_PASS : BANNER_INVITE}
+        alt={inv.eventName || "Feria del Millón"}
+        className="w-full"
+      />
 
-      {inv.image && <img src={inv.image} alt={inv.eventName || "Feria del Millón"} className="mt-8 w-full" />}
+      {inv.image && inv.status !== "confirmed" && (
+        <img src={inv.image} alt={`${inv.eventName || "Feria del Millón"}: horarios y plano`} className="mt-6 w-full" />
+      )}
 
       {inv.status === "canceled" && (
         <p className="mt-8 rounded-2xl bg-slate-100 p-4 text-sm">Esta invitación fue anulada.</p>

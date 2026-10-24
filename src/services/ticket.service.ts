@@ -229,7 +229,10 @@ export interface InvitationView {
   validFrom?: string | null;
   validTo?: string | null;
   admits: number;
-  status: "pending" | "confirmed" | "canceled" | "declined";
+  /** closed = enlace público apagado o sin cupo. */
+  status: "pending" | "confirmed" | "canceled" | "declined" | "closed";
+  /** Al registrarse por enlace público: el token de su invitación (para ver el pase). */
+  inviteToken?: string;
   companionName?: string;
   shortCode?: string;
   qrDataUrl?: string;
@@ -281,6 +284,46 @@ export const declineInvitation = async (token: string) => {
 export const confirmInvitation = async (token: string, body: InvitationRegistration) => {
   const { data } = await apiClient.post<InvitationView>(
     `/ticket/tickets/invitations/${encodeURIComponent(token)}/confirm`,
+    body,
+  );
+  return data;
+};
+
+/* ────────── Enlace público de registro (/i/:code) ────────── */
+export interface InviteLinkPublic {
+  code: string;
+  label: string;
+  admits: number;
+  allDays: boolean;
+  anyDay: boolean;
+  date: string | null;
+  open: boolean;
+  eventName?: string;
+  validFrom?: string | null;
+  validTo?: string | null;
+}
+
+/** La info del enlace, con la forma de una invitación pendiente para reusar el formulario. */
+export const getInviteLinkAsInvitation = async (code: string): Promise<InvitationView> => {
+  const { data } = await apiClient.get<InviteLinkPublic>(`/ticket/tickets/invite-links/public/${encodeURIComponent(code)}`);
+  return {
+    name: "",
+    email: "",
+    eventName: data.eventName,
+    eventDay: data.date || data.validFrom || "",
+    allDays: data.allDays,
+    anyDay: data.anyDay,
+    validFrom: data.validFrom,
+    validTo: data.validTo,
+    admits: data.admits,
+    status: data.open ? "pending" : "closed",
+  } as InvitationView;
+};
+
+/** Registro por enlace público: crea la invitación y la confirma; devuelve el pase. */
+export const registerWithInviteLink = async (code: string, body: InvitationRegistration) => {
+  const { data } = await apiClient.post<InvitationView>(
+    `/ticket/tickets/invite-links/public/${encodeURIComponent(code)}/register`,
     body,
   );
   return data;

@@ -461,8 +461,9 @@ export default function MiEstudioClient() {
               >
                 <Lock size={15} strokeWidth={1.6} style={{ marginTop: 2, color: "var(--acc)", flexShrink: 0 }} />
                 <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: mix(72) }}>
-                  Tu inventario ya está entregado, así que esto queda de consulta. Si necesitas
-                  cambiar una obra, escríbele a la feria.
+                  {inventory.canUpload
+                    ? "Tu inventario ya está entregado. Puedes corregir tus obras desde el listado mientras la carga siga abierta; para agregar obras nuevas, escríbele a la feria."
+                    : "Tu inventario ya está entregado y la carga cerró. Si necesitas cambiar una obra, escríbele a la feria."}
                 </p>
               </div>
             )}
@@ -587,9 +588,11 @@ export default function MiEstudioClient() {
                   <ArtworksTable
                     rows={rows}
                     loading={artworksQuery.isLoading}
-                    // Fuera de la ventana tampoco se puede editar: el servidor
-                    // lo rechaza igual, así que el botón no se ofrece.
+                    // Enviado el inventario ya no se agregan obras, pero las
+                    // cargadas se corrigen mientras la ventana siga abierta
+                    // (fuera de ella el servidor rechaza, así que no se ofrece).
                     locked={locked || !inventory.canUpload}
+                    canEdit={inventory.canUpload}
                     filtering={filtering}
                     onView={openDetail}
                     onEdit={openEdit}
@@ -805,7 +808,7 @@ export default function MiEstudioClient() {
         data={detailData}
         open={!!detailId}
         loading={loadingDetail}
-        locked={locked || !inventory.canUpload}
+        locked={!inventory.canUpload}
         onClose={closeDetail}
         onEdit={editFromDetail}
         onOpenQr={openQr}

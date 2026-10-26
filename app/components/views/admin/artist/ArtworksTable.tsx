@@ -16,8 +16,10 @@ import { Bone, Eyebrow, StudioButton } from "./ui";
 type Props = {
   rows: ArtworkRow[];
   loading: boolean;
-  /** Inventario enviado: se mira, no se toca. */
+  /** No se cargan obras nuevas (inventario enviado o carga cerrada). */
   locked?: boolean;
+  /** Se pueden corregir las obras ya cargadas, aunque el inventario esté enviado. */
+  canEdit?: boolean;
   /** Hay filtros puestos: cambia el texto del estado vacío. */
   filtering?: boolean;
   onView: (id: string) => void;
@@ -65,14 +67,14 @@ function RowSkeleton() {
    filas en cada tecla. */
 const Row = memo(function Row({
   r,
-  locked,
+  canEdit,
   onView,
   onEdit,
   onOpenQr,
   onShare,
 }: {
   r: ArtworkRow;
-  locked?: boolean;
+  canEdit?: boolean;
   onView: (id: string) => void;
   onEdit: (id: string) => void;
   onOpenQr: (id: string) => void;
@@ -212,7 +214,7 @@ const Row = memo(function Row({
           <Eye size={13} strokeWidth={1.6} />
           Ver
         </StudioButton>
-        {(!locked || returned) && (
+        {(canEdit || returned) && (
           <StudioButton variant="link" onClick={() => onEdit(r.id)}>
             <Pencil size={13} strokeWidth={1.6} />
             Editar
@@ -235,6 +237,7 @@ export default function ArtworksTable({
   rows,
   loading,
   locked,
+  canEdit,
   filtering,
   onView,
   onEdit,
@@ -292,7 +295,7 @@ export default function ArtworksTable({
         <p style={{ ...BODY, maxWidth: "48ch" }}>
           {filtering
             ? "Prueba con otro título, otra técnica u otro pabellón."
-            : "Cada obra lleva su imagen, sus dimensiones, su técnica y su precio. Puedes cargarlas de a una y editarlas hasta que envíes el inventario."}
+            : "Cada obra lleva su imagen, sus dimensiones, su técnica y su precio. Puedes cargarlas de a una y editarlas mientras la carga esté abierta."}
         </p>
         {!filtering && !locked && onCreate && (
           <StudioButton onClick={onCreate}>
@@ -310,7 +313,7 @@ export default function ArtworksTable({
         <Row
           key={r.id}
           r={r}
-          locked={locked}
+          canEdit={canEdit}
           onView={onView}
           onEdit={onEdit}
           onOpenQr={onOpenQr}

@@ -14,6 +14,7 @@ import {
 } from "@services/artworks.service";
 import type { ArtworkRow } from "@hooks/queries/useArtworksCursor";
 import { useImageUpload } from "@hooks/artist/useImageUpload";
+import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
 import { MAX_COPIES, MAX_IMAGE_MB } from "@lib/artwork";
 import { formatCOP } from "@lib/money";
 import {
@@ -388,13 +389,21 @@ export default function CreateEditArtworkModal({
     if (!busyRef.current) onOpenChange(false);
   }, [onOpenChange]);
 
-  // Se calculan al abrir y no se vuelven a mirar: si la lista de obras cambia
-  // en segundo plano, el formulario no se entera.
+  // Al editar se carga la obra completa: la fila de la lista no trae todo, y
+  // un campo que llegaba vacío se guardaba vacío (se "borraba" lo cargado).
+  const detail = useArtworkDetail(open && editingId ? editingId : undefined);
+  const editRow = editingId
+    ? (detail.data?.doc as ArtworkRow | undefined) ?? (detail.isError ? currentRows.find((r) => r.id === editingId) : undefined)
+    : undefined;
+  const loadingEdit = !!editingId && !editRow;
+
+  // Se calculan una vez con la obra lista y no se vuelven a mirar: si la lista
+  // cambia en segundo plano, el formulario no se entera.
   const initialValues = useMemo(() => {
     const solo = pavilionOptions?.length === 1 ? pavilionOptions[0].value : "";
-    return valuesOf(editingId ? currentRows.find((r) => r.id === editingId) : undefined, solo);
+    return valuesOf(editRow, solo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editingId]);
+  }, [open, editingId, loadingEdit]);
 
   const submit = async (values: ArtworkFormValues) => {
     const payload = artworkPayload(values);
@@ -418,7 +427,7 @@ export default function CreateEditArtworkModal({
       onClose={close}
       eyebrow={editingId ? "Editar obra" : "Nueva obra"}
       title={editingId ? "Editar la obra" : "Cargar una obra"}
-      description="Imagen, título, dimensiones, técnica, precio y copias. Puedes editarla las veces que quieras hasta que envíes tu inventario."
+      description="Imagen, título, dimensiones, técnica, precio y copias. Puedes editarla las veces que quieras mientras la carga esté abierta."
       maxWidth={900}
       footer={
         <>
@@ -436,17 +445,23 @@ export default function CreateEditArtworkModal({
         </>
       }
     >
-      <Formik<ArtworkFormValues>
-        // Una obra distinta es un formulario distinto: la `key` lo reinicia sin
-        // efectos de por medio.
-        key={editingId ?? "nueva"}
-        innerRef={form}
-        initialValues={initialValues}
-        validate={validate}
-        onSubmit={submit}
-      >
-        <ArtworkFields techniqueOptions={techniqueOptions} pavilionOptions={pavilionOptions} />
-      </Formik>
+      {loadingEdit ? (
+        <div style={{ display: "grid", placeItems: "center", minHeight: 240 }}>
+          <Eyebrow tone="muted">Cargando la obra…</Eyebrow>
+        </div>
+      ) : (
+        <Formik<ArtworkFormValues>
+          // Una obra distinta (o volver a abrir la hoja) es un formulario
+          // distinto: la `key` lo reinicia sin efectos de por medio.
+          key={`${editingId ?? "nueva"}:${open}`}
+          innerRef={form}
+          initialValues={initialValues}
+          validate={validate}
+          onSubmit={submit}
+        >
+          <ArtworkFields techniqueOptions={techniqueOptions} pavilionOptions={pavilionOptions} />
+        </Formik>
+      )}
     </StudioSheet>
   );
 }

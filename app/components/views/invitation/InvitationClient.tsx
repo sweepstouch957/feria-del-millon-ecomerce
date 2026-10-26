@@ -234,6 +234,10 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
       firstName: cur.firstName || inv.firstName || first,
       lastName: cur.lastName || inv.lastName || rest.join(" "),
       email: cur.email || inv.email || "",
+      // Lo que la feria ya tenía (lista de invitados): solo se revisa.
+      phone: cur.phone || inv.phone || "",
+      city: cur.city || inv.city || "",
+      address: cur.address || inv.address || "",
       companions: Array.from({ length: seats }, (_, i) => cur.companions?.[i] || { ...EMPTY_COMPANION }),
     });
   }, [inv, seats]); // eslint-disable-line react-hooks/exhaustive-deps

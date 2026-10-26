@@ -211,6 +211,7 @@ export interface InvitationView {
   phone?: string;
   documentNumber?: string;
   address?: string;
+  city?: string;
   firstName?: string;
   lastName?: string;
   /** Imagen de cabecera del correo de invitación. */

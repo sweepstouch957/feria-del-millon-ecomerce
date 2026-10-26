@@ -1,4 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEdition } from "@provider/editionProvider";
+import apiClient from "src/http/axios";
 
 /* ¿Se puede cargar inventario ahora?
 
@@ -8,7 +10,8 @@ import { useEdition } from "@provider/editionProvider";
    es la peor forma de enterarse.
 
    Las dos puntas son opcionales: sin apertura se puede desde siempre, sin
-   cierre hasta siempre. */
+   cierre hasta siempre. Algunos artistas tienen plazo extendido (la feria se
+   los da en el panel): para ellos manda su propia fecha. */
 
 const when = (iso: string) =>
   new Intl.DateTimeFormat("es-CO", {
@@ -27,10 +30,26 @@ export type InventoryWindow = {
 };
 
 export function useInventoryWindow(): InventoryWindow {
-  const { openAt, closeAt } = useEdition().inventory;
+  const { eventId, inventory } = useEdition();
+  const { data: mine } = useQuery({
+    queryKey: ["inventory-window", eventId],
+    queryFn: async () =>
+      (await apiClient.get<{ extendedUntil: string | null }>("/catalogs/artworks/inventory-window", {
+        params: { event: eventId },
+        withCredentials: true,
+      })).data,
+    enabled: !!eventId,
+    staleTime: 60_000,
+    retry: false,
+  });
+
+  const { openAt } = inventory;
+  // El plazo propio reemplaza al cierre general (y no espera la apertura).
+  const extended = mine?.extendedUntil || null;
+  const closeAt = extended || inventory.closeAt;
   const now = Date.now();
 
-  if (openAt && new Date(openAt).getTime() > now) {
+  if (!extended && openAt && new Date(openAt).getTime() > now) {
     return {
       canUpload: false,
       reason: `La carga de inventario abre el ${when(openAt)}.`,

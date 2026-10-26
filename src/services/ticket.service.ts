@@ -289,6 +289,15 @@ export const confirmInvitation = async (token: string, body: InvitationRegistrat
   return data;
 };
 
+/** Ya confirmado: nombra a los acompañantes que le faltaron (cada uno recibe su QR). */
+export const addInvitationCompanions = async (token: string, companions: InvitationCompanion[]) => {
+  const { data } = await apiClient.post<InvitationView>(
+    `/ticket/tickets/invitations/${encodeURIComponent(token)}/companions`,
+    { companions },
+  );
+  return data;
+};
+
 /* ────────── Enlace público de registro (/i/:code) ────────── */
 export interface InviteLinkPublic {
   code: string;

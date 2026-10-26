@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray, type FieldError } from "react-hook-form";
@@ -11,6 +11,8 @@ import {
   declineInvitation,
   getInviteLinkAsInvitation,
   registerWithInviteLink,
+  addInvitationCompanions,
+  type InvitationView,
   type InvitationRegistration,
   type InvitationCompanion,
 } from "@services/ticket.service";
@@ -86,6 +88,111 @@ const inputCls = (err?: FieldError) =>
   `mt-1 w-full rounded-lg border bg-white px-3 py-2.5 text-[15px] outline-none transition-colors ${
     err ? "border-red-500 bg-red-50/40 focus:border-red-600" : "border-slate-300 focus:border-slate-900"
   }`;
+
+/** Agregar acompañantes después de confirmar (llega del correo con ?acompanante=1). */
+function AddCompanionsForm({ token, inv, onDone }: { token: string; inv: InvitationView; onDone: (v: InvitationView) => void }) {
+  const seats = Math.max((inv.admits || 1) - 1, 0);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("acompanante") === "1") {
+      setOpen(true);
+      setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth" }), 300);
+    }
+  }, []);
+  const { register, handleSubmit, getValues, setError, reset, formState: { errors } } = useForm<{ companions: InvitationCompanion[] }>({
+    mode: "onTouched",
+    defaultValues: { companions: Array.from({ length: seats }, () => ({ ...EMPTY_COMPANION })) },
+  });
+  useEffect(() => {
+    reset({ companions: Array.from({ length: seats }, () => ({ ...EMPTY_COMPANION })) });
+  }, [seats, reset]);
+
+  const save = useMutation({
+    mutationFn: (companions: InvitationCompanion[]) => addInvitationCompanions(token, companions),
+    onSuccess: (data) => {
+      toast.success("Listo. Le enviamos el pase a su acompañante por correo y WhatsApp.");
+      setOpen(false);
+      onDone(data);
+    },
+    onError: (e: any) => {
+      const code: string = e?.response?.data?.error || "";
+      const field = (name: any, message: string) => setError(name, { type: "server", message }, { shouldFocus: true });
+      if (code === "companion_same_email") return field("companions.0.email", "Use un correo distinto al suyo / Must differ from yours");
+      if (code === "companion_already_added") return field("companions.0.email", "Esa persona ya tiene su pase / Already added");
+      const m = code.match(/^companion_(\w+?)_(required|invalid)$/);
+      if (m) return field(`companions.0.${m[1]}`, m[2] === "invalid" ? MSG.email : "Este dato es obligatorio / Required");
+      if (code === "no_free_seats") return toast.error("Su invitación ya no tiene cupos libres.");
+      toast.error("No pudimos guardar. Intente de nuevo.");
+    },
+  });
+
+  const rule = (i: number, kind: "name" | "last" | "phone" | "email") => (v: string) => {
+    if (i > 0 && isBlank(getValues(`companions.${i}`))) return true; // el primero es obligatorio
+    if (!String(v || "").trim()) return "Este dato es obligatorio / Required";
+    if (kind === "phone" && !validPhone(v)) return MSG.phone;
+    if (kind === "email") {
+      if (!EMAIL_RE.test(v.trim())) return MSG.email;
+      if (v.trim().toLowerCase() === String(inv.email || "").toLowerCase()) return "Use un correo distinto al suyo / Must differ from yours";
+    }
+    return true;
+  };
+
+  return (
+    <div ref={ref} className="mt-6 rounded-2xl border-2 border-black p-6">
+      <p className="text-xl font-semibold">{seats > 1 ? "Agregue a sus acompañantes" : "Agregue a su acompañante"}</p>
+      <p className="mt-1 text-sm text-slate-600">
+        Su invitación incluye {seats > 1 ? `${seats} pases adicionales` : "un pase adicional"}. Déjenos sus datos y {seats > 1 ? "cada uno recibirá" : "recibirá"} su
+        propio pase con QR en su correo y su WhatsApp. <span className="text-slate-400">Add your companion: they get their own QR pass.</span>
+      </p>
+      {!open ? (
+        <button type="button" onClick={() => setOpen(true)} className="mt-4 rounded-lg bg-black px-5 py-2.5 text-sm font-semibold text-white">
+          Agregar acompañante
+        </button>
+      ) : (
+        <form className="mt-4 space-y-4" noValidate onSubmit={handleSubmit((v) => save.mutate(v.companions.filter((c) => !isBlank(c)).map((c) => Object.fromEntries(Object.entries(c).map(([k, x]) => [k, String(x ?? "").trim()])) as unknown as InvitationCompanion)))}>
+          {Array.from({ length: seats }, (_, i) => {
+            const ce = errors.companions?.[i];
+            return (
+              <fieldset key={i} className={`rounded-xl border p-4 ${ce ? "border-red-300" : "border-slate-200"}`}>
+                {seats > 1 && <legend className="px-1 text-sm font-semibold text-slate-800">Acompañante {i + 1}{i > 0 && <span className="font-normal text-slate-400"> (opcional)</span>}</legend>}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Nombres *" en="Name" error={ce?.firstName}>
+                    <input className={inputCls(ce?.firstName)} {...register(`companions.${i}.firstName`, { validate: rule(i, "name") })} />
+                  </Field>
+                  <Field label="Apellidos *" en="Last name" error={ce?.lastName}>
+                    <input className={inputCls(ce?.lastName)} {...register(`companions.${i}.lastName`, { validate: rule(i, "last") })} />
+                  </Field>
+                  <Field label="Celular (WhatsApp) *" en="Mobile" error={ce?.phone}>
+                    <input className={inputCls(ce?.phone)} inputMode="tel" placeholder="300 000 0000" {...register(`companions.${i}.phone`, { validate: rule(i, "phone") })} />
+                  </Field>
+                  <Field label="Correo electrónico *" en="E-mail" error={ce?.email}>
+                    <input className={inputCls(ce?.email)} type="email" {...register(`companions.${i}.email`, { validate: rule(i, "email") })} />
+                  </Field>
+                  <Field label="Tipo de documento" en="opcional">
+                    <select className={inputCls()} {...register(`companions.${i}.documentType`)}>
+                      <option value="">—</option>
+                      {DOC_TYPES.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="Número de documento" en="opcional">
+                    <input className={inputCls()} {...register(`companions.${i}.documentNumber`)} />
+                  </Field>
+                </div>
+              </fieldset>
+            );
+          })}
+          <p className="text-xs text-slate-500">
+            Al enviar, garantiza que su acompañante le autorizó a compartir estos datos, según el aviso de privacidad que aceptó al confirmar.
+          </p>
+          <button type="submit" disabled={save.isPending} className="w-full rounded-lg bg-black py-3.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:bg-slate-400">
+            {save.isPending ? "Enviando…" : "Enviar pase a mi acompañante / Submit"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
 
 /** Página de invitación: por token (correo) o por enlace público de registro (/i/:code). */
 export default function InvitationClient({ token, linkCode }: { token?: string; linkCode?: string }) {
@@ -313,6 +420,11 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
           )}
           <p className="mt-4 text-xs text-slate-500">También se lo enviamos a {inv.email} y por WhatsApp desde la línea oficial {WHATSAPP}.</p>
         </div>
+      )}
+
+      {/* Confirmó sin nombrar acompañante: el cupo sigue en su QR y puede darle su propio pase. */}
+      {inv.status === "confirmed" && !inv.hostName && inv.admits > 1 && token && (
+        <AddCompanionsForm token={token} inv={inv} onDone={(data) => qc.setQueryData(qKey, data)} />
       )}
 
       {inv.status === "declined" && !reconsider && (

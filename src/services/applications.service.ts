@@ -62,7 +62,8 @@ export const updateMyProject = async (payload: Partial<MyProject>): Promise<MyPr
 /** Avisa al equipo de la feria que el artista terminó de cargar. */
 export const sendMyInventory = async (payload: { artworkCount: number; pavilionName?: string }) => {
   const { data } = await apiClient.post("/applications/applications/my/inventory-sent", payload);
-  return data as { ok: boolean; inventorySentAt: string; notified: number };
+  // update = ya lo había enviado y ahora avisa de obras nuevas o cambios.
+  return data as { ok: boolean; inventorySentAt: string; notified: number; update?: boolean };
 };
 
 export const createApplication = async (convocatoriaId: string) => {

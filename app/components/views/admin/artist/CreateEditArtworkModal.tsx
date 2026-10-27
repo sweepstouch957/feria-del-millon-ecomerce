@@ -277,8 +277,8 @@ function ArtworkFields({
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {/* Sin campo de URL: confundía a los artistas; la imagen se sube aquí. */}
         <ImageField />
-        <TextInput name="image" label="…o pega una dirección" placeholder="https://…" />
         <CatalogPreview />
       </div>
 

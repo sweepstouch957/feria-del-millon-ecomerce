@@ -234,18 +234,16 @@ export default function MiEstudioClient() {
     [rows.length, savedTitle, locked, sentAt]
   );
 
+  // Haber enviado no cierra nada: mientras la carga esté abierta puede
+  // agregar obras y volver a enviar. Lo que manda es la ventana de la feria.
   const openNew = useCallback(() => {
-    if (locked) {
-      toast.error("Ya enviaste tu inventario: escríbele a la feria para cambiar algo.");
-      return;
-    }
     if (!inventory.canUpload) {
       toast.error(inventory.reason as string);
       return;
     }
     setEditingId(null);
     setModalOpen(true);
-  }, [locked, inventory.canUpload, inventory.reason]);
+  }, [inventory.canUpload, inventory.reason]);
 
   const openEdit = useCallback((id: string) => {
     setEditingId(id);
@@ -370,7 +368,7 @@ export default function MiEstudioClient() {
 
   const filtering = !!(q || pavilion !== "all" || tech !== "all");
   const total = artworksQuery.totalLabel;
-  const showBar = tab === "inventario" && !locked;
+  const showBar = tab === "inventario" && (!locked || inventory.canUpload);
 
   return (
     <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "100vh" }}>
@@ -462,7 +460,7 @@ export default function MiEstudioClient() {
                 <Lock size={15} strokeWidth={1.6} style={{ marginTop: 2, color: "var(--acc)", flexShrink: 0 }} />
                 <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: mix(72) }}>
                   {inventory.canUpload
-                    ? "Tu inventario ya está entregado. Puedes corregir tus obras desde el listado mientras la carga siga abierta; para agregar obras nuevas, escríbele a la feria."
+                    ? "Ya enviaste tu inventario. Mientras la carga siga abierta puedes agregar más obras o corregir las que tienes: cuando termines, vuelve a darle «Enviar» para avisarle a la feria."
                     : "Tu inventario ya está entregado y la carga cerró. Si necesitas cambiar una obra, escríbele a la feria."}
                 </p>
               </div>
@@ -478,13 +476,13 @@ export default function MiEstudioClient() {
                     <h2 style={STEP_TITLE}>Tus obras</h2>
                     <p style={{ ...BODY, maxWidth: "54ch" }}>
                       Cada obra lleva su imagen, sus dimensiones, su técnica, su precio y cuántas
-                      copias hay. Puedes editarlas hasta que envíes el inventario.
+                      copias hay. Puedes agregar y editar obras mientras la carga esté abierta.
                     </p>
                   </div>
 
                   {/* La ventana de carga de la feria: se dice acá, no cuando el
                       guardado contesta que no. */}
-                  {!locked && (inventory.reason || inventory.closingSoon) && (
+                  {(inventory.reason || inventory.closingSoon) && (
                     <div
                       style={{
                         display: "flex",
@@ -588,10 +586,9 @@ export default function MiEstudioClient() {
                   <ArtworksTable
                     rows={rows}
                     loading={artworksQuery.isLoading}
-                    // Enviado el inventario ya no se agregan obras, pero las
-                    // cargadas se corrigen mientras la ventana siga abierta
-                    // (fuera de ella el servidor rechaza, así que no se ofrece).
-                    locked={locked || !inventory.canUpload}
+                    // Con la ventana abierta se agregan y corrigen obras aunque
+                    // ya haya enviado (fuera de ella el servidor rechaza).
+                    locked={!inventory.canUpload}
                     canEdit={inventory.canUpload}
                     filtering={filtering}
                     onView={openDetail}
@@ -611,7 +608,7 @@ export default function MiEstudioClient() {
                 <ProjectFields
                   initial={initialValues}
                   loading={projectLoading}
-                  readOnly={locked}
+                  readOnly={!inventory.canUpload}
                   formRef={projectForm}
                   onStateChange={onProjectState}
                   onSave={saveProject}
@@ -744,7 +741,7 @@ export default function MiEstudioClient() {
               {step === "enviar" && (
                 <StudioButton variant="solid" onClick={trySend} disabled={send.isPending}>
                   <Send size={14} strokeWidth={1.8} />
-                  {send.isPending ? "Enviando…" : "Enviar mi inventario"}
+                  {send.isPending ? "Enviando…" : locked ? "Enviar de nuevo (con las obras nuevas)" : "Enviar mi inventario"}
                 </StudioButton>
               )}
             </div>
@@ -756,8 +753,8 @@ export default function MiEstudioClient() {
       <StudioSheet
         open={confirming}
         onClose={closeConfirm}
-        eyebrow="Se envía una sola vez"
-        title="¿Enviamos tu inventario?"
+        eyebrow={locked ? "Actualizar el envío" : "Avisarle a la feria"}
+        title={locked ? "¿Enviamos tu inventario actualizado?" : "¿Enviamos tu inventario?"}
         maxWidth={520}
         footer={
           <>
@@ -786,7 +783,7 @@ export default function MiEstudioClient() {
           </p>
           <div style={{ display: "grid", gap: 10, padding: "16px 0", borderTop: hair(14), borderBottom: hair(14) }}>
             {[
-              "Después de enviar no vas a poder editar tus obras por tu cuenta.",
+              "Mientras la carga siga abierta puedes agregar más obras y volver a enviar.",
               "La feria recibe el aviso y revisa tu inventario.",
               "Te quedan tus dos códigos QR para imprimir y poner en el stand.",
             ].map((t) => (

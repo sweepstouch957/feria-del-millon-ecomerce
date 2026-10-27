@@ -48,18 +48,9 @@ export function useMyProject(enabled = true) {
     mutationFn: (vars: { artworkCount: number; pavilionName?: string }) => sendMyInventory(vars),
     onSuccess: (r) => {
       qc.setQueryData(MY_PROJECT_KEY, { ...(saved ?? {}), inventorySentAt: r.inventorySentAt });
-      toast.success("Inventario enviado. Ya tienes tus QR.");
+      toast.success(r.update ? "Inventario actualizado: la feria ya tiene tus obras nuevas." : "Inventario enviado. Ya tienes tus QR.");
     },
-    onError: (e: any) => {
-      // Enviar es de una sola vez: si ya estaba enviado, el servidor lo dice.
-      const already = e?.response?.data?.inventorySentAt;
-      if (already) {
-        qc.setQueryData(MY_PROJECT_KEY, { ...(saved ?? {}), inventorySentAt: already });
-        toast.error("Ya habías enviado tu inventario");
-        return;
-      }
-      toast.error("No se pudo avisar a la feria");
-    },
+    onError: () => toast.error("No se pudo avisar a la feria"),
   });
 
   return {
@@ -69,7 +60,7 @@ export function useMyProject(enabled = true) {
     save,
     send,
     sentAt: saved?.inventorySentAt as string | undefined,
-    /** Enviado = de acá en adelante se mira, no se toca. */
+    /** Ya envió al menos una vez (puede seguir agregando mientras la carga esté abierta). */
     locked: !!saved?.inventorySentAt,
     savedTitle: saved?.projectTitle as string | undefined,
     savedReview: saved?.projectReview as string | undefined,

@@ -78,8 +78,8 @@ export default function ReviewPanel({
                 day: "2-digit",
                 month: "long",
                 year: "numeric",
-              })}. Si necesitas cambiar una obra, escríbele a la feria.`
-            : "Esto es lo que va a recibir la feria. Se envía una sola vez: después no vas a poder editarlo por tu cuenta."}
+              })}. Mientras la carga esté abierta puedes agregar obras y volver a enviar.`
+            : "Esto es lo que va a recibir la feria. Si después tienes más obras, puedes agregarlas y volver a enviar mientras la carga esté abierta."}
         </p>
       </div>
 
@@ -126,8 +126,7 @@ export default function ReviewPanel({
         </p>
       )}
 
-      {/* Qué le falta a cada obra */}
-      {!delivered && (
+      {/* Qué le falta a cada obra (también después de enviar: puede agregar más) */}
         <div>
           <span style={{ ...EYEBROW, fontSize: 9.5, color: gaps.length ? "#B4472A" : "var(--acc)", display: "flex", alignItems: "center", gap: 7 }}>
             {gaps.length ? <AlertCircle size={13} strokeWidth={1.8} /> : <Check size={13} strokeWidth={2.2} />}
@@ -174,7 +173,6 @@ export default function ReviewPanel({
             </>
           )}
         </div>
-      )}
 
       {/* Las obras que van, en miniatura */}
       {rows.length > 0 && (

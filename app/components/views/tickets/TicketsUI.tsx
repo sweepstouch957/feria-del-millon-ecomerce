@@ -161,7 +161,11 @@ export default function TicketsUI({
     enabled: !!eventId,
     staleTime: 60_000,
   });
-  const typeOptions = config?.types?.length ? config.types : FALLBACK_TYPES;
+  // Un tipo apagado en el panel (Tickets → Preventa) no se muestra; uno que aún
+  // no abre o ya cerró sí sale, con su aviso.
+  // (Si los apagaran todos, se muestran igual como "No disponible" para que la página no quede vacía.)
+  const shown = config?.types?.filter((t) => t.enabled !== false) ?? [];
+  const typeOptions = shown.length ? shown : config?.types?.length ? config.types : FALLBACK_TYPES;
   const spec = typeOptions.find((t) => t.key === ticketType) ?? typeOptions[0];
   const [company, setCompany] = useState("");
   const [nit, setNit] = useState("");

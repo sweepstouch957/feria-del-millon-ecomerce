@@ -122,10 +122,14 @@ export default function PaymentForm({
               } catch (err: any) {
                 console.error("Error cobrando con Mercado Pago:", err);
                 toast.dismiss(loadingId);
-                // 409 del backend: "ya se está procesando" o "la obra se vendió" (sin cobro).
+                // El backend explica el motivo: rechazo de la tarjeta (400), en
+                // proceso / se vendió (409) o el error de Mercado Pago (500).
+                const data = err?.response?.data;
                 toast.error(
-                  err?.response?.data?.message ||
-                    "Ocurrió un error procesando el pago. Intenta de nuevo."
+                  data?.message ||
+                    (data?.detail?.message ? `Mercado Pago: ${data.detail.message}` : "") ||
+                    "Ocurrió un error procesando el pago. Intenta de nuevo.",
+                  { duration: 8000 }
                 );
               }
             },

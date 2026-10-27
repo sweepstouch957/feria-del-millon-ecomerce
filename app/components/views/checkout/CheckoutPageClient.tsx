@@ -39,7 +39,7 @@ import { useCatalogSalesPaused } from "@provider/siteConfigProvider";
 import { getArtworkByIdOrSlug } from "@services/artworks.service";
 import { pickSrc } from "@lib/utils";
 
-// Validación simple para documento colombiano
+const DRAFT_KEY = "fdm-checkout-draft";
 
 export default function CheckoutPageClient() {
     const { eventId } = useEdition();
@@ -66,6 +66,7 @@ export default function CheckoutPageClient() {
         formState: { errors },
         setError,
         reset,
+        watch,
     } = useForm<CheckoutFormData>({
         defaultValues: {
             firstName: "",
@@ -83,16 +84,40 @@ export default function CheckoutPageClient() {
         mode: "onBlur",
     });
 
+    // Borrador de los datos: si recarga la página no tiene que volver a escribirlos.
+    // Se restaura cuando ya llegaron las ciudades (el <select> nativo no toma un
+    // valor cuya opción aún no existe) y se borra al terminar la compra.
+    const [draftRestored, setDraftRestored] = useState(false);
     useEffect(() => {
-        if (!user) return;
+        if (draftRestored || loadingCities) return;
+        setDraftRestored(true);
+        try {
+            const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+            if (saved) reset((prev) => ({ ...prev, ...saved }));
+        } catch {}
+    }, [draftRestored, loadingCities, reset]);
+
+    useEffect(() => {
+        if (!draftRestored) return;
+        const sub = watch((values) => {
+            try {
+                localStorage.setItem(DRAFT_KEY, JSON.stringify(values));
+            } catch {}
+        });
+        return () => sub.unsubscribe();
+    }, [draftRestored, watch]);
+
+    // La cuenta solo completa lo que esté vacío: no pisa lo que ya escribió.
+    useEffect(() => {
+        if (!user || !draftRestored) return;
 
         reset((prev) => ({
             ...prev,
-            firstName: user.firstName || prev.firstName,
-            lastName: user.lastName || prev.lastName,
-            email: user.email || prev.email,
+            firstName: prev.firstName || user.firstName || "",
+            lastName: prev.lastName || user.lastName || "",
+            email: prev.email || user.email || "",
         }));
-    }, [user, reset]);
+    }, [user, reset, draftRestored]);
 
     // Mensaje cuando la obra ya está vendida / sin stock
     const [artworkUnavailable, setArtworkUnavailable] = useState<string | null>(
@@ -242,6 +267,9 @@ export default function CheckoutPageClient() {
 
             setOrderNumber(formattedOrderNumber);
             clear();
+            try {
+                localStorage.removeItem(DRAFT_KEY);
+            } catch {}
             setStep(3);
         } catch (error) {
             console.error("Error procesando pago:", error);

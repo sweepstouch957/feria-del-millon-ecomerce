@@ -408,7 +408,6 @@ export default function Page() {
               >
                 {formatCOP(doc.price, { currency })}
               </span>
-              <span style={{ ...EYEBROW, fontSize: 10, color: mix(50) }}>IVA incluido</span>
               <span style={{ flex: 1 }} />
               <span
                 style={{

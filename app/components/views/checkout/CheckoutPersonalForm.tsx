@@ -161,8 +161,8 @@ export function CheckoutPersonalForm({ cities, loadingCities, isProcessing, onSu
           <h2>Entrega</h2>
           <span style={{ fontSize: 13, opacity: 0.6, marginLeft: "auto" }}>El artista coordina la entrega con estos datos.</span>
         </div>
-        <Field label="Dirección" error={err("address")}>
-          <input {...register("address", { required: "La dirección es obligatoria" })} placeholder="Calle, carrera, número, apartamento" disabled={isProcessing} autoComplete="street-address" />
+        <Field label="Dirección completa" error={err("address")}>
+          <input {...register("address", { required: "La dirección completa es obligatoria" })} placeholder="Ej: Calle 93 # 11-26, apto 502, edificio, barrio"disabled={isProcessing} autoComplete="street-address" />
         </Field>
         <div className="fdm-f-row">
           <Field label="Ciudad" error={err("cityId")}>

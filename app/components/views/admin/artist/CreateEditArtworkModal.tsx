@@ -298,7 +298,7 @@ function ArtworkFields({
             name="pavilion"
             label="Pabellón"
             options={pavilionOptions}
-            placeholder="Sin pabellón"
+            placeholder="Elige el pabellón"
           />
         )}
 
@@ -456,7 +456,14 @@ export default function CreateEditArtworkModal({
           key={`${editingId ?? "nueva"}:${open}`}
           innerRef={form}
           initialValues={initialValues}
-          validate={validate}
+          // Con varios pabellones la obra tiene que decir en cuál va: sin él no
+          // aparece en ninguno.
+          validate={(v) => {
+            const errors = validate(v);
+            return pavilionOptions.length > 1 && !v.pavilion
+              ? { ...errors, pavilion: "Elige en qué pabellón va esta obra" }
+              : errors;
+          }}
           onSubmit={submit}
         >
           <ArtworkFields techniqueOptions={techniqueOptions} pavilionOptions={pavilionOptions} />

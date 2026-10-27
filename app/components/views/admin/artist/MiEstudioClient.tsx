@@ -181,6 +181,9 @@ export default function MiEstudioClient() {
     [pavsByUser]
   );
 
+  // Un artista puede estar en más de un pabellón: se nombran todos.
+  const pavilionNames = pavilionOptions.map((p) => p.label).join(" / ");
+
   const techniqueOptions = useMemo(
     () =>
       (techniques ?? []).map((t: any) => ({ value: t.id || t._id, label: t.name })),
@@ -189,10 +192,10 @@ export default function MiEstudioClient() {
 
   const doSend = useCallback(() => {
     send
-      .mutateAsync({ artworkCount: rows.length, pavilionName: pavilionOptions[0]?.label })
+      .mutateAsync({ artworkCount: rows.length, pavilionName: pavilionNames || undefined })
       .catch(() => {})
       .finally(() => setConfirming(false));
-  }, [send, rows.length, pavilionOptions]);
+  }, [send, rows.length, pavilionNames]);
 
   /* ── Pasos ───────────────────────────────────────────────────────────── */
   const [tab, setTab] = useState("inventario");
@@ -202,9 +205,13 @@ export default function MiEstudioClient() {
   const [placed, setPlaced] = useState(false);
   useEffect(() => {
     if (placed || projectLoading || artworksQuery.isLoading) return;
-    setStep(locked ? "enviar" : !rows.length ? "obras" : !savedTitle ? "proyecto" : "enviar");
+    // Ya envió y la carga sigue abierta: vuelve a sus obras, que es donde está
+    // "Nueva obra" (abrirle en Revisar escondía el botón de agregar).
+    setStep(
+      locked ? (inventory.canUpload ? "obras" : "enviar") : !rows.length ? "obras" : !savedTitle ? "proyecto" : "enviar"
+    );
     setPlaced(true);
-  }, [placed, projectLoading, artworksQuery.isLoading, locked, rows.length, savedTitle]);
+  }, [placed, projectLoading, artworksQuery.isLoading, locked, rows.length, savedTitle, inventory.canUpload]);
 
   const steps: Step[] = useMemo(
     () => [
@@ -405,8 +412,8 @@ export default function MiEstudioClient() {
             >
               Mi estudio
             </h1>
-            {pavilionOptions[0] && (
-              <span style={{ ...EYEBROW, fontSize: 9, color: mix(48) }}>{pavilionOptions[0].label}</span>
+            {pavilionNames && (
+              <span style={{ ...EYEBROW, fontSize: 9, color: mix(48) }}>{pavilionNames}</span>
             )}
           </div>
 
@@ -621,7 +628,7 @@ export default function MiEstudioClient() {
                   rows={rows}
                   projectTitle={savedTitle || ""}
                   projectReview={savedReview || ""}
-                  pavilionName={pavilionOptions[0]?.label}
+                  pavilionName={pavilionNames || undefined}
                   artistId={String(artistId)}
                   sentAt={sentAt}
                   onFix={(id) => {
@@ -735,6 +742,13 @@ export default function MiEstudioClient() {
                       {projectState.dirty ? "Guardar y seguir" : "Seguir a revisar"}
                     </>
                   )}
+                </StudioButton>
+              )}
+
+              {step === "enviar" && inventory.canUpload && (
+                <StudioButton onClick={openNew}>
+                  <Plus size={15} strokeWidth={1.8} />
+                  Nueva obra
                 </StudioButton>
               )}
 

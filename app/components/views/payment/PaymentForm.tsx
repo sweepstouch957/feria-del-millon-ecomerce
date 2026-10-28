@@ -9,6 +9,7 @@ import type { PaymentMethod } from "@services/order.service";
 import { formatMoney } from "@lib/utils";
 
 import { TrustBadges } from "./PaymentInfoBlocks";
+import LegalDisclaimer from "@components/LegalDisclaimer";
 import {
   PaymentMethodSelector,
 } from "./PaymentMethodSelector";
@@ -206,6 +207,8 @@ export default function PaymentForm({
           <span style={{ fontSize: 12.5, opacity: 0.6 }}>El botón de pagar está dentro del formulario de la tarjeta.</span>
         </div>
       )}
+
+      <LegalDisclaimer />
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
         {method === "whatsapp" && (

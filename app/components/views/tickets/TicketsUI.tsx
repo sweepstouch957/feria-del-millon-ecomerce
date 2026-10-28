@@ -18,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { uploadImage } from "@services/upload.service";
 import { useEdition } from "@provider/editionProvider";
 import { ColombianPhoneInput } from "@components/ColombianInput";
+import LegalDisclaimer from "@components/LegalDisclaimer";
 
 /* ──────────────────────────────────────────────────────────────
    Entradas — diseño editorial v2 (mismos tokens que catálogo, obra
@@ -648,9 +649,7 @@ export default function TicketsUI({
                   <span style={{ fontSize: 26, fontWeight: 300, fontVariantNumeric: "tabular-nums" }}>{formatMoney(total, currency)}</span>
                 </div>
               </div>
-              <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, opacity: 0.55 }}>
-                Al continuar aceptas los términos del evento. El pago se procesa con Mercado Pago y tus QR llegan a tu correo.
-              </p>
+              <LegalDisclaimer>El pago se procesa con Mercado Pago y tus QR llegan a tu correo.</LegalDisclaimer>
             </aside>
           </div>
         </section>

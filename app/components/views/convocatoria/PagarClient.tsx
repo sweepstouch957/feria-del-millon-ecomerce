@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@provider/authProvider";
 import { clearAuth } from "@services/auth.service";
 import Skeleton from "@components/ui/Skeleton";
+import LegalDisclaimer from "@components/LegalDisclaimer";
 
 /* ──────────────────────────────────────────────────────────────
    Pago de inscripción — sistema editorial v2.
@@ -436,10 +437,7 @@ export default function PagarClient() {
         </button>
       )}
 
-      <p style={{ margin: "16px 0 0", fontSize: 12.5, lineHeight: 1.6, color: mix(55) }}>
-        Al pagar aceptás los términos y condiciones de la Feria del Millón. El pago no es
-        reembolsable.
-      </p>
+      <LegalDisclaimer style={{ margin: "16px 0 0", fontSize: 12.5 }}>El pago no es reembolsable.</LegalDisclaimer>
     </Shell>
   );
 }

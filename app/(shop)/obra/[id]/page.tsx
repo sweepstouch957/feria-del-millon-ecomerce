@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import useCart from "@store/useCart";
-import { useCatalogSalesPaused } from "@provider/siteConfigProvider";
+import { useCatalogSalesPaused, useFairMode } from "@provider/siteConfigProvider";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
 import { mergeImages, pickSrc } from "@lib/utils";
 import { formatCOP } from "@lib/money";
@@ -109,6 +109,8 @@ export default function Page() {
   const { data, isLoading, isError, error } = useArtworkDetail(id);
   const { add, items } = useCart();
   const { paused: salesPaused, message: salesPausedMsg } = useCatalogSalesPaused();
+  // Modo feria: se llega por el QR de la obra; se compra solo esta, sin carrito ni catálogo.
+  const fairMode = useFairMode();
   const reduce = useReducedMotion();
   const rise = reduce
     ? {}
@@ -260,6 +262,8 @@ export default function Page() {
 
   const handleAddToCart = () => add(cartPayload, 1);
   const handleBuyNow = () => {
+    // ?artwork= vacía el carrito y deja solo esta obra.
+    if (fairMode) return router.push(`/checkout?artwork=${encodeURIComponent(String(doc._id))}`);
     add(cartPayload, 1);
     router.push("/checkout");
   };
@@ -304,6 +308,9 @@ export default function Page() {
             color: mix(55),
           }}
         >
+          {fairMode ? (
+            <span aria-current="page" style={{ color: mix(85) }}>{doc.title}</span>
+          ) : (
           <span style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
             <Link href="/catalogo" className="fdm-obra-link">
               Catálogo
@@ -329,12 +336,17 @@ export default function Page() {
               {doc.title}
             </span>
           </span>
+          )}
 
           <span style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <Link href={pavilionHref} className="fdm-obra-link">
-              ← Volver
-            </Link>
-            <span style={{ display: "block", width: 1, height: 14, background: mix(18) }} />
+            {!fairMode && (
+              <>
+                <Link href={pavilionHref} className="fdm-obra-link">
+                  ← Volver
+                </Link>
+                <span style={{ display: "block", width: 1, height: 14, background: mix(18) }} />
+              </>
+            )}
             <span style={{ color: isAvailable ? "var(--acc)" : mix(45) }}>
               {isAvailable ? "Disponible" : "No disponible"}
             </span>
@@ -442,6 +454,7 @@ export default function Page() {
                 borderBottom: `1px solid ${mix(12)}`,
               }}
             >
+              {!fairMode && (
               <button
                 type="button"
                 onClick={handleAddToCart}
@@ -467,6 +480,7 @@ export default function Page() {
               >
                 {salesPaused ? "Venta en feria" : !isAvailable ? "Agotada" : inCart ? "En el carrito ✓" : "Agregar al carrito"}
               </button>
+              )}
               {salesPaused && inStock && (
                 <p style={{ flex: "1 1 100%", margin: "10px 0 0", fontSize: 13.5, lineHeight: 1.5, color: mix(62) }}>{salesPausedMsg}</p>
               )}
@@ -481,20 +495,21 @@ export default function Page() {
                   display: "inline-flex",
                   alignItems: "center",
                   height: 48,
-                  padding: "0 24px",
+                  padding: fairMode ? "0 36px" : "0 24px",
                   borderRadius: 999,
                   cursor: isAvailable ? "pointer" : "not-allowed",
                   opacity: isAvailable ? 1 : 0.45,
-                  background: "transparent",
-                  color: "inherit",
-                  border: `1px solid ${mix(26)}`,
+                  // En modo feria es el único botón: va relleno, como acción principal.
+                  background: fairMode ? "var(--fg)" : "transparent",
+                  color: fairMode ? "var(--bg)" : "inherit",
+                  border: `1px solid ${fairMode ? "var(--fg)" : mix(26)}`,
                   ...EYEBROW,
                   fontSize: 10.5,
                   letterSpacing: "0.12em",
                   transition: "all .3s ease",
                 }}
               >
-                Comprar ahora
+                {fairMode ? (isAvailable ? "Comprar esta obra" : "Vendida") : "Comprar ahora"}
               </button>
 
               <a
@@ -620,7 +635,7 @@ export default function Page() {
         </section>
 
         {/* ── Más obras ──────────────────────────────────────── */}
-        {related.length > 0 && (
+        {related.length > 0 && !fairMode && (
           <section style={{ padding: "0 0 clamp(28px,3vw,44px)" }}>
             <div
               style={{

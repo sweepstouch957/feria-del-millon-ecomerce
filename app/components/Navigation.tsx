@@ -7,7 +7,7 @@ import { ShoppingCart, LogOut, ChevronDown, LayoutDashboard, BadgeCheck } from "
 import useCart from "@store/useCart";
 import { useMounted } from "@hooks/useMounted";
 import { useAuth } from "@provider/authProvider";
-import { useSiteContent, useSiteNav } from "@provider/siteConfigProvider";
+import { useFairMode, useSiteContent, useSiteNav } from "@provider/siteConfigProvider";
 import ThemeToggle from "@components/views/home/v2/ThemeToggle";
 
 const GREEN = "var(--fdm-green,#3FA46E)";
@@ -26,7 +26,9 @@ export default function Navigation() {
   const { user, isAuthLoading, isAuthenticated, logout } = useAuth();
   const { brand, social } = useSiteContent();
   const nav = useSiteNav();
-  const items = nav.items.filter((i) => i.visible);
+  const fairMode = useFairMode();
+  // Modo feria: el catálogo no se muestra (la venta es desde el QR de cada obra).
+  const items = nav.items.filter((i) => i.visible && !(fairMode && i.href.startsWith("/catalogo")));
 
   const cart = useCart((s) => s.items);
   const mounted = useMounted();
@@ -224,12 +226,14 @@ export default function Navigation() {
           </div>
 
           {/* Carrito */}
-          <Link href="/carrito" aria-label="Ir al carrito" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", height: 42, width: 42, borderRadius: 999, border: `1px solid color-mix(in srgb, ${FG} 26%, transparent)` }}>
-            <ShoppingCart className="h-4 w-4" />
-            {cartCount > 0 && (
-              <span style={{ position: "absolute", top: -6, right: -6, background: GREEN, color: "#0B0B0A", fontSize: 11, borderRadius: 999, height: 20, minWidth: 20, padding: "0 5px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{cartCount}</span>
-            )}
-          </Link>
+          {!fairMode && (
+            <Link href="/carrito" aria-label="Ir al carrito" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", height: 42, width: 42, borderRadius: 999, border: `1px solid color-mix(in srgb, ${FG} 26%, transparent)` }}>
+              <ShoppingCart className="h-4 w-4" />
+              {cartCount > 0 && (
+                <span style={{ position: "absolute", top: -6, right: -6, background: GREEN, color: "#0B0B0A", fontSize: 11, borderRadius: 999, height: 20, minWidth: 20, padding: "0 5px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{cartCount}</span>
+              )}
+            </Link>
+          )}
 
           {/* Tickets */}
           <Link href="/tickets" className="fdm-desk-only" style={ticketPill}>Tickets</Link>

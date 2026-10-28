@@ -45,3 +45,5 @@ export const useCatalogSalesPaused = () => {
   const c = useContext(SiteConfigCtx).landing.catalogSales;
   return { paused: isCatalogSalesPaused(c), message: c?.message || "" };
 };
+/** Modo feria (switch del panel): sin catálogo ni carrito; se compra una obra a la vez desde su QR. */
+export const useFairMode = () => !!useContext(SiteConfigCtx).landing.catalogSales?.fairMode;

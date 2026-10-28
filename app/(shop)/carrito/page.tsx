@@ -7,6 +7,7 @@ import useCart from "@store/useCart";
 import { useMounted } from "@hooks/useMounted";
 import SmartImage from "@components/ui/SmartImage";
 import SiteFooter from "@components/SiteFooter";
+import FairModeGate from "@components/FairModeGate";
 import { formatCOP } from "@lib/money";
 
 /* ──────────────────────────────────────────────────────────────
@@ -103,6 +104,14 @@ function QtyButton({
 }
 
 export default function CartPage() {
+  return (
+    <FairModeGate>
+      <CartView />
+    </FairModeGate>
+  );
+}
+
+function CartView() {
   const mounted = useMounted();
   const stored = useCart((s) => s.items) as CartViewItem[];
   // Antes de hidratar, el carrito se pinta vacío igual que en el servidor.

@@ -1,5 +1,6 @@
 import PavilionPageClient from "@components/views/pavilion/PavilionPageClient";
 import { getActiveEdition } from "@lib/getActiveEdition";
+import FairModeGate from "@components/FairModeGate";
 
 // Next.js 15: params es Promise<{ slug: string }>
 export default async function PavilionPage({
@@ -10,5 +11,9 @@ export default async function PavilionPage({
   const { slug } = await params;
   const { eventId } = await getActiveEdition(); // edición vigente (dinámica)
 
-  return <PavilionPageClient eventId={eventId} slug={slug} />;
+  return (
+    <FairModeGate>
+      <PavilionPageClient eventId={eventId} slug={slug} />
+    </FairModeGate>
+  );
 }

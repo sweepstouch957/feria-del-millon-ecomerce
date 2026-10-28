@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useFairMode } from "@provider/siteConfigProvider";
 import { EYEBROW, mix } from "./checkoutTheme";
 
 type Props = {
@@ -10,6 +11,8 @@ type Props = {
 /* Confirmación, sistema editorial v2: número de pedido grande, qué sigue en
    tres líneas, dos botones píldora. */
 export function CheckoutConfirmation({ orderNumber }: Props) {
+  // Modo feria: no se invita a seguir comprando (la venta es obra por obra, desde el QR).
+  const fairMode = useFairMode();
   const pill = (solid: boolean): React.CSSProperties => ({
     display: "inline-flex",
     alignItems: "center",
@@ -53,8 +56,8 @@ export function CheckoutConfirmation({ orderNumber }: Props) {
       </ol>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-        <Link href="/catalogo" style={pill(true)}>Seguir viendo obras</Link>
-        <Link href="/" style={pill(false)}>Volver al inicio</Link>
+        {!fairMode && <Link href="/catalogo" style={pill(true)}>Seguir viendo obras</Link>}
+        <Link href="/" style={pill(fairMode)}>Volver al inicio</Link>
       </div>
     </section>
   );

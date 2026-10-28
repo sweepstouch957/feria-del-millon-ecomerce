@@ -65,13 +65,15 @@ export interface LandingConfig {
   showPrices: boolean;
   priceLabel: string;
   /** Congelamiento de la venta en línea (días de feria: solo compra presencial). Fechas YYYY-MM-DD, inclusive, hora Bogotá. */
-  catalogSales: { pausedFrom: string; pausedTo: string; message: string };
+  catalogSales: { pausedFrom: string; pausedTo: string; message: string; fairMode?: boolean };
   convocatoriaPage: ConvocatoriaPage;
   linktree: LinktreeConfig;
 }
 
 /** ¿Está congelada la venta en línea hoy (Bogotá)? Misma regla que orders-svc. */
 export function isCatalogSalesPaused(c?: LandingConfig["catalogSales"], now = new Date()): boolean {
+  // Modo feria: la venta en línea sigue, pero solo desde el QR de cada obra.
+  if (c?.fairMode) return false;
   const ok = (v?: string) => /^\d{4}-\d{2}-\d{2}$/.test(v || "");
   const from = ok(c?.pausedFrom) ? c!.pausedFrom : "";
   const to = ok(c?.pausedTo) ? c!.pausedTo : "";

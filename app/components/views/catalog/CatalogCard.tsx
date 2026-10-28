@@ -15,7 +15,7 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { formatMoney, mergeImages } from "@lib/utils";
-import { useCatalogSalesPaused } from "@provider/siteConfigProvider";
+import { useCatalogSalesPaused, useFairMode } from "@provider/siteConfigProvider";
 
 export type CatalogCardProps = {
   artwork: any;
@@ -89,9 +89,12 @@ export default function CatalogCard({
   const pavilionSlug = artwork?.pavilionInfo?.slug;
   const detailHref = `/obra/${encodeURIComponent(artwork?._id || artwork?.id)}`;
   const { paused: salesPaused } = useCatalogSalesPaused();
+  // Modo feria: sin carrito; el botón lleva a la obra, donde se compra sola.
+  const fairMode = useFairMode();
   const available = Number(artwork?.stock || 0) > 0 && !salesPaused;
   const buyLabel = (long: boolean) =>
-    salesPaused ? "Venta en feria" : available ? (long ? "Agregar al Carrito" : "Agregar") : (long ? "Agotado" : "Agotado");
+    fairMode && available ? "Ver obra" : salesPaused ? "Venta en feria" : available ? (long ? "Agregar al Carrito" : "Agregar") : (long ? "Agotado" : "Agotado");
+  const onBuy = () => (fairMode ? router.push(detailHref) : onAddToCart?.(artwork));
 
   // ─────────────────────────────
   // Navegación al hacer click en el card (mobile + desktop)
@@ -147,7 +150,7 @@ export default function CatalogCard({
             <Button
               onClick={(e) => {
                 e.stopPropagation();
-                onAddToCart?.(artwork);
+                onBuy();
               }}
               disabled={!available}
             >
@@ -345,7 +348,7 @@ export default function CatalogCard({
           <Button
             onClick={(e) => {
               e.stopPropagation();
-              onAddToCart?.(artwork);
+              onBuy();
             }}
             size="sm"
             disabled={!available}

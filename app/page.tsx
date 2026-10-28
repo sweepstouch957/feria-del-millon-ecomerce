@@ -8,6 +8,7 @@ import {
   useSiteContent,
   useSiteLanding,
   useSiteSections,
+  useFairMode,
 } from "@provider/siteConfigProvider";
 import type { SectionKey } from "@lib/siteDefaults";
 import { subscribeToNewsletter } from "@services/events.service";
@@ -139,6 +140,8 @@ export default function HomePage() {
   const content = useSiteContent();
   const landing = useSiteLanding();
   const sections = useSiteSections();
+  // Modo feria: nada que lleve al catálogo (obras destacadas, técnicas, "Ver catálogo").
+  const fairMode = useFairMode();
   const [subscribed, setSubscribed] = useState(false);
   const [subscribeError, setSubscribeError] = useState("");
 
@@ -605,7 +608,7 @@ export default function HomePage() {
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12, marginTop: 6 }}>
               <Link href="/tickets" style={pill(ON_DARK, "#0B0B0A")}>{hero.ctaPrimaryLabel}</Link>
-              <Link href="/catalogo" style={pillOutline("rgba(245,244,239,0.42)", ON_DARK)}>{hero.ctaSecondaryLabel}</Link>
+              {!fairMode && <Link href="/catalogo" style={pillOutline("rgba(245,244,239,0.42)", ON_DARK)}>{hero.ctaSecondaryLabel}</Link>}
             </div>
           </div>
 
@@ -653,7 +656,9 @@ export default function HomePage() {
       )}
 
       {/* ══ SECCIONES (orden + visibilidad configurables) ══ */}
-      {sections.order.filter((k) => sections.visible[k]).map((k) => blocks[k])}
+      {sections.order
+        .filter((k) => sections.visible[k] && !(fairMode && (k === "featured" || k === "techniques")))
+        .map((k) => blocks[k])}
 
       {/* ══ FOOTER ══ */}
       <footer id="acceso" style={{ borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)`, padding: "clamp(30px,4vw,56px) clamp(20px,4vw,56px) 40px" }}>
@@ -665,7 +670,7 @@ export default function HomePage() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 14.5 }}>
             <span style={{ fontWeight: 300, fontSize: 10.5, letterSpacing: "0.24em", textTransform: "uppercase", color: `color-mix(in srgb, ${FG} 48%, transparent)`, marginBottom: 8 }}>Navegar</span>
-            <Link href="/catalogo" className="fdm-link">Catálogo</Link>
+            {!fairMode && <Link href="/catalogo" className="fdm-link">Catálogo</Link>}
             <Link href="/tickets" className="fdm-link">Tickets</Link>
             <Link href="/convocatoria" className="fdm-link">Convocatoria</Link>
             <Link href="/#programas" className="fdm-link">Programas</Link>

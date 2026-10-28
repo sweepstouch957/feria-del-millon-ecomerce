@@ -35,7 +35,7 @@ import { CheckoutConfirmation } from "@components/views/checkout/CheckoutConfirm
 import { useEdition } from "@provider/editionProvider";
 import PaymentForm, { PaymentFormPayload } from "../payment/PaymentForm";
 import { useAuth } from "@provider/authProvider";
-import { useCatalogSalesPaused } from "@provider/siteConfigProvider";
+import { useCatalogSalesPaused, useFairMode } from "@provider/siteConfigProvider";
 import { getArtworkByIdOrSlug } from "@services/artworks.service";
 import { pickSrc } from "@lib/utils";
 
@@ -59,6 +59,8 @@ export default function CheckoutPageClient() {
 
     const { user } = useAuth();
     const salesPause = useCatalogSalesPaused();
+    // Modo feria: compra de una sola obra desde su QR; nada lleva al catálogo ni al carrito.
+    const fairMode = useFairMode();
 
     const {
         register,
@@ -311,10 +313,12 @@ export default function CheckoutPageClient() {
                             ? salesPause.message
                             : artworkUnavailable
                             ? artworkUnavailable
+                            : fairMode
+                            ? "Escanea el código QR junto a la obra que quieres comprar."
                             : "Agregá obras al carrito para continuar con el pago."}
                     </p>
                     <Link
-                        href="/catalogo"
+                        href={fairMode ? "/" : "/catalogo"}
                         style={{
                             display: "inline-flex",
                             alignItems: "center",
@@ -328,7 +332,7 @@ export default function CheckoutPageClient() {
                             letterSpacing: "0.12em",
                         }}
                     >
-                        Ver catálogo
+                        {fairMode ? "Volver al inicio" : "Ver catálogo"}
                     </Link>
                 </div>
                 <SiteFooter />
@@ -362,10 +366,14 @@ export default function CheckoutPageClient() {
                         color: mix(55),
                     }}
                 >
-                    <Link href="/catalogo" className="fdm-check-link">Catálogo</Link>
-                    <span aria-hidden>/</span>
-                    <Link href="/carrito" className="fdm-check-link">Carrito</Link>
-                    <span aria-hidden>/</span>
+                    {!fairMode && (
+                        <>
+                            <Link href="/catalogo" className="fdm-check-link">Catálogo</Link>
+                            <span aria-hidden>/</span>
+                            <Link href="/carrito" className="fdm-check-link">Carrito</Link>
+                            <span aria-hidden>/</span>
+                        </>
+                    )}
                     <span aria-current="page" style={{ color: mix(85) }}>{steps[step - 1]}</span>
                 </nav>
 

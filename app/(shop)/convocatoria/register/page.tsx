@@ -10,13 +10,7 @@ import { LoggedInArtistGate } from "@components/views/convocatoria/LoggedInArtis
 import { useEdition } from "@provider/editionProvider";
 import ConvocatoriaClosed from "@components/views/convocatoria/ConvocatoriaClosed";
 
-function formatColPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 10);
-  if (!digits) return "";
-  if (digits.length <= 3) return `+57 ${digits}`;
-  if (digits.length <= 6) return `+57 ${digits.slice(0, 3)} ${digits.slice(3)}`;
-  return `+57 ${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
-}
+import PhoneInput from "@components/PhoneInput";
 
 export default function ConvocatoriaRegisterPage() {
   const router = useRouter();
@@ -55,10 +49,6 @@ export default function ConvocatoriaRegisterPage() {
   const selectCity = (c: CityDoc) => { setCityQuery(c.name); setSelectedCityId(c.id); setCityOpen(false); };
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
-  const handlePhone = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const d = e.target.value.replace(/^\+57\s?/, "").replace(/\D/g, "").slice(0, 10);
-    setForm(f => ({ ...f, mobile: d }));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +61,7 @@ export default function ConvocatoriaRegisterPage() {
       await register({
         email: form.email, password: form.password,
         firstName: form.firstName, lastName: form.lastName,
-        mobile:         form.mobile         ? `+57${form.mobile}` : undefined,
+        mobile:         form.mobile         || undefined, // ya viene con país: "+573001234567"
         city:           cityQuery           || undefined,
         cityId:         selectedCityId      || undefined,
         documentType:   form.documentType,
@@ -220,9 +210,8 @@ export default function ConvocatoriaRegisterPage() {
               {/* ── Contacto ── */}
               <div className="cr-section">
                 <div className="cr-row">
-                  <Fld label="Teléfono" htmlFor="cr-tel" hint="Colombia · 10 dígitos">
-                    <input id="cr-tel" type="tel" value={formatColPhone(form.mobile)}
-                      onChange={handlePhone} autoComplete="tel" placeholder="+57 300 000 0000" />
+                  <Fld label="Teléfono" htmlFor="cr-tel" hint="Elige el país si no es Colombia">
+                    <PhoneInput id="cr-tel" value={form.mobile} onChange={(v) => setForm(f => ({ ...f, mobile: v }))} />
                   </Fld>
                   <Fld label="Ciudad" htmlFor="cr-city">
                     <div className="cr-combo" ref={cityRef}>

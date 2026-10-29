@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm, useFieldArray, type FieldError } from "react-hook-form";
+import { useForm, useFieldArray, Controller, type FieldError } from "react-hook-form";
+import PhoneInput, { isValidPhone } from "@components/PhoneInput";
 import toast from "react-hot-toast";
 import {
   getInvitation,
@@ -52,15 +53,12 @@ const isBlank = (c?: InvitationCompanion) => !c || !Object.values(c).some((v) =>
 const MSG = {
   required: (es: string, en: string) => `${es} / ${en}`,
   email: "Correo no válido, ej.: nombre@correo.com / Invalid e-mail",
-  phone: "Celular de 10 dígitos, ej.: 300 123 4567 / 10-digit mobile number",
+  phone: "Número incompleto para el país elegido / Incomplete number for the selected country",
   doc: "Solo números y letras, de 5 a 15 caracteres / 5–15 letters or digits",
 };
 
-const validPhone = (v: string) => {
-  const d = digits(v);
-  const local = d.startsWith("57") && d.length === 12 ? d.slice(2) : d;
-  return (local.length === 10 && local.startsWith("3")) || (d.length >= 8 && d.length <= 15 && String(v).trim().startsWith("+"));
-};
+// Con país ("+34612345678"); los guardados sin "+" se leen como Colombia.
+const validPhone = isValidPhone;
 
 /* ── Campo con etiqueta, error y ayuda ───────────────────────────────── */
 function Field({
@@ -100,7 +98,7 @@ function AddCompanionsForm({ token, inv, onDone }: { token: string; inv: Invitat
       setTimeout(() => ref.current?.scrollIntoView({ behavior: "smooth" }), 300);
     }
   }, []);
-  const { register, handleSubmit, getValues, setError, reset, formState: { errors } } = useForm<{ companions: InvitationCompanion[] }>({
+  const { register, control, handleSubmit, getValues, setError, reset, formState: { errors } } = useForm<{ companions: InvitationCompanion[] }>({
     mode: "onTouched",
     defaultValues: { companions: Array.from({ length: seats }, () => ({ ...EMPTY_COMPANION })) },
   });
@@ -164,7 +162,11 @@ function AddCompanionsForm({ token, inv, onDone }: { token: string; inv: Invitat
                     <input className={inputCls(ce?.lastName)} {...register(`companions.${i}.lastName`, { validate: rule(i, "last") })} />
                   </Field>
                   <Field label="Celular (WhatsApp) *" en="Mobile" error={ce?.phone}>
-                    <input className={inputCls(ce?.phone)} inputMode="tel" placeholder="300 000 0000" {...register(`companions.${i}.phone`, { validate: rule(i, "phone") })} />
+                    <Controller name={`companions.${i}.phone`} control={control} rules={{ validate: rule(i, "phone") }}
+                      render={({ field }) => (
+                        <PhoneInput value={field.value} onChange={field.onChange} onBlur={field.onBlur} invalid={!!ce?.phone}
+                          selectClassName={inputCls(ce?.phone)} inputClassName={inputCls(ce?.phone)} />
+                      )} />
                   </Field>
                   <Field label="Correo electrónico *" en="E-mail" error={ce?.email}>
                     <input className={inputCls(ce?.email)} type="email" {...register(`companions.${i}.email`, { validate: rule(i, "email") })} />
@@ -527,10 +529,12 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
                 {...register("address", { validate: (v) => !!v.trim() || MSG.required("Escriba la dirección", "Enter your address") })} />
             </Field>
             <Field label="Celular (WhatsApp) *" en="Mobile" error={errors.phone} hint="Ahí le llega el pase por WhatsApp.">
-              <input className={inputCls(errors.phone)} inputMode="tel" autoComplete="tel" placeholder="300 000 0000" aria-invalid={!!errors.phone}
-                {...register("phone", {
-                  validate: (v) => (!v.trim() ? MSG.required("Escriba su celular", "Enter your mobile number") : validPhone(v) || MSG.phone),
-                })} />
+              <Controller name="phone" control={control}
+                rules={{ validate: (v) => (!v.trim() ? MSG.required("Escriba su celular", "Enter your mobile number") : validPhone(v) || MSG.phone) }}
+                render={({ field }) => (
+                  <PhoneInput value={field.value} onChange={field.onChange} onBlur={field.onBlur} invalid={!!errors.phone}
+                    selectClassName={inputCls(errors.phone)} inputClassName={inputCls(errors.phone)} />
+                )} />
             </Field>
             <Field label="Correo electrónico *" en="E-mail" error={errors.email} hint="Ahí le llega su pase con el QR.">
               <input className={inputCls(errors.email)} type="email" autoComplete="email" aria-invalid={!!errors.email}
@@ -571,8 +575,12 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
                       {...register(`companions.${i}.lastName`, { validate: companionRule(i, "last"), onChange: () => revalidateCompanion(i) })} />
                   </Field>
                   <Field label="Celular (WhatsApp)" error={ce?.phone}>
-                    <input className={inputCls(ce?.phone)} inputMode="tel" placeholder="300 000 0000"
-                      {...register(`companions.${i}.phone`, { validate: companionRule(i, "phone"), onChange: () => revalidateCompanion(i) })} />
+                    <Controller name={`companions.${i}.phone`} control={control} rules={{ validate: companionRule(i, "phone") }}
+                      render={({ field }) => (
+                        <PhoneInput value={field.value} onBlur={field.onBlur} invalid={!!ce?.phone}
+                          onChange={(v) => { field.onChange(v); revalidateCompanion(i); }}
+                          selectClassName={inputCls(ce?.phone)} inputClassName={inputCls(ce?.phone)} />
+                      )} />
                   </Field>
                   <Field label="Correo electrónico" error={ce?.email}>
                     <input className={inputCls(ce?.email)} type="email"

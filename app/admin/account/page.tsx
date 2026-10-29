@@ -2,7 +2,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
+import PhoneInput from "@components/PhoneInput";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -48,6 +49,9 @@ import { uploadCampaignImage as uploadProfileImage } from "@services/upload.serv
 // ─────────────────────────────────────────────────────────────
 
 const documentTypes: DocumentType[] = ["CC", "NIT", "CE", "PP", "OTRO", "INE"];
+// Mismo aspecto que <Input> de ui/, para el país y el número del teléfono.
+const SHADCN_FIELD =
+  "border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs outline-none md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:bg-input/30";
 
 const ProfileFormSchema = z.object({
   firstName: z.string().max(120).optional().or(z.literal("")),
@@ -518,10 +522,19 @@ export default function MiCuentaClient() {
 
                 <div className="space-y-1.5">
                   <Label className={""} htmlFor="mobile">Teléfono</Label>
-                  <Input
-                    id="mobile"
-                    placeholder="+57 ..."
-                    {...form.register("mobile")}
+                  <Controller
+                    name="mobile"
+                    control={form.control}
+                    render={({ field }) => (
+                      <PhoneInput
+                        id="mobile"
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        selectClassName={SHADCN_FIELD}
+                        inputClassName={SHADCN_FIELD}
+                      />
+                    )}
                   />
                   {form.formState.errors.mobile && (
                     <p className="text-xs text-red-500">

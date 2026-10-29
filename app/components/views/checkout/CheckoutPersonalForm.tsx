@@ -1,8 +1,9 @@
 "use client";
 
 import { FormEvent, ChangeEvent, type ReactNode } from "react";
-import type { UseFormRegister, FieldErrors } from "react-hook-form";
+import { Controller, type Control, type UseFormRegister, type FieldErrors } from "react-hook-form";
 import { EYEBROW, mix } from "./checkoutTheme";
+import PhoneInput, { isValidPhone } from "@components/PhoneInput";
 
 /* Datos del comprador, sistema editorial v2: campos subrayados (la línea se
    vuelve verde al enfocar), etiquetas en versalitas, una columna en el
@@ -34,6 +35,7 @@ type Props = {
   isProcessing: boolean;
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   register: UseFormRegister<CheckoutFormData>;
+  control: Control<CheckoutFormData>;
   errors: FieldErrors<CheckoutFormData>;
 };
 
@@ -80,39 +82,11 @@ function Field({ label, error, hint, children, className }: { label: string; err
   );
 }
 
-export function CheckoutPersonalForm({ cities, loadingCities, isProcessing, onSubmit, register, errors }: Props) {
-  // ───────────────────────────────────────────────────────────────
-  // Helpers de máscara (vanilla)
-  // ───────────────────────────────────────────────────────────────
-  const formatColombiaPhone = (value: string) => {
-    let digits = value.replace(/\D/g, "");
-    if (digits.startsWith("57")) digits = digits.slice(2);
-    digits = digits.slice(0, 10);
-    let formatted = "+57";
-    if (digits.length > 0) formatted += " " + digits.slice(0, 3);
-    if (digits.length > 3) formatted += " " + digits.slice(3, 6);
-    if (digits.length > 6) formatted += " " + digits.slice(6, 10);
-    return formatted;
-  };
-
-  const handlePhoneChange = (e: ChangeEvent<HTMLInputElement>, originalOnChange: (event: ChangeEvent<HTMLInputElement>) => void) => {
-    e.target.value = formatColombiaPhone(e.target.value);
-    originalOnChange(e);
-  };
-
+export function CheckoutPersonalForm({ cities, loadingCities, isProcessing, onSubmit, register, control, errors }: Props) {
   const handleZipChange = (e: ChangeEvent<HTMLInputElement>, originalOnChange: (event: ChangeEvent<HTMLInputElement>) => void) => {
     e.target.value = e.target.value.replace(/\D/g, "");
     originalOnChange(e);
   };
-
-  const phoneReg = register("phone", {
-    required: "El teléfono es obligatorio",
-    validate: (value) => {
-      const digits = value.replace(/\D/g, "");
-      const after57 = digits.startsWith("57") ? digits.slice(2) : digits;
-      return after57.length === 10 || "Ingresa un número colombiano válido (+57 y 10 dígitos)";
-    },
-  });
 
   const zipReg = register("zipCode", {
     pattern: { value: /^\d*$/, message: "El código postal solo puede contener números" },
@@ -151,7 +125,17 @@ export function CheckoutPersonalForm({ cities, loadingCities, isProcessing, onSu
             />
           </Field>
           <Field label="Celular" error={err("phone")}>
-            <input type="tel" placeholder="+57 300 123 4567" inputMode="tel" disabled={isProcessing} {...phoneReg} onChange={(e) => handlePhoneChange(e, phoneReg.onChange)} autoComplete="tel" />
+            <Controller
+              name="phone"
+              control={control}
+              rules={{
+                required: "El teléfono es obligatorio",
+                validate: (v) => isValidPhone(v) || "Número incompleto para el país elegido",
+              }}
+              render={({ field }) => (
+                <PhoneInput value={field.value} onChange={field.onChange} onBlur={field.onBlur} disabled={isProcessing} />
+              )}
+            />
           </Field>
         </div>
       </section>

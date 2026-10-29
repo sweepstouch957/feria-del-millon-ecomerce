@@ -17,7 +17,7 @@ import { getMpPublicKey } from "@services/order.service";
 import { useQuery } from "@tanstack/react-query";
 import { uploadImage } from "@services/upload.service";
 import { useEdition } from "@provider/editionProvider";
-import { ColombianPhoneInput } from "@components/ColombianInput";
+import PhoneInput, { isValidPhone } from "@components/PhoneInput";
 import LegalDisclaimer from "@components/LegalDisclaimer";
 
 /* ──────────────────────────────────────────────────────────────
@@ -216,7 +216,7 @@ export default function TicketsUI({
 
   const emailValid = /\S+@\S+\.\S+/.test(buyerEmail);
   const isPhoneValid =
-    buyerPhone === "" || /^3\d{9}$/.test(buyerPhone); // 10 dígitos, empieza en 3
+    buyerPhone === "" || isValidPhone(buyerPhone); // con país: "+573001234567"
 
   // Pases multi-día no consumen cupo de un día: tienen su propio cupo.
   const remaining = useMemo(() => {
@@ -552,7 +552,18 @@ export default function TicketsUI({
                 <LabeledInput label="Correo" placeholder="tucorreo@dominio.com" value={buyerEmail} onChange={setBuyerEmail} icon={<Mail size={16} />} type="email" hint="Ahí llegan los QR." />
               </div>
               <div className="fdm-tix-row">
-                <ColombianPhoneInput value={buyerPhone} onChange={setBuyerPhone} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                  <label htmlFor="fdm-tix-phone" style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Teléfono (opcional)</label>
+                  <PhoneInput
+                    id="fdm-tix-phone"
+                    value={buyerPhone}
+                    onChange={setBuyerPhone}
+                    className="fdm-in"
+                    style={{ alignItems: "center", borderBottom: `1px solid ${mix(25)}`, paddingBottom: 8, transition: "border-color .3s ease" }}
+                    selectStyle={{ background: "transparent", border: 0, outline: "none", color: "inherit", fontSize: 16, fontFamily: "inherit", padding: 0, cursor: "pointer" }}
+                    inputStyle={{ background: "transparent", border: 0, outline: "none", color: "inherit", fontSize: 16, fontFamily: "inherit", padding: 0 }}
+                  />
+                </div>
                 {ticketType === "empresa" ? (
                   <LabeledInput label="Empresa" placeholder="Razón social" value={company} onChange={setCompany} />
                 ) : (
@@ -560,7 +571,7 @@ export default function TicketsUI({
                 )}
               </div>
               {buyerPhone && !isPhoneValid && (
-                <p style={{ margin: "-14px 0 0", fontSize: 12.5, color: "#C0392B" }}>Ingresa un celular colombiano válido.</p>
+                <p style={{ margin: "-14px 0 0", fontSize: 12.5, color: "#C0392B" }}>El número está incompleto para el país elegido.</p>
               )}
               {ticketType === "empresa" && (
                 <div className="fdm-tix-row">

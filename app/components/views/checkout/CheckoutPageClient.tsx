@@ -64,6 +64,7 @@ export default function CheckoutPageClient() {
 
     const {
         register,
+        control,
         handleSubmit,
         formState: { errors },
         setError,
@@ -424,6 +425,7 @@ export default function CheckoutPageClient() {
                                 isProcessing={isProcessing}
                                 onSubmit={handleSubmitInfo}
                                 register={register}
+                                control={control}
                                 errors={errors}
                             />
                         )}

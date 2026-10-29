@@ -375,6 +375,7 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
+      {inv.logo && <img src={inv.logo} alt="" className="mx-auto mb-6 w-32" />}
       {/* Una sola imagen arriba: banner "Invitación especial" con el
           formulario; ya confirmado, el banner "Pase de acceso". */}
       <img
@@ -463,6 +464,12 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
         <form className="mt-8 space-y-6" noValidate onSubmit={handleSubmit((v) => confirm.mutate(v), onInvalid)}>
           <div className="space-y-2 text-[15px] leading-relaxed text-slate-800">
             <p className="text-xl font-semibold">{isLink ? "Regístrese como invitado" : "Confirme su asistencia"}</p>
+            {inv.message ? (
+              // Texto propio del enlace (el mismo del correo): párrafo por línea en blanco, "* " = viñeta.
+              inv.message.split(/\n{2,}/).map((p, i) => (
+                <p key={i} className="whitespace-pre-line">{p.trim().replace(/^\* /gm, "• ")}</p>
+              ))
+            ) : (<>
             <p>
               Para completar su registro, le solicitamos actualizar sus datos, especialmente su correo electrónico, ya que allí
               recibirá su Pase de Acceso personalizado para ingresar a la Feria.
@@ -479,6 +486,7 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
               To complete your registration, please make sure your information is up to date — especially your email address, as
               your personalized entry pass for the Fair will be sent there.
             </p>
+            </>)}
             <p className="text-xs text-slate-500">Los campos con <span className="text-red-600">*</span> son obligatorios / Required fields.</p>
           </div>
 

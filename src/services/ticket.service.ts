@@ -234,6 +234,9 @@ export interface InvitationView {
   status: "pending" | "confirmed" | "canceled" | "declined" | "closed";
   /** Al registrarse por enlace público: el token de su invitación (para ver el pase). */
   inviteToken?: string;
+  /** Solo enlaces públicos: logo del aliado y texto propio. */
+  logo?: string;
+  message?: string;
   companionName?: string;
   shortCode?: string;
   qrDataUrl?: string;
@@ -311,6 +314,9 @@ export interface InviteLinkPublic {
   eventName?: string;
   validFrom?: string | null;
   validTo?: string | null;
+  /** Logo del aliado y texto propio del enlace (los mismos del correo). */
+  logo?: string;
+  message?: string;
 }
 
 /** La info del enlace, con la forma de una invitación pendiente para reusar el formulario. */
@@ -327,6 +333,8 @@ export const getInviteLinkAsInvitation = async (code: string): Promise<Invitatio
     validTo: data.validTo,
     admits: data.admits,
     status: data.open ? "pending" : "closed",
+    logo: data.logo || "",
+    message: data.message || "",
   } as InvitationView;
 };
 

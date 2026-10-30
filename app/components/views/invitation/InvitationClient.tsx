@@ -467,7 +467,10 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
             {inv.message ? (
               // Texto propio del enlace (el mismo del correo): párrafo por línea en blanco, "* " = viñeta.
               inv.message.split(/\n{2,}/).map((p, i) => (
-                <p key={i} className="whitespace-pre-line">{p.trim().replace(/^\* /gm, "• ")}</p>
+                <p key={i} className="whitespace-pre-line">
+                  {/* **así** = negrilla, igual que en el correo */}
+                  {p.trim().replace(/^\* /gm, "• ").split(/\*\*(.+?)\*\*/g).map((t, j) => (j % 2 ? <b key={j}>{t}</b> : t))}
+                </p>
               ))
             ) : (<>
             <p>

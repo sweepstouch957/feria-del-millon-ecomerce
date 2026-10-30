@@ -463,7 +463,7 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
       {showForm && !declining && (
         <form className="mt-8 space-y-6" noValidate onSubmit={handleSubmit((v) => confirm.mutate(v), onInvalid)}>
           <div className="space-y-2 text-[15px] leading-relaxed text-slate-800">
-            <p className="text-xl font-semibold">{isLink ? "Regístrese como invitado" : "Confirme su asistencia"}</p>
+            <p className="text-xl font-semibold">{isLink ? "Regístrate como invitado" : "Confirme su asistencia"}</p>
             {inv.message ? (
               // Texto propio del enlace (el mismo del correo): párrafo por línea en blanco, "* " = viñeta.
               inv.message.split(/\n{2,}/).map((p, i) => (
@@ -487,7 +487,7 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
               your personalized entry pass for the Fair will be sent there.
             </p>
             </>)}
-            <p className="text-xs text-slate-500">Los campos con <span className="text-red-600">*</span> son obligatorios / Required fields.</p>
+            <p className="text-base font-medium text-slate-700">Los campos con <span className="text-red-600">*</span> son obligatorios / Required fields.</p>
           </div>
 
           {/* Resumen de errores tras intentar enviar */}
@@ -566,8 +566,8 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
             const ce = errors.companions?.[i];
             return (
               <fieldset key={field.id} className={`rounded-xl border p-4 ${ce ? "border-red-300" : "border-slate-200"}`}>
-                <legend className="px-1 text-sm font-semibold text-slate-800">
-                  {seats > 1 ? `Acompañante ${i + 1}` : "Su acompañante"} <span className="font-normal text-slate-400">/ Companion</span>
+                <legend className="px-1 text-xl font-semibold text-slate-800">
+                  {seats > 1 ? `Acompañante ${i + 1}` : "Su acompañante"} (campo opcional) <span className="text-sm font-normal text-slate-400">/ Companion (optional)</span>
                 </legend>
                 <p className="mb-3 text-xs text-slate-500">
                   Recibe su propio pase con QR en su correo y su WhatsApp. Si aún no sabe quién le acompaña, déjelo en blanco:

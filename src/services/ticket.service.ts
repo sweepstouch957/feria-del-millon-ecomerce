@@ -40,6 +40,8 @@ export interface Ticket {
 export interface PurchaseTicketsResponse {
   ok: boolean;
   tickets: Ticket[];
+  /** Paquete de empresa: en vez de QR, un enlace para repartir. */
+  link?: { code: string; url: string; maxUses: number };
 }
 
 /** Día de tickets para la fecha actual (CO) */
@@ -76,7 +78,6 @@ export interface PayWithMercadoPagoPayload {
   eventId: string;
   type?: TicketType;
   date?: string;      // "YYYY-MM-DD" (tipos de un día)
-  studentIdUrl?: string; // foto del carné (estudiantes)
   quantity: number;
   channel?: TicketChannel;
   presale?: boolean;
@@ -120,6 +121,7 @@ export const payTicketsWithMercadoPago = async (
   return {
     ok: data.ok,
     tickets: data.tickets.map(normalizeId),
+    link: data.link,
   };
 };
 
@@ -158,7 +160,7 @@ export const getTodayTicketDay = async (eventId: string) => {
  * El backend decide qué se vende, a qué precio, con qué cupo y en qué ventana.
  * Aquí solo se muestra: nunca se confía en precios del cliente.
  */
-export type TicketTypeKey = "general" | "allpass" | "preview" | "empresa" | "2x1" | "estudiante";
+export type TicketTypeKey = "general" | "allpass" | "preview" | "empresa" | "2x1";
 
 export interface TicketTypeOption {
   key: TicketTypeKey;
@@ -182,7 +184,6 @@ export interface TicketTypeOption {
   salesTo: string | null;
   open: boolean;
   closedReason: "disabled" | "not_started" | "ended" | "sold_out" | null;
-  requiresStudentId: boolean;
   bonus?: { weekday: number; from: string; to: string } | null;
   sortOrder: number;
 }

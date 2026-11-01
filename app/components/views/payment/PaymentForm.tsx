@@ -89,10 +89,11 @@ export default function PaymentForm({
               const {
                 token,
                 installments,
-                paymentMethodId,
-                issuerId,
                 payer,
               } = cardFormData;
+              // El Brick los entrega en snake_case; se acepta también el otro por si cambia.
+              const paymentMethodId = cardFormData.payment_method_id ?? cardFormData.paymentMethodId;
+              const issuerId = cardFormData.issuer_id ?? cardFormData.issuerId;
 
               const loadingId = toast.loading("Procesando pago...");
 

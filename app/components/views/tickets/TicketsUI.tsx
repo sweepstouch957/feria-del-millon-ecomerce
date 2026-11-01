@@ -15,7 +15,6 @@ import type { Ticket } from "@services/ticket.service";
 import { payTicketsWithMercadoPago, getTicketTypes, type PayWithMercadoPagoPayload, type TicketTypeKey, type TicketTypeOption } from "@services/ticket.service";
 import { getMpPublicKey } from "@services/order.service";
 import { useQuery } from "@tanstack/react-query";
-import { uploadImage } from "@services/upload.service";
 import { useEdition } from "@provider/editionProvider";
 import PhoneInput, { isValidPhone } from "@components/PhoneInput";
 import LegalDisclaimer from "@components/LegalDisclaimer";
@@ -69,9 +68,6 @@ const PAGE_CSS = `
   .fdm-step button:disabled { opacity: .3; cursor: not-allowed; }
   .fdm-tix select { background: transparent; border: 0; border-bottom: 1px solid ${mix(25)}; color: inherit; font: inherit; font-size: 16px; padding: 6px 0 8px; outline: none; }
   .fdm-tix select:focus { border-color: var(--acc); }
-  .fdm-tix input[type=file] { font-size: 13px; color: inherit; }
-  .fdm-tix input[type=file]::file-selector-button { ${Object.entries(EYEBROW).map(([k, v]) => `${k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase())}:${typeof v === "number" ? v + "px" : v}`).join(";")}; margin-right: 12px; height: 38px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--fg); background: transparent; color: inherit; cursor: pointer; font-family: inherit; }
-  .fdm-tix input[type=file]::file-selector-button:hover { background: var(--fg); color: var(--bg); }
   #mp-card-form { margin-top: 10px; }
   @media (max-width: 900px) { .fdm-tix-two { grid-template-columns: 1fr; } .fdm-tix-aside { position: static; } }
   @media (prefers-reduced-motion: reduce) { .fdm-tix * { transition: none !important; } }
@@ -84,7 +80,7 @@ const FALLBACK_TYPES: TicketTypeOption[] = TICKET_TYPE_OPTIONS.map((t, i) => ({
   desc: t.desc,
   price: t.price ?? null,
   pickDay: !!t.pickDay,
-  allDays: !t.pickDay,
+  allDays: t.key === "allpass",
   quantities: t.quantities ?? null,
   packPrices: t.packPrices ?? null,
   maxQty: t.maxQty ?? null,
@@ -96,7 +92,6 @@ const FALLBACK_TYPES: TicketTypeOption[] = TICKET_TYPE_OPTIONS.map((t, i) => ({
   salesTo: null,
   open: true,
   closedReason: null,
-  requiresStudentId: t.key === "estudiante",
   sortOrder: i,
 }));
 
@@ -170,8 +165,7 @@ export default function TicketsUI({
   const spec = typeOptions.find((t) => t.key === ticketType) ?? typeOptions[0];
   const [company, setCompany] = useState("");
   const [nit, setNit] = useState("");
-  const [studentIdUrl, setStudentIdUrl] = useState("");
-  const [uploadingId, setUploadingId] = useState(false);
+  const [companyLink, setCompanyLink] = useState<{ url: string; maxUses: number } | null>(null);
 
   const submittingRef = React.useRef(false);
   // Clave de idempotencia ESTABLE por intento de compra: se genera al abrir el
@@ -201,19 +195,6 @@ export default function TicketsUI({
     setReadyToPay(false);
   }, [ticketType]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onStudentId = async (file?: File) => {
-    if (!file) return;
-    setUploadingId(true);
-    try {
-      const { url } = await uploadImage(file, "carnets");
-      setStudentIdUrl(url);
-    } catch {
-      toast.error("No se pudo subir la foto del carné.");
-    } finally {
-      setUploadingId(false);
-    }
-  };
-
   const emailValid = /\S+@\S+\.\S+/.test(buyerEmail);
   const isPhoneValid =
     buyerPhone === "" || isValidPhone(buyerPhone); // con país: "+573001234567"
@@ -232,7 +213,6 @@ export default function TicketsUI({
     buyerName.trim().length > 1 &&
     emailValid &&
     remaining > 0 &&
-    (ticketType !== "estudiante" || studentIdUrl) &&
     (ticketType !== "empresa" || company.trim()),
   );
 
@@ -253,7 +233,6 @@ export default function TicketsUI({
         channel: "online",
         presale: false,
         idempotencyKey,
-        studentIdUrl: ticketType === "estudiante" ? studentIdUrl : undefined,
         buyer: {
           // estos vienen de tu propio formulario (NO confiamos en el Brick)
           name: buyerName.trim(),
@@ -265,7 +244,12 @@ export default function TicketsUI({
         card,
       });
       toast.dismiss(loadingId);
-      if (res.ok && res.tickets?.length) {
+      if (res.ok && res.link) {
+        setReadyToPay(false);
+        setCompanyLink(res.link);
+        toast.success("Pago aprobado: tu enlace está listo");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else if (res.ok && res.tickets?.length) {
         setGeneratedTickets(res.tickets);
         setShowPreview(true);
         toast.success(<span>Boletos generados <TicketIcon size={16} style={{ verticalAlign: "-2px" }} /></span>);
@@ -275,11 +259,14 @@ export default function TicketsUI({
     } catch (err: any) {
       toast.dismiss(loadingId);
       const code = err?.response?.data?.error;
+      // Rechazada: la próxima tarjeta es un intento nuevo. Con la misma llave el
+      // servidor devolvería este rechazo sin cobrar. Un error de red sí conserva
+      // la llave, para que el reintento no cobre dos veces.
+      if (err?.response?.status === 402) idemKeyRef.current = crypto.randomUUID();
       toast.error(
         code === "capacity_reached" ? "No quedan cupos para esta entrada."
-          : code === "student_ticket_already_issued" ? "Este correo ya tiene una entrada de estudiante."
-            : code === "student_id_required" ? "Sube la foto de tu carné."
-              : err?.response?.data?.message || "Ocurrió un error procesando el pago. Intenta de nuevo.",
+          : code === "payment_not_approved" ? "La tarjeta fue rechazada. Revisa los datos o intenta con otra."
+          : err?.response?.data?.message || "Ocurrió un error procesando el pago. Intenta de nuevo.",
       );
     }
   };
@@ -288,7 +275,6 @@ export default function TicketsUI({
     setQty(initialQty);
     setBuyerName("");
     setBuyerEmail("");
-    setStudentIdUrl("");
     setCompany("");
     setNit("");
     setGeneratedTickets([]);
@@ -309,16 +295,6 @@ export default function TicketsUI({
       typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-    // Gratis (estudiantes): sin pasarela.
-    if (total === 0) {
-      if (submittingRef.current) return;
-      submittingRef.current = true;
-      purchase().finally(() => {
-        submittingRef.current = false;
-      });
-      return;
-    }
 
     // callback opcional (por si el parent quiere loggear algo)
     onBuyClick?.({
@@ -438,7 +414,6 @@ export default function TicketsUI({
     buyerEmail,
     canBuy,
     ticketType,
-    studentIdUrl,
     company,
     nit,
   ]);
@@ -451,7 +426,7 @@ export default function TicketsUI({
   const priceLabel = (t: TicketTypeOption) => {
     const packs = t.packPrices ? Object.values(t.packPrices).filter((n) => typeof n === "number") : [];
     if (packs.length && Math.min(...packs) < Math.max(...packs)) return `desde ${formatMoney(Math.min(...packs), currency)}`;
-    return t.price === null ? "según el día" : t.price === 0 ? "Gratis" : formatMoney(t.price, currency);
+    return t.price === null ? "según el día" : formatMoney(t.price, currency);
   };
   const stepDatos = spec.pickDay ? "03" : "02";
 
@@ -475,6 +450,34 @@ export default function TicketsUI({
             </div>
           )}
         </header>
+
+        {/* Paquete de empresa pagado: el enlace para repartir. */}
+        {companyLink && (
+          <section className="fdm-tix-sec" style={{ border: "1px solid var(--acc)", padding: "clamp(18px,2.4vw,28px)" }}>
+            <SectionHead n="✓" title="Pago aprobado: reparte este enlace" />
+            <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6 }}>
+              Compártelo con tu gente: cada persona se registra, elige su día y recibe su QR. Sirve para {companyLink.maxUses} personas. También te lo enviamos al correo.
+            </p>
+            <a href={companyLink.url} style={{ fontSize: 18, color: "var(--acc)", wordBreak: "break-all" }}>{companyLink.url}</a>
+            <div>
+              <button
+                type="button"
+                className="fdm-tix-btn"
+                style={{ ...EYEBROW, fontSize: 11, width: "auto" }}
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(companyLink.url);
+                    toast.success("Enlace copiado");
+                  } catch {
+                    toast.error("No se pudo copiar: selecciona el enlace.");
+                  }
+                }}
+              >
+                Copiar enlace
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* 01 · Tipo de entrada */}
         <section className="fdm-tix-sec">
@@ -580,16 +583,6 @@ export default function TicketsUI({
                 </div>
               )}
 
-              {ticketType === "estudiante" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Foto del carné vigente 2026</span>
-                  <input type="file" accept="image/*" onChange={(e) => onStudentId(e.target.files?.[0])} />
-                  <span style={{ fontSize: 12.5, opacity: 0.65 }}>
-                    {uploadingId ? "Subiendo…" : studentIdUrl ? "Carné cargado. Preséntalo también en la entrada." : "Obligatorio. Lo verificamos en la entrada."}
-                  </span>
-                </div>
-              )}
-
               {/* Cantidad */}
               <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 18, paddingTop: 6, borderTop: `1px solid ${mix(12)}` }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 16 }}>
@@ -623,7 +616,7 @@ export default function TicketsUI({
               </div>
 
               <button type="button" className="fdm-tix-btn" disabled={!canBuy || qty > remaining} onClick={handleBuy} style={{ ...EYEBROW, fontSize: 11 }}>
-                {total === 0 ? "Obtener mi entrada" : "Continuar al pago"}
+                Continuar al pago
               </button>
 
               {readyToPay && (
@@ -647,7 +640,8 @@ export default function TicketsUI({
                   <div style={{ fontSize: 13.5, opacity: 0.7, marginTop: 4 }}>
                     {spec.pickDay
                       ? selectedDay ? `${selectedDay.display} · ${formatMoney(unitPrice, currency)} por persona` : "Elige un día para ver el detalle"
-                      : spec.allDays ? `Todos los días de feria · ${formatMoney(unitPrice, currency)} por persona` : `${formatMoney(unitPrice, currency)} por persona`}
+                      : spec.allDays ? `Todos los días de feria · ${formatMoney(unitPrice, currency)} por persona`
+                        : `Un día a elección de cada persona · ${formatMoney(unitPrice, currency)} por persona`}
                   </div>
                 </div>
                 <Pill tone="acc">{qty} {qty === 1 ? "boleto" : "boletos"}</Pill>

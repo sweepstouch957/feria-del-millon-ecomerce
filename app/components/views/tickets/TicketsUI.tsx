@@ -141,7 +141,8 @@ export default function TicketsUI({
   days,
   initialQty = 1,
   onBuyClick,
-}: TicketsUIProps & { eventId?: string }) {
+  quick = false,
+}: TicketsUIProps & { eventId?: string; quick?: boolean }) {
   const edition = useEdition();
   const eventId = eventIdProp ?? edition.eventId;
   const eventName = eventNameProp ?? edition.eventName;
@@ -188,7 +189,7 @@ export default function TicketsUI({
 
   // Si el tipo elegido deja de estar en venta, saltamos al primero disponible.
   useEffect(() => {
-    if (spec?.open) return;
+    if (quick || spec?.open) return;
     const next = typeOptions.find((t) => t.open);
     if (next && next.key !== ticketType) setTicketType(next.key);
   }, [spec?.open, typeOptions]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -438,7 +439,7 @@ export default function TicketsUI({
     if (packs.length && Math.min(...packs) < Math.max(...packs)) return `desde ${formatMoney(Math.min(...packs), currency)}`;
     return t.price === null ? "según el día" : formatMoney(t.price, currency);
   };
-  const stepDatos = spec.pickDay ? "03" : "02";
+  const stepDatos = quick ? "01" : spec.pickDay ? "03" : "02";
 
   return (
     <div className="fdm-tix">
@@ -448,14 +449,16 @@ export default function TicketsUI({
         <header className="fdm-tix-head">
           <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
             <span style={{ ...EYEBROW, opacity: 0.65 }}>Entradas · {eventName}</span>
-            <h1 className="fdm-tix-h1">Elige tu <em>entrada</em>.</h1>
+            <h1 className="fdm-tix-h1">{quick ? <>Tu entrada de <em>hoy</em>.</> : <>Elige tu <em>entrada</em>.</>}</h1>
             <p style={{ margin: 0, maxWidth: "52ch", fontSize: 15.5, lineHeight: 1.6, opacity: 0.8 }}>
-              Compra en línea y recibe tus códigos QR por correo. Un QR por persona: preséntalo en la entrada, impreso o en el celular.
+              {quick
+                ? `${formatMoney(unitPrice, currency)}. Escribe tu nombre y correo, paga y presenta tu QR en la entrada.`
+                : "Compra en línea y recibe tus códigos QR por correo. Un QR por persona: preséntalo en la entrada, impreso o en el celular."}
             </p>
           </div>
           {dateRange && (
             <div style={{ display: "flex", flexDirection: "column", gap: 6, textAlign: "right" }}>
-              <span style={{ ...EYEBROW, opacity: 0.65 }}>Días de feria</span>
+              <span style={{ ...EYEBROW, opacity: 0.65 }}>{quick ? "Válida para" : "Días de feria"}</span>
               <span style={{ fontSize: "clamp(18px,2vw,24px)", fontWeight: 300, whiteSpace: "nowrap" }}>{dateRange}</span>
             </div>
           )}
@@ -490,7 +493,7 @@ export default function TicketsUI({
         )}
 
         {/* 01 · Tipo de entrada */}
-        {!readyToPay && <section className="fdm-tix-sec">
+        {!readyToPay && !quick && <section className="fdm-tix-sec">
           <SectionHead n="01" title="Tipo de entrada" />
           <div className="fdm-tix-grid">
             {typeOptions.map((t) => {
@@ -540,7 +543,7 @@ export default function TicketsUI({
         </section>}
 
         {/* 02 · Día */}
-        {spec.pickDay && !readyToPay && (
+        {spec.pickDay && !readyToPay && !quick && (
           <section className="fdm-tix-sec">
             <SectionHead n="02" title="Elige el día" />
             {days.length ? (
@@ -593,7 +596,25 @@ export default function TicketsUI({
                 <LabeledInput label="Nombre completo" placeholder="Como aparece en tu documento" value={buyerName} onChange={setBuyerName} icon={<User size={16} />} />
                 <LabeledInput label="Correo" placeholder="tucorreo@dominio.com" value={buyerEmail} onChange={setBuyerEmail} icon={<Mail size={16} />} type="email" hint="Ahí llegan los QR." />
               </div>
-              <div className="fdm-tix-row">
+              {/* Un toque completa el dominio: en la fila, un correo mal escrito es un QR perdido. */}
+              {quick && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: -12 }}>
+                  {["gmail.com", "hotmail.com", "outlook.com", "yahoo.com", "icloud.com"].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => {
+                        const user = buyerEmail.split("@")[0].trim();
+                        if (user) setBuyerEmail(`${user}@${d}`);
+                      }}
+                      style={{ background: "transparent", border: `1px solid ${mix(25)}`, borderRadius: 999, color: "inherit", cursor: "pointer", font: "inherit", fontSize: 13, padding: "6px 12px" }}
+                    >
+                      @{d}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {!quick && <div className="fdm-tix-row">
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
                   <label htmlFor="fdm-tix-phone" style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Teléfono (opcional)</label>
                   <PhoneInput
@@ -611,7 +632,7 @@ export default function TicketsUI({
                 ) : (
                   <div />
                 )}
-              </div>
+              </div>}
               {buyerPhone && !isPhoneValid && (
                 <p style={{ margin: "-14px 0 0", fontSize: 12.5, color: "#C0392B" }}>El número está incompleto para el país elegido.</p>
               )}
@@ -624,7 +645,7 @@ export default function TicketsUI({
 
               {/* Cantidad */}
               <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 18, paddingTop: 6, borderTop: `1px solid ${mix(12)}` }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 16 }}>
+                {!quick && <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 16 }}>
                   <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Cantidad</span>
                   {spec.quantities ? (
                     <select value={qty} onChange={(e) => setQty(Number(e.target.value))}>
@@ -647,13 +668,16 @@ export default function TicketsUI({
                       {remaining > 0 ? `${remaining.toLocaleString("es-CO")} disponibles para ese día` : "Cupo completo para ese día"}
                     </span>
                   )}
-                </div>
+                </div>}
                 <div style={{ textAlign: "right", paddingTop: 16 }}>
                   <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65, display: "block" }}>Total</span>
                   <span style={{ fontSize: "clamp(26px,3vw,34px)", fontWeight: 300, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{formatMoney(total, currency)}</span>
                 </div>
               </div>
 
+              {quick && (!spec.open || remaining <= 0) && (
+                <p role="alert" style={{ margin: 0, fontSize: 15 }}>La venta en línea no está disponible en este momento. Acércate a la taquilla.</p>
+              )}
               <button type="button" className="fdm-tix-btn" disabled={!canBuy || qty > remaining} onClick={handleBuy} style={{ ...EYEBROW, fontSize: 11 }}>
                 Continuar al pago
               </button>

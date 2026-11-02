@@ -9,7 +9,8 @@ import { ROOT_VARS, EYEBROW, mix } from "@components/views/checkout/checkoutThem
 
 // Preventa: se compran entradas semanas antes, así que la página muestra TODOS
 // los días de la feria. Misma cáscara editorial v2 que catálogo, obra y checkout.
-export function ExampleTicketsSection() {
+// quick: la del QR impreso, solo con la entrada de hoy.
+export function ExampleTicketsSection({ quick = false, dia }: { quick?: boolean; dia?: string }) {
     const { eventId, eventName } = useEdition();
     const { data, isLoading, isError } = useQuery({
         queryKey: ["ticketDays", eventId],
@@ -44,6 +45,24 @@ export function ExampleTicketsSection() {
             remaining: d.remaining,
             utilization: d.utilization,
         }));
+
+    if (quick) {
+        const today = days.find((d) => (dia ? d.date === dia : d.isToday));
+        return (
+            <div style={ROOT_VARS}>
+                {today ? (
+                    <TicketsUI eventId={eventId} eventName={eventName} days={[today]} quick />
+                ) : (
+                    <div style={{ maxWidth: 1180, margin: "0 auto", padding: "clamp(40px,6vw,80px) clamp(16px,3vw,32px)", display: "flex", flexDirection: "column", gap: 12 }}>
+                        <span style={{ ...EYEBROW, opacity: 0.65 }}>Entradas</span>
+                        <p style={{ margin: 0, fontSize: 18, fontWeight: 300 }}>
+                            Hoy no hay feria. Puedes comprar tu entrada para otro día <a href="/tickets" style={{ color: "inherit" }}>aquí</a>.
+                        </p>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div style={ROOT_VARS}>

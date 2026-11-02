@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { CreditCard, Mail, Ticket as TicketIcon, User } from "lucide-react";
+import { Mail, Ticket as TicketIcon, User } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { TicketDay, TicketsUIProps, TICKET_TYPE_OPTIONS } from "./ticketTypes";
@@ -69,6 +69,7 @@ const PAGE_CSS = `
   .fdm-tix select { background: transparent; border: 0; border-bottom: 1px solid ${mix(25)}; color: inherit; font: inherit; font-size: 16px; padding: 6px 0 8px; outline: none; }
   .fdm-tix select:focus { border-color: var(--acc); }
   #mp-card-form { margin-top: 10px; }
+  #fdm-pay { scroll-margin-top: 110px; }
   @media (max-width: 900px) { .fdm-tix-two { grid-template-columns: 1fr; } .fdm-tix-aside { position: static; } }
   @media (prefers-reduced-motion: reduce) { .fdm-tix * { transition: none !important; } }
 `;
@@ -304,16 +305,12 @@ export default function TicketsUI({
     } as any);
 
     setReadyToPay(true);
-
-    toast("Ahora completa los datos de tu tarjeta para pagar.", {
-      icon: <CreditCard size={16} />,
-    });
-
-    const el = document.getElementById("mp-card-form");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   };
+
+  // El pago ya está en pantalla solo después de pintar: aquí sí se puede subir a él.
+  useEffect(() => {
+    if (readyToPay) document.getElementById("fdm-pay")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [readyToPay]);
 
   // ────────────────────────────────────────────────────────────────────────────
   // Mercado Pago Brick (adaptado para tickets)
@@ -348,6 +345,8 @@ export default function TicketsUI({
         await bricksBuilder.create("cardPayment", "mp-card-form", {
           initialization: {
             amount: total, // toma el 100% del total
+            // El documento no se pasa: es el del titular de la tarjeta, que puede ser otra persona.
+            payer: { email: buyerEmail.trim() },
           },
           customization: {},
           callbacks: {
@@ -480,7 +479,7 @@ export default function TicketsUI({
         )}
 
         {/* 01 · Tipo de entrada */}
-        <section className="fdm-tix-sec">
+        {!readyToPay && <section className="fdm-tix-sec">
           <SectionHead n="01" title="Tipo de entrada" />
           <div className="fdm-tix-grid">
             {typeOptions.map((t) => {
@@ -527,10 +526,10 @@ export default function TicketsUI({
               );
             })}
           </div>
-        </section>
+        </section>}
 
         {/* 02 · Día */}
-        {spec.pickDay && (
+        {spec.pickDay && !readyToPay && (
           <section className="fdm-tix-sec">
             <SectionHead n="02" title="Elige el día" />
             {days.length ? (
@@ -546,10 +545,22 @@ export default function TicketsUI({
         )}
 
         {/* 03 · Datos + resumen */}
-        <section className="fdm-tix-sec">
-          <SectionHead n={stepDatos} title="Tus datos" />
+        <section className="fdm-tix-sec" id="fdm-pay">
+          <SectionHead n={stepDatos} title={readyToPay ? "Pago" : "Tus datos"} />
           <div className="fdm-tix-two">
             <div className="fdm-tix-form">
+              {readyToPay ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", justifyContent: "space-between", gap: "6px 16px", fontSize: 14.5 }}>
+                    <span style={{ minWidth: 0, wordBreak: "break-word" }}>{buyerName.trim()} · {buyerEmail.trim()}</span>
+                    <button type="button" onClick={() => setReadyToPay(false)} style={{ background: "none", border: 0, padding: 0, color: "inherit", cursor: "pointer", textDecoration: "underline", font: "inherit" }}>
+                      Cambiar mis datos
+                    </button>
+                  </div>
+                  <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Pago con tarjeta · Mercado Pago · {formatMoney(total, currency)}</span>
+                  <div id="mp-card-form" style={{ border: `1px solid ${mix(12)}`, padding: 12 }} />
+                </div>
+              ) : (<>
               <div className="fdm-tix-row">
                 <LabeledInput label="Nombre completo" placeholder="Como aparece en tu documento" value={buyerName} onChange={setBuyerName} icon={<User size={16} />} />
                 <LabeledInput label="Correo" placeholder="tucorreo@dominio.com" value={buyerEmail} onChange={setBuyerEmail} icon={<Mail size={16} />} type="email" hint="Ahí llegan los QR." />
@@ -619,16 +630,10 @@ export default function TicketsUI({
                 Continuar al pago
               </button>
 
-              {readyToPay && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Pago con tarjeta · Mercado Pago</span>
-                  <div id="mp-card-form" style={{ border: `1px solid ${mix(12)}`, padding: 12 }} />
-                </div>
-              )}
-
               <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, opacity: 0.6, maxWidth: "60ch" }}>
                 Usa un correo al que tengas acceso: ahí recibirás la confirmación y los códigos QR. No compartas tu código con desconocidos.
               </p>
+              </>)}
             </div>
 
             {/* Resumen */}

@@ -70,6 +70,9 @@ const PAGE_CSS = `
   .fdm-tix select:focus { border-color: var(--acc); }
   #mp-card-form { margin-top: 10px; }
   #fdm-pay { scroll-margin-top: 110px; }
+  .fdm-pay-wait { display: flex; align-items: center; gap: 12px; padding: 18px 14px; border: 1px solid ${mix(12)}; font-size: 14.5px; }
+  .fdm-pay-spin { flex: none; width: 18px; height: 18px; border-radius: 999px; border: 2px solid ${mix(20)}; border-top-color: var(--acc); animation: fdm-pay-spin .8s linear infinite; }
+  @keyframes fdm-pay-spin { to { transform: rotate(360deg); } }
   @media (max-width: 900px) { .fdm-tix-two { grid-template-columns: 1fr; } .fdm-tix-aside { position: static; } }
   @media (prefers-reduced-motion: reduce) { .fdm-tix * { transition: none !important; } }
 `;
@@ -176,6 +179,9 @@ export default function TicketsUI({
   const [showPreview, setShowPreview] = useState(false);
   const [generatedTickets, setGeneratedTickets] = useState<Ticket[]>([]);
   const [readyToPay, setReadyToPay] = useState(false);
+  // Sin esto, el formulario de Mercado Pago tarda en aparecer y parece que no funciona.
+  const [brickState, setBrickState] = useState<"loading" | "ready" | "error">("loading");
+  const [paying, setPaying] = useState(false);
 
   // Por ahora sólo tenemos un método: Mercado Pago
   const [method] = useState<"mercadopago">("mercadopago");
@@ -322,6 +328,7 @@ export default function TicketsUI({
     if (!canBuy || total === 0) return;
 
     let bricksBuilder: any = null;
+    setBrickState("loading");
 
     const renderCardBrick = async () => {
       // @ts-expect-error: MercadoPago viene del script global
@@ -329,6 +336,7 @@ export default function TicketsUI({
       if (!MP) {
         console.error("MercadoPago SDK no cargó (¿bloqueador de contenido?)");
         toast.error("No cargó el formulario de tarjeta. Desactiva el bloqueador de contenido para este sitio e intenta de nuevo.");
+        setBrickState("error");
         return;
       }
       let mpPublicKey = "";
@@ -338,6 +346,7 @@ export default function TicketsUI({
       if (!mpPublicKey) {
         console.error("Falta la llave pública de Mercado Pago (MERCADOPAGO_PUBLIC_KEY)");
         toast.error("Falta configurar Mercado Pago. Intenta más tarde.");
+        setBrickState("error");
         return;
       }
       try {
@@ -350,20 +359,20 @@ export default function TicketsUI({
           },
           customization: {},
           callbacks: {
-            onReady: () => {
-              toast.success("Listo para pagar con Mercado Pago");
-            },
+            onReady: () => setBrickState("ready"),
             onError: (error: unknown) => {
               console.error("Error en Brick de Mercado Pago:", error);
               toast.error(
                 "Hubo un error cargando el formulario de Mercado Pago.",
               );
+              setBrickState((s) => (s === "loading" ? "error" : s));
             },
             onSubmit: async (cardFormData: MercadoPagoCardFormData) => {
               // Guard contra doble submit concurrente (doble click, Brick
               // reinvocando onSubmit antes de que resuelva el primero).
               if (submittingRef.current) return;
               submittingRef.current = true;
+              setPaying(true);
 
               const {
                 token,
@@ -383,6 +392,7 @@ export default function TicketsUI({
                 });
               } finally {
                 submittingRef.current = false;
+                setPaying(false);
               }
             },
           },
@@ -390,6 +400,7 @@ export default function TicketsUI({
       } catch (err) {
         console.error("Error montando Brick de Mercado Pago:", err);
         toast.error("No se pudo inicializar Mercado Pago.");
+        setBrickState("error");
       }
     };
 
@@ -558,7 +569,24 @@ export default function TicketsUI({
                     </button>
                   </div>
                   <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Pago con tarjeta · Mercado Pago · {formatMoney(total, currency)}</span>
-                  <div id="mp-card-form" style={{ border: `1px solid ${mix(12)}`, padding: 12 }} />
+                  {brickState === "loading" && (
+                    <div className="fdm-pay-wait" role="status">
+                      <span className="fdm-pay-spin" aria-hidden="true" />
+                      Cargando el formulario de pago seguro…
+                    </div>
+                  )}
+                  {brickState === "error" && (
+                    <div className="fdm-pay-wait" role="alert">
+                      No cargó el formulario de pago. Revisa tu conexión o desactiva el bloqueador de anuncios y recarga la página.
+                    </div>
+                  )}
+                  {paying && (
+                    <div className="fdm-pay-wait" role="status">
+                      <span className="fdm-pay-spin" aria-hidden="true" />
+                      Procesando tu pago… no cierres ni recargues esta página.
+                    </div>
+                  )}
+                  <div id="mp-card-form" style={{ border: `1px solid ${mix(12)}`, padding: 12, display: brickState === "error" ? "none" : "block" }} />
                 </div>
               ) : (<>
               <div className="fdm-tix-row">

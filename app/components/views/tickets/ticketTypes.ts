@@ -39,7 +39,7 @@ export const TICKET_TYPE_OPTIONS: {
 }[] = [
   { key: "general", label: "General", desc: "Un día a elección.", pickDay: true },
   { key: "allpass", label: "All pass 4 días", desc: "Entra los cuatro días de feria.", price: 80000 },
-  { key: "2x1", label: "Promoción 2x1", desc: "Solo en línea. Compra una entrada y recibe otra para el viernes de 12:00 a 6:00 p.m., hora Colombia.", pickDay: true },
+  { key: "2x1", label: "Promoción 2x1", desc: "Solo en línea, el viernes 6 de noviembre de 12:00 a 6:00 p. m., hora Colombia: $55.000 por 2 entradas para ese día.", price: 55000 },
   { key: "empresa", label: "Empresas", desc: "Paquetes de 20, 50 o 100 entradas, válidas por un día. Recibes un enlace para repartir. 20% de descuento desde 50.", price: 55000, quantities: [20, 50, 100], packPrices: { 20: 55000, 50: 44000, 100: 44000 } },
 ];
 

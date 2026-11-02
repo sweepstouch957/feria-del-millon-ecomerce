@@ -640,11 +640,12 @@ export default function TicketsUI({
                   <div style={{ fontSize: 13.5, opacity: 0.7, marginTop: 4 }}>
                     {spec.pickDay
                       ? selectedDay ? `${selectedDay.display} · ${formatMoney(unitPrice, currency)} por persona` : "Elige un día para ver el detalle"
+                      : spec.bonus ? `Viernes de 12:00 a 6:00 p. m. · ${formatMoney(unitPrice, currency)} por 2 entradas`
                       : spec.allDays ? `Todos los días de feria · ${formatMoney(unitPrice, currency)} por persona`
                         : `Un día a elección de cada persona · ${formatMoney(unitPrice, currency)} por persona`}
                   </div>
                 </div>
-                <Pill tone="acc">{qty} {qty === 1 ? "boleto" : "boletos"}</Pill>
+                <Pill tone="acc">{spec.bonus ? qty * 2 : qty} {!spec.bonus && qty === 1 ? "boleto" : "boletos"}</Pill>
               </div>
               <div>
                 <div className="line"><span style={{ opacity: 0.7 }}>Subtotal</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{formatMoney(total, currency)}</span></div>

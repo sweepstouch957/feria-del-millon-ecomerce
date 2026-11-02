@@ -38,6 +38,7 @@ import ApplicationStatusCard from "@components/views/admin/artist/ApplicationSta
 import StudioSheet from "./StudioSheet";
 import StudioStepper, { type Step, type StepKey } from "./StudioStepper";
 import ProjectFields from "./ProjectFields";
+import ArtistProfileCard from "./ArtistProfileCard";
 import ReviewPanel from "./ReviewPanel";
 import { Bone, Eyebrow, StudioButton } from "./ui";
 import type { FormState } from "./ui/fields";
@@ -612,14 +613,17 @@ export default function MiEstudioClient() {
 
               {/* PASO 2 ─ Proyecto */}
               {step === "proyecto" && (
-                <ProjectFields
-                  initial={initialValues}
-                  loading={projectLoading}
-                  readOnly={!inventory.canUpload}
-                  formRef={projectForm}
-                  onStateChange={onProjectState}
-                  onSave={saveProject}
-                />
+                <>
+                  <ArtistProfileCard />
+                  <ProjectFields
+                    initial={initialValues}
+                    loading={projectLoading}
+                    readOnly={!inventory.canUpload}
+                    formRef={projectForm}
+                    onStateChange={onProjectState}
+                    onSave={saveProject}
+                  />
+                </>
               )}
 
               {/* PASO 3 ─ Revisar y enviar */}

@@ -46,6 +46,8 @@ export interface ArtworkImageEntry {
 export interface MyProject {
   projectTitle: string;
   projectReview: string;
+  bio?: string;
+  profilePhotoUrl?: string;
   inventorySentAt?: string | null;
 }
 

@@ -39,7 +39,10 @@ export const artworkSchema = z.object({
   ),
 
   price: optionalNumber.pipe(
-    z.number().int("El precio va sin decimales").min(0, "El precio no puede ser negativo").optional()
+    z
+      .number({ required_error: "Pon el precio de la obra" })
+      .int("El precio va sin decimales")
+      .min(0, "El precio no puede ser negativo")
   ),
 
   // Obligatorio: vacío se guardaba como 1 y las series quedaban con una sola
@@ -62,8 +65,8 @@ export const artworkSchema = z.object({
   image: z
     .string()
     .trim()
-    .optional()
-    .refine((v) => !v || /^https?:\/\/\S+$/i.test(v), "Esa dirección de imagen no es válida"),
+    .min(1, "Sube la imagen de la obra")
+    .refine((v) => /^https?:\/\/\S+$/i.test(v), "Esa dirección de imagen no es válida"),
 });
 
 export type ArtworkFormValues = {

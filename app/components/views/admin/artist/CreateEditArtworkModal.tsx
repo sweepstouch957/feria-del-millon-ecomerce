@@ -42,6 +42,13 @@ import { hair, mix } from "./studioTheme";
 
 const validate = zodValidator<ArtworkFormValues>(artworkSchema);
 
+/** Lo que dijo el servidor; sin respuesta, es la conexión del artista. */
+const saveError = (e: any) =>
+  e?.response?.data?.error ||
+  (e?.response
+    ? "No pudimos guardar la obra. Inténtalo de nuevo; si sigue, escríbenos a soporte@feriadelmillon.com."
+    : "No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo. Lo que escribiste sigue aquí.");
+
 const str = (v: unknown) => (v === null || v === undefined ? "" : String(v));
 
 /** Lo guardado de una obra, en el formato que entienden los inputs (texto). */
@@ -67,7 +74,7 @@ function valuesOf(row: ArtworkRow | undefined, soloPavilion: string): ArtworkFor
    obligue a nadie más a enterarse. */
 
 function ImageField({ disabled }: { disabled?: boolean }) {
-  const [field, , helpers] = useField<string>("image");
+  const [field, meta, helpers] = useField<string>("image");
   const [dragging, setDragging] = useState(false);
   const [broken, setBroken] = useState(false);
 
@@ -87,7 +94,7 @@ function ImageField({ disabled }: { disabled?: boolean }) {
   return (
     <div>
       <Eyebrow tone="muted" size={9.5} style={{ letterSpacing: "0.22em", display: "block", marginBottom: 7 }}>
-        Imagen de la obra
+        Imagen de la obra *
       </Eyebrow>
 
       <label
@@ -198,6 +205,11 @@ function ImageField({ disabled }: { disabled?: boolean }) {
           JPG o PNG · máx {MAX_IMAGE_MB} MB
         </Eyebrow>
       </div>
+      {meta.touched && meta.error && (
+        <p role="alert" style={{ margin: "8px 0 0", fontSize: 12.5, color: "#B4472A" }}>
+          {meta.error}
+        </p>
+      )}
     </div>
   );
 }
@@ -303,7 +315,7 @@ function ArtworkFields({
         )}
 
         <div style={twoUp}>
-          <TextInput name="price" label="Precio en pesos" type="number" placeholder="1200000" />
+          <TextInput name="price" label="Precio en pesos *" type="number" placeholder="1200000" />
           <TextInput
             name="stock"
             label={values.reproducible ? "N.º de copias" : "Cantidad"}
@@ -366,7 +378,7 @@ export default function CreateEditArtworkModal({
       qc.invalidateQueries({ queryKey: ["artworks"] });
       onDone();
     },
-    onError: (e: any) => toast.error(e?.response?.data?.error || "No se pudo cargar la obra"),
+    onError: (e: any) => toast.error(saveError(e)),
   });
 
   const mPatch = useMutation({
@@ -377,7 +389,7 @@ export default function CreateEditArtworkModal({
       qc.invalidateQueries({ queryKey: ["artwork-detail", resp.doc.id] });
       onDone();
     },
-    onError: (e: any) => toast.error(e?.response?.data?.error || "No se pudo actualizar la obra"),
+    onError: (e: any) => toast.error(saveError(e)),
   });
 
   const busy = mCreate.isPending || mPatch.isPending;
@@ -404,6 +416,15 @@ export default function CreateEditArtworkModal({
     return valuesOf(editRow, solo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editingId, loadingEdit]);
+
+  // El botón está en el pie y el campo con error puede quedar fuera de la vista:
+  // sin este aviso, "no pasa nada" al tocar el botón.
+  const trySubmit = async () => {
+    const errors = await form.current?.validateForm();
+    const first = Object.values(errors ?? {})[0];
+    if (first) toast.error(String(first));
+    form.current?.submitForm();
+  };
 
   const submit = async (values: ArtworkFormValues) => {
     const payload = artworkPayload(values);
@@ -435,7 +456,7 @@ export default function CreateEditArtworkModal({
             Cancelar
           </StudioButton>
           {/* El pie vive fuera del <form>, así que envía a mano. */}
-          <StudioButton variant="solid" disabled={busy} onClick={() => form.current?.submitForm()}>
+          <StudioButton variant="solid" disabled={busy} onClick={trySubmit}>
             {busy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} strokeWidth={1.8} />}
             {busy ? "Guardando…" : editingId ? "Guardar cambios" : "Cargar obra"}
           </StudioButton>

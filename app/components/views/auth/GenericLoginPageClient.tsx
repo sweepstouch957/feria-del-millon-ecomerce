@@ -204,9 +204,12 @@ export default function GenericLoginPageClient() {
       } catch {}
       await login(email.trim(), password, remember);
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { error?: string } }; message?: string };
+      const e = err as { response?: { data?: { error?: string } } };
       setErrorMsg(
-        e?.response?.data?.error || e?.message || "Credenciales incorrectas. Intenta de nuevo."
+        e?.response?.data?.error ||
+          (e?.response
+            ? "No pudimos iniciar sesión. Inténtalo de nuevo en un momento."
+            : "No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.")
       );
       setSubmitting(false);
     }

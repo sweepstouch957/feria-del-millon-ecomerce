@@ -41,7 +41,7 @@ export function useImageUpload(onUploaded: (url: string) => void) {
           if (!url) throw new Error("sin url");
           onUploaded(url);
         } catch {
-          toast.error("No se pudo subir la imagen");
+          toast.error("No se pudo subir la imagen. Revisa tu conexión e inténtalo de nuevo; si sigue, prueba con otro JPG o PNG.");
         }
       } finally {
         setUploading(false);

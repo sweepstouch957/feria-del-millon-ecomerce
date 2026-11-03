@@ -37,7 +37,33 @@ const digits = (v: string) => String(v || "").replace(/\D/g, "");
 const DATA_CONTACT = "info@sweepstouch.com";
 const WHATSAPP = "+57 300 748 5406";
 
-const BANNER_INVITE = "https://res.cloudinary.com/dg9gzic4s/image/upload/w_1400,q_auto,f_auto/v1792793981/feria-del-millon/invitaciones/j4qipbaaiqle8vvaoenm.jpg";
+/* <a download> con data URL no hace nada en iPhone ni en los navegadores de
+   Outlook/Hotmail/WhatsApp. Se intenta: compartir el archivo (celular) →
+   descargar un blob → abrir la imagen para guardarla con pulsación larga. */
+async function saveQr(dataUrl: string, name: string) {
+  const blob = await (await fetch(dataUrl)).blob();
+  const file = new File([blob], name, { type: "image/png" });
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: "Pase de acceso" });
+      return;
+    } catch (e) {
+      if ((e as Error)?.name === "AbortError") return; // la persona cerró el menú
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // iPhone ignora `download`: se abre la imagen para dejarla presionada y guardarla.
+  if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) window.open(url, "_blank");
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+const BANNER_INVITE ="https://res.cloudinary.com/dg9gzic4s/image/upload/w_1400,q_auto,f_auto/v1792793981/feria-del-millon/invitaciones/j4qipbaaiqle8vvaoenm.jpg";
 const BANNER_PASS = "https://res.cloudinary.com/dg9gzic4s/image/upload/w_1120,q_auto,f_auto/v1792785037/feria-del-millon/invitaciones/nrqpko0zuilfgouwfp0n.jpg";
 
 type FormValues = Omit<InvitationRegistration, "dataConsent" | "companions"> & {
@@ -335,7 +361,9 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
     return `${f(d(inv.validFrom), false)} al ${f(d(inv.validTo), true)}`;
   })();
   const totalPeople = (inv.admits || 1) + (inv.companions?.length || 0);
-  const when = inv.allDays
+  const when = inv.passNote
+    ? inv.passNote
+    : inv.allDays
     ? "todos los días de la feria"
     : inv.anyDay
       ? `ingreso 1 día de la Feria${rangeText ? ` (${rangeText})` : ""}`
@@ -421,11 +449,18 @@ export default function InvitationClient({ token, linkCode }: { token?: string; 
           {inv.qrDataUrl && <img src={inv.qrDataUrl} alt="QR de acceso" className="mx-auto mt-4 w-64" />}
           <p className="mt-2 text-xs text-slate-500">Código {inv.shortCode}. Presente este QR en la entrada.</p>
           {inv.qrDataUrl && (
-            <a href={inv.qrDataUrl} download={`invitacion-${inv.shortCode}.png`} className="mt-4 inline-block rounded-lg bg-black px-5 py-2.5 text-sm font-semibold text-white">
+            <button
+              type="button"
+              onClick={() => saveQr(inv.qrDataUrl as string, `invitacion-${inv.shortCode}.png`)}
+              className="mt-4 inline-block rounded-lg bg-black px-5 py-2.5 text-sm font-semibold text-white"
+            >
               Descargar QR
-            </a>
+            </button>
           )}
-          <p className="mt-4 text-xs text-slate-500">También se lo enviamos a {inv.email} y por WhatsApp desde la línea oficial {WHATSAPP}.</p>
+          <p className="mt-2 text-xs text-slate-500">Si no se descarga, haga una captura de pantalla de este QR: también sirve en la entrada.</p>
+          <p className="mt-4 text-xs text-slate-500">
+            También se lo enviamos a {inv.email} (revise la carpeta de correo no deseado) y por WhatsApp desde la línea oficial {WHATSAPP}.
+          </p>
         </div>
       )}
 

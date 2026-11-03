@@ -228,6 +228,8 @@ export interface InvitationView {
   allDays: boolean;
   /** Un día a elección entre validFrom y validTo. */
   anyDay?: boolean;
+  /** Texto del enlace de empresa que reemplaza la línea de días (ej. Itaú). */
+  passNote?: string;
   validFrom?: string | null;
   validTo?: string | null;
   admits: number;

@@ -68,6 +68,16 @@ const STEP_TITLE: React.CSSProperties = {
   textTransform: "uppercase",
 };
 
+/** "3 nov, 2:06 p. m." en hora de Colombia: el artista tiene que ver que su envío quedó. */
+const sentText = (iso: string) =>
+  new Date(iso).toLocaleString("es-CO", {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/Bogota",
+  });
+
 /* El estudio del artista.
 
    Era una página larga donde todo estaba al mismo nivel y no se sabía qué
@@ -467,9 +477,12 @@ export default function MiEstudioClient() {
               >
                 <Lock size={15} strokeWidth={1.6} style={{ marginTop: 2, color: "var(--acc)", flexShrink: 0 }} />
                 <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: mix(72) }}>
+                  <strong style={{ fontWeight: 500, color: "var(--fg)" }}>
+                    La feria ya recibió tu inventario{sentAt ? ` (último envío: ${sentText(sentAt)})` : ""}.
+                  </strong>{" "}
                   {inventory.canUpload
-                    ? "Ya enviaste tu inventario. Mientras la carga siga abierta puedes agregar más obras o corregir las que tienes: cuando termines, vuelve a darle «Enviar» para avisarle a la feria."
-                    : "Tu inventario ya está entregado y la carga cerró. Si necesitas cambiar una obra, escríbele a la feria."}
+                    ? "No tienes que volver a enviarlo. Solo si agregas o corriges obras, dale «Enviar de nuevo» para avisarle a la feria."
+                    : "La carga cerró. Si necesitas cambiar una obra, escríbele a la feria."}
                 </p>
               </div>
             )}
@@ -701,7 +714,9 @@ export default function MiEstudioClient() {
                       : savedTitle
                         ? "Proyecto guardado"
                         : "Ponle título"
-                    : "Todo listo para enviar"}
+                    : locked && sentAt
+                      ? `Enviado ✓ ${sentText(sentAt)}`
+                      : "Todo listo para enviar"}
               </span>
             </div>
 

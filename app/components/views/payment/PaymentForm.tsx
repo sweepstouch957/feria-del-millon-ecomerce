@@ -198,7 +198,7 @@ export default function PaymentForm({
 
       {method === "whatsapp" ? (
         <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: mix(75), maxWidth: "60ch" }}>
-          Te llevamos a WhatsApp para coordinar el pago con un asesor de la Feria del Millón. La obra queda reservada mientras se confirma.
+          Te llevamos a WhatsApp para coordinar el pago con un asesor de la Feria del Millón. La obra queda tuya cuando el asesor confirme el pago; hasta entonces alguien más podría comprarla.
         </p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

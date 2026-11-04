@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
@@ -202,7 +202,7 @@ export default function ArtistPage() {
             {profile?.bio && (
               <>
                 <span className="fdm-art-label">Sobre el artista</span>
-                <p style={{ margin: 0, fontSize: 16, lineHeight: 1.65, color: "var(--fg2)", textWrap: "pretty", whiteSpace: "pre-line" }}>{profile.bio}</p>
+                <MoreText text={profile.bio} lines={3} style={{ fontSize: 16, lineHeight: 1.65 }} />
               </>
             )}
             {(profile?.projectTitle || profile?.projectReview) && (
@@ -212,7 +212,7 @@ export default function ArtistPage() {
                   <p style={{ margin: 0, fontWeight: 600, fontSize: "clamp(19px,1.8vw,24px)", lineHeight: 1.25, letterSpacing: "-.015em" }}>{profile.projectTitle}</p>
                 )}
                 {profile?.projectReview && (
-                  <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.7, color: "var(--fg2)", textWrap: "pretty", whiteSpace: "pre-line" }}>{profile.projectReview}</p>
+                  <MoreText text={profile.projectReview} lines={4} style={{ fontSize: 15.5, lineHeight: 1.7 }} />
                 )}
               </>
             )}
@@ -276,6 +276,41 @@ export default function ArtistPage() {
         )}
       </section>
     </Root>
+  );
+}
+
+/** Texto largo recortado a `lines` líneas con "Ver más": así las obras quedan arriba. */
+function MoreText({ text, lines, style }: { text: string; lines: number; style: React.CSSProperties }) {
+  const [open, setOpen] = useState(false);
+  // ponytail: umbral por caracteres (~70 por línea en celular), no mide el alto real.
+  const long = text.length > lines * 70 || text.split("\n").length > lines;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-start" }}>
+      <p
+        style={{
+          margin: 0,
+          color: "var(--fg2)",
+          textWrap: "pretty",
+          whiteSpace: "pre-line",
+          ...style,
+          ...(long && !open
+            ? { display: "-webkit-box", WebkitLineClamp: lines, WebkitBoxOrient: "vertical", overflow: "hidden" }
+            : {}),
+        }}
+      >
+        {text}
+      </p>
+      {long && (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          style={{ padding: "6px 0", minHeight: 36, border: 0, background: "none", color: "var(--acc)", font: "inherit", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+        >
+          {open ? "Ver menos" : "Ver más"}
+        </button>
+      )}
+    </div>
   );
 }
 

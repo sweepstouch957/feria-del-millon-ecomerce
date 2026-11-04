@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import useCart from "@store/useCart";
@@ -111,14 +111,6 @@ export default function Page() {
   const { paused: salesPaused, message: salesPausedMsg } = useCatalogSalesPaused();
   // Modo feria: se llega por el QR de la obra; se compra solo esta, sin carrito ni catálogo.
   const fairMode = useFairMode();
-  // QR de la etiqueta de una copia (?c=4): se compra ESA copia, sin carrito,
-  // para que la venta en línea descuente la misma que tiene la etiqueta.
-  const [labelCopy, setLabelCopy] = useState<number | null>(null);
-  useEffect(() => {
-    const n = Number(new URLSearchParams(window.location.search).get("c"));
-    if (Number.isInteger(n) && n > 0) setLabelCopy(n);
-  }, []);
-  const single = fairMode || !!labelCopy;
   const reduce = useReducedMotion();
   const rise = reduce
     ? {}
@@ -271,9 +263,7 @@ export default function Page() {
   const handleAddToCart = () => add(cartPayload, 1);
   const handleBuyNow = () => {
     // ?artwork= vacía el carrito y deja solo esta obra.
-    if (single) {
-      return router.push(`/checkout?artwork=${encodeURIComponent(String(doc._id))}${labelCopy ? `&c=${labelCopy}` : ""}`);
-    }
+    if (fairMode) return router.push(`/checkout?artwork=${encodeURIComponent(String(doc._id))}`);
     add(cartPayload, 1);
     router.push("/checkout");
   };
@@ -464,7 +454,7 @@ export default function Page() {
                 borderBottom: `1px solid ${mix(12)}`,
               }}
             >
-              {!single && (
+              {!fairMode && (
               <button
                 type="button"
                 onClick={handleAddToCart}
@@ -505,21 +495,21 @@ export default function Page() {
                   display: "inline-flex",
                   alignItems: "center",
                   height: 48,
-                  padding: single ? "0 36px" : "0 24px",
+                  padding: fairMode ? "0 36px" : "0 24px",
                   borderRadius: 999,
                   cursor: isAvailable ? "pointer" : "not-allowed",
                   opacity: isAvailable ? 1 : 0.45,
-                  // Modo feria o QR de etiqueta: es el único botón, va relleno.
-                  background: single ? "var(--fg)" : "transparent",
-                  color: single ? "var(--bg)" : "inherit",
-                  border: `1px solid ${single ? "var(--fg)" : mix(26)}`,
+                  // En modo feria es el único botón: va relleno, como acción principal.
+                  background: fairMode ? "var(--fg)" : "transparent",
+                  color: fairMode ? "var(--bg)" : "inherit",
+                  border: `1px solid ${fairMode ? "var(--fg)" : mix(26)}`,
                   ...EYEBROW,
                   fontSize: 10.5,
                   letterSpacing: "0.12em",
                   transition: "all .3s ease",
                 }}
               >
-                {single ? (isAvailable ? "Comprar esta obra" : "Vendida") : "Comprar ahora"}
+                {fairMode ? (isAvailable ? "Comprar esta obra" : "Vendida") : "Comprar ahora"}
               </button>
 
               <a

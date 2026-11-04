@@ -129,8 +129,6 @@ export default function CheckoutPageClient() {
 
     // Precargar carrito cuando mandan id/slug en la URL
     const [prefilledFromQuery, setPrefilledFromQuery] = useState(false);
-    // Copia de la etiqueta escaneada (?c=4): la orden pide esa copia.
-    const [labelCopy, setLabelCopy] = useState<{ id: string; n: number } | null>(null);
 
     useEffect(() => {
         if (prefilledFromQuery) return;
@@ -165,8 +163,6 @@ export default function CheckoutPageClient() {
 
                 setArtworkUnavailable(null);
                 clear();
-                const n = Number(searchParams.get("c"));
-                setLabelCopy(Number.isInteger(n) && n > 0 ? { id: String(artwork._id), n } : null);
 
                 add(
                     {
@@ -221,7 +217,6 @@ export default function CheckoutPageClient() {
                 qty: item.quantity,
                 unitPrice: item.price,
                 currency: "COP",
-                ...(labelCopy && String(item.id) === labelCopy.id ? { copyNumbers: [labelCopy.n] } : {}),
             }));
 
             const payload = {

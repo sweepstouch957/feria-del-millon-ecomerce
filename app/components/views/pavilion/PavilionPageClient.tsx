@@ -283,7 +283,7 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
           </div>
 
           {/* Carrito header (oculto en xs para ahorrar espacio) */}
-          <Button
+          {false && <Button
             variant="outline"
             className="relative hidden sm:inline-flex"
             title="Carrito"
@@ -292,7 +292,7 @@ export default function PavilionPageClient({ eventId, slug }: Props) {
             <span className="ml-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-black/90 px-2 text-white text-xs">
               {totalItems}
             </span>
-          </Button>
+          </Button>}
         </div>
 
         {/* Términos y condiciones (visible también en desktop) */}

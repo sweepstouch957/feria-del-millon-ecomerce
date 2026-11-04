@@ -92,9 +92,10 @@ export default function CatalogCard({
   // Modo feria: sin carrito; el botón lleva a la obra, donde se compra sola.
   const fairMode = useFairMode();
   const available = Number(artwork?.stock || 0) > 0 && !salesPaused;
-  const buyLabel = (long: boolean) =>
-    fairMode && available ? "Ver obra" : salesPaused ? "Venta en feria" : available ? (long ? "Agregar al Carrito" : "Agregar") : (long ? "Agotado" : "Agotado");
-  const onBuy = () => (fairMode ? router.push(detailHref) : onAddToCart?.(artwork));
+  // Sin carrito: el botón siempre lleva a la obra, donde está "Comprar ahora".
+  const buyLabel = (_long: boolean) =>
+    fairMode && available ? "Ver obra" : salesPaused ? "Venta en feria" : available ? "Comprar" : "Agotado";
+  const onBuy = () => router.push(detailHref);
 
   // ─────────────────────────────
   // Navegación al hacer click en el card (mobile + desktop)

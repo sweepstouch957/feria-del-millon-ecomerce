@@ -406,7 +406,8 @@ export default function CatalogPageClient() {
                 </Tab>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "clamp(10px,1.4vw,20px)" }}>
-                <Link
+                {/* Carrito oculto: se compra obra por obra con "Comprar". */}
+                {false && <Link
                   href="/carrito"
                   className="fdm-cat-link"
                   style={{
@@ -422,8 +423,7 @@ export default function CatalogPageClient() {
                 >
                   Carrito
                   <span style={{ fontSize: 15, fontWeight: 500, letterSpacing: 0, color: "var(--acc)" }}>{totalItems}</span>
-                </Link>
-                <span style={{ display: "block", width: 1, height: 20, background: mix(20) }} />
+                </Link>}
                 <Pill active={viewMode === "grid"} onClick={() => setViewMode("grid")}>
                   Grilla
                 </Pill>
@@ -1046,9 +1046,7 @@ function ArtCard({
           <span style={{ fontWeight: 500, fontSize: 17, letterSpacing: "0.01em" }}>
             {formatCOP(art.price, { currency: art.currency })}
           </span>
-          <button type="button" onClick={onAdd} style={addBtnStyle(inCart)}>
-            {inCart ? "En carrito" : "Agregar"}
-          </button>
+          <Link href={href} style={addBtnStyle(true)}>Comprar</Link>
         </div>
       </div>
     </article>
@@ -1129,9 +1127,7 @@ function ArtRow({
       >
         {formatCOP(art.price, { currency: art.currency })}
       </span>
-      <button type="button" onClick={onAdd} style={addBtnStyle(inCart)}>
-        {inCart ? "En carrito" : "Agregar"}
-      </button>
+      <Link href={href} style={addBtnStyle(true)}>Comprar</Link>
     </article>
   );
 }

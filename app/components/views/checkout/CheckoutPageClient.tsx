@@ -346,7 +346,9 @@ export default function CheckoutPageClient() {
             <style>{CHECKOUT_CSS}</style>
             <style>{`
               .fdm-check-grid { display: grid; grid-template-columns: minmax(0,1fr) 380px; gap: clamp(24px,4vw,64px); align-items: start; padding-bottom: clamp(40px,6vw,88px); }
-              @media (max-width: 960px) { .fdm-check-grid { grid-template-columns: 1fr; } .fdm-check-grid > aside { position: static !important; } }
+              .fdm-check-grid > * { min-width: 0; }
+              /* minmax(0,1fr): con 1fr el resumen ensanchaba la columna y el formulario se salía de la pantalla. */
+              @media (max-width: 960px) { .fdm-check-grid { grid-template-columns: minmax(0,1fr); } .fdm-check-grid > aside { position: static !important; } }
             `}</style>
             <main
                 className="fdm-check"
@@ -370,8 +372,6 @@ export default function CheckoutPageClient() {
                     {!fairMode && (
                         <>
                             <Link href="/catalogo" className="fdm-check-link">Catálogo</Link>
-                            <span aria-hidden>/</span>
-                            <Link href="/carrito" className="fdm-check-link">Carrito</Link>
                             <span aria-hidden>/</span>
                         </>
                     )}

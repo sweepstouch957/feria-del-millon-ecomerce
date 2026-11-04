@@ -47,6 +47,7 @@ export const FORM_CSS = `
   @media (min-width: 720px) { .fdm-f-h > span { flex: 0 1 auto; } }
   .fdm-f-h h2 { margin: 0; font-weight: 300; font-size: clamp(20px,2.2vw,26px); letter-spacing: -0.01em; }
   .fdm-f-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%,210px), 1fr)); gap: 22px 28px; }
+  @media (max-width: 600px) { .fdm-f-row { grid-template-columns: minmax(0,1fr); } }
   .fdm-f-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .fdm-f-field label { font-weight: 500; font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; opacity: .65; }
   .fdm-f-field input, .fdm-f-field select, .fdm-f-field textarea {

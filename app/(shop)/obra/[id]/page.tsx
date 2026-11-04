@@ -419,7 +419,7 @@ export default function Page() {
                   gap: 8,
                   ...EYEBROW,
                   fontSize: 10,
-                  color: isAvailable ? "var(--acc)" : mix(50),
+                  color: inStock ? "var(--acc)" : mix(50),
                 }}
               >
                 <span
@@ -428,10 +428,11 @@ export default function Page() {
                     width: 6,
                     height: 6,
                     borderRadius: 999,
-                    background: isAvailable ? "var(--acc)" : mix(35),
+                    background: inStock ? "var(--acc)" : mix(35),
                   }}
                 />
-                {isAvailable ? "Disponible" : "Agotada"}
+                {/* Con la venta pausada la obra sigue disponible: solo no se compra en línea aún. */}
+                {inStock ? "Disponible" : fairMode ? "Vendida" : "Agotada"}
               </span>
             </div>
 
@@ -475,29 +476,6 @@ export default function Page() {
               >
                 {salesPaused ? "Venta en feria" : !isAvailable ? (fairMode ? "Vendida" : "Agotada") : fairMode ? "Comprar esta obra" : "Comprar ahora"}
               </button>
-
-              <a
-                href={`mailto:info@feriadelmillon.com?subject=${encodeURIComponent(
-                  `Consulta obra ${doc.title}`
-                )}`}
-                className="fdm-obra-link"
-                style={{
-                  flex: "0 0 auto",
-                  whiteSpace: "nowrap",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  height: 48,
-                  padding: "0 22px",
-                  border: `1px solid ${mix(26)}`,
-                  borderRadius: 999,
-                  ...EYEBROW,
-                  fontSize: 10.5,
-                  letterSpacing: "0.12em",
-                  color: mix(65),
-                }}
-              >
-                Consultar
-              </a>
             </div>
 
             {/* Ficha técnica */}

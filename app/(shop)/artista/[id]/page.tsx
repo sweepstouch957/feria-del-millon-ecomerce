@@ -242,14 +242,7 @@ export default function ArtistPage() {
 
       {/* ── Obras ─────────────────────────────────────────── */}
       <section style={{ marginTop: "clamp(36px,5vw,64px)", display: "flex", flexDirection: "column", gap: 20 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: "-.02em" }}>Obras</h2>
-          {!fairMode && (
-            <Link href={`/catalogo?artistId=${encodeURIComponent(String(id))}`} style={{ fontSize: 13, fontWeight: 500, color: "var(--acc)", whiteSpace: "nowrap" }}>
-              Verlas en el catálogo →
-            </Link>
-          )}
-        </div>
+        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600, letterSpacing: "-.02em" }}>Obras</h2>
 
         {loadingArtworks ? (
           <div className="fdm-art-grid">

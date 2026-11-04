@@ -45,18 +45,25 @@ export default function SiteFooter() {
         fontWeight: 400,
       }}
     >
-      <div
-        style={{
-          maxWidth: 1600,
-          margin: "0 auto",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,210px),1fr))",
-          gap: "clamp(22px,2.6vw,44px)",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <BrandLogo height={44} />
-          <p style={{ margin: 0, maxWidth: "34ch", fontSize: 14.5, lineHeight: 1.65, color: mix(68) }}>
+      <style>{`
+        .fdm-foot-grid { max-width:1600px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr)); gap:clamp(24px,3vw,48px); }
+        @media (max-width:900px){ .fdm-foot-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .fdm-foot-brand { grid-column:1 / -1; } }
+        @media (max-width:520px){ .fdm-foot-grid { grid-template-columns:minmax(0,1fr); } .fdm-foot-brand { align-items:center; text-align:center; } }
+      `}</style>
+      <div className="fdm-foot-grid">
+        <div className="fdm-foot-brand" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Link href="/" aria-label="Ir al inicio" style={{ display: "inline-flex", alignItems: "center", gap: 14 }}>
+            <BrandLogo height={52} />
+            <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.1, textAlign: "left" }}>
+              <span style={{ fontWeight: 500, fontSize: 17, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                {brand?.name || "Feria del Millón"}
+              </span>
+              <span style={{ fontWeight: 400, fontSize: 9.5, letterSpacing: "0.3em", textTransform: "uppercase", color: mix(52), marginTop: 5 }}>
+                Bogotá · 2026
+              </span>
+            </span>
+          </Link>
+          <p style={{ margin: 0, maxWidth: "36ch", fontSize: 14.5, lineHeight: 1.65, color: mix(66) }}>
             {brand?.tagline || "Arte emergente colombiano al alcance de todos."}
           </p>
         </div>

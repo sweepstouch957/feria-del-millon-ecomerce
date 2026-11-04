@@ -823,3 +823,8 @@ html {
   .fdm-desk-nav { display: none !important; }
   .fdm-mobile-only { display: inline-flex !important; }
 }
+/* Celular: el tagline espaciado no cabe junto a "Menú" y desbordaba la página (zoom out). */
+@media (max-width: 520px) {
+  .fdm-tagline { display: none; }
+}
+html, body { overflow-x: clip; }

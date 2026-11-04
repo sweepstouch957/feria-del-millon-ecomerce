@@ -263,13 +263,8 @@ export default function Page() {
     artist: artistFullName,
   };
 
-  const handleAddToCart = () => add(cartPayload, 1);
-  const handleBuyNow = () => {
-    // ?artwork= vacía el carrito y deja solo esta obra.
-    if (fairMode) return router.push(`/checkout?artwork=${encodeURIComponent(String(doc._id))}`);
-    add(cartPayload, 1);
-    router.push("/checkout");
-  };
+  // Sin carrito: ?artwork= vacía el carrito y deja solo esta obra.
+  const handleBuyNow = () => router.push(`/checkout?artwork=${encodeURIComponent(String(doc._id))}`);
 
   const specs: { k: string; v: string }[] = [
     doc.techniqueInfo?.name && { k: "Técnica", v: doc.techniqueInfo.name },
@@ -450,33 +445,6 @@ export default function Page() {
                 borderBottom: `1px solid ${mix(12)}`,
               }}
             >
-              {!fairMode && (
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={!isAvailable}
-                style={{
-                  flex: "0 0 auto",
-                  whiteSpace: "nowrap",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  height: 48,
-                  padding: "0 28px",
-                  borderRadius: 999,
-                  cursor: isAvailable ? "pointer" : "not-allowed",
-                  opacity: isAvailable ? 1 : 0.45,
-                  ...EYEBROW,
-                  fontSize: 10.5,
-                  letterSpacing: "0.12em",
-                  transition: "all .3s ease",
-                  border: `1px solid ${inCart ? "var(--acc)" : "var(--fg)"}`,
-                  background: inCart ? "var(--acc)" : "var(--fg)",
-                  color: inCart ? "#0B0B0A" : "var(--bg)",
-                }}
-              >
-                {salesPaused ? "Venta en feria" : !isAvailable ? "Agotada" : inCart ? "En el carrito ✓" : "Agregar al carrito"}
-              </button>
-              )}
               {salesPaused && inStock && (
                 <p style={{ flex: "1 1 100%", margin: "10px 0 0", fontSize: 13.5, lineHeight: 1.5, color: mix(62) }}>{salesPausedMsg}</p>
               )}
@@ -491,21 +459,21 @@ export default function Page() {
                   display: "inline-flex",
                   alignItems: "center",
                   height: 48,
-                  padding: fairMode ? "0 36px" : "0 24px",
+                  padding: "0 36px",
                   borderRadius: 999,
                   cursor: isAvailable ? "pointer" : "not-allowed",
                   opacity: isAvailable ? 1 : 0.45,
-                  // En modo feria es el único botón: va relleno, como acción principal.
-                  background: fairMode ? "var(--fg)" : "transparent",
-                  color: fairMode ? "var(--bg)" : "inherit",
-                  border: `1px solid ${fairMode ? "var(--fg)" : mix(26)}`,
+                  // Sin carrito: es la única acción de compra, verde y relleno.
+                  background: "var(--acc)",
+                  color: "#0B0B0A",
+                  border: "1px solid var(--acc)",
                   ...EYEBROW,
                   fontSize: 10.5,
                   letterSpacing: "0.12em",
                   transition: "all .3s ease",
                 }}
               >
-                {fairMode ? (isAvailable ? "Comprar esta obra" : "Vendida") : "Comprar ahora"}
+                {salesPaused ? "Venta en feria" : !isAvailable ? (fairMode ? "Vendida" : "Agotada") : fairMode ? "Comprar esta obra" : "Comprar ahora"}
               </button>
 
               <a

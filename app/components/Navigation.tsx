@@ -146,7 +146,7 @@ export default function Navigation() {
           />
           <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}>
             <span style={{ fontWeight: 500, fontSize: 16, letterSpacing: "0.08em", textTransform: "uppercase" }}>{brand.name}</span>
-            <span style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.32em", textTransform: "uppercase", color: `color-mix(in srgb, ${FG} 50%, transparent)`, marginTop: 4 }}>
+            <span className="fdm-tagline" style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.32em", textTransform: "uppercase", color: `color-mix(in srgb, ${FG} 50%, transparent)`, marginTop: 4 }}>
               {brand.tagline}
             </span>
           </span>
@@ -225,8 +225,8 @@ export default function Navigation() {
             )}
           </div>
 
-          {/* Carrito */}
-          {!fairMode && (
+          {/* Carrito: oculto, la compra va directo con "Comprar ahora". */}
+          {false && !fairMode && (
             <Link href="/carrito" aria-label="Ir al carrito" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", height: 42, width: 42, borderRadius: 999, border: `1px solid color-mix(in srgb, ${FG} 26%, transparent)` }}>
               <ShoppingCart className="h-4 w-4" />
               {cartCount > 0 && (

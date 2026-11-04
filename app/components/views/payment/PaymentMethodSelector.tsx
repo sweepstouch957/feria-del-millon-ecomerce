@@ -35,15 +35,21 @@ export function PaymentMethodSelector({ method, onChange }: PaymentMethodSelecto
               gap: 6,
               textAlign: "left",
               padding: "16px 18px",
-              border: `1px solid ${selected ? "var(--fg)" : mix(16)}`,
-              background: selected ? "var(--panel)" : "transparent",
-              color: selected ? "var(--fdm-on-dark,#F5F4EF)" : "inherit",
+              minHeight: 44,
+              borderRadius: 14,
+              border: `1.5px solid ${selected ? "var(--acc)" : mix(16)}`,
+              background: selected ? "color-mix(in srgb, var(--acc) 10%, transparent)" : "transparent",
+              color: "inherit",
               font: "inherit",
               cursor: "pointer",
-              transition: "all .3s ease",
+              transition: "all .25s ease",
             }}
           >
-            <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, fontWeight: 400 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 16, fontWeight: 600 }}>
+              {/* Punto de radio: deja claro cuál está elegido. */}
+              <span aria-hidden style={{ width: 18, height: 18, borderRadius: 999, border: `2px solid ${selected ? "var(--acc)" : mix(30)}`, display: "grid", placeItems: "center", flex: "none" }}>
+                {selected && <span style={{ width: 8, height: 8, borderRadius: 999, background: "var(--acc)" }} />}
+              </span>
               <span style={{ color: selected ? "var(--acc)" : "inherit", display: "inline-flex" }}>{o.icon}</span>
               {o.label}
             </span>

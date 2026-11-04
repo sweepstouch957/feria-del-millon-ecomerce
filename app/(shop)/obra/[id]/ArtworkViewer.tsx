@@ -9,7 +9,6 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
    Usa lo que ya estaba en el repo (framer-motion, react-zoom-pan-pinch) en vez
    de sumar dependencias nuevas. */
 
-const mix = (pct: number) => `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
 
 const CTRL: React.CSSProperties = {
   display: "inline-flex",
@@ -30,14 +29,22 @@ const CTRL: React.CSSProperties = {
   textTransform: "uppercase",
 };
 
+export type ViewerChip = { label: string; tone: "acc" | "inv" | "mute" };
+
+const CHIP_BG: Record<ViewerChip["tone"], [string, string]> = {
+  acc: ["var(--acc)", "#0B0B0A"],
+  inv: ["var(--inv)", "var(--invfg)"],
+  mute: ["var(--line2)", "var(--fg)"],
+};
+
 export default function ArtworkViewer({
   images,
   title,
-  badge,
+  chips,
 }: {
   images: string[];
   title: string;
-  badge: string;
+  chips: ViewerChip[];
 }) {
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
@@ -76,10 +83,12 @@ export default function ArtworkViewer({
         <div
           style={{
             position: "relative",
-            aspectRatio: "1/1",
-            padding: "clamp(20px,3vw,52px)",
-            background: mix(4),
-            border: `1px solid ${mix(12)}`,
+            aspectRatio: "4/5",
+            background: "var(--card)",
+            border: "1px solid var(--line)",
+            borderRadius: 24,
+            boxShadow: "0 30px 80px -40px rgba(0,0,0,.6)",
+            overflow: "hidden",
           }}
         >
           <button
@@ -88,7 +97,7 @@ export default function ArtworkViewer({
             aria-label="Ampliar imagen"
             style={{
               position: "absolute",
-              inset: "clamp(20px,3vw,52px)",
+              inset: "clamp(20px,3vw,40px)",
               padding: 0,
               border: 0,
               background: "transparent",
@@ -106,36 +115,40 @@ export default function ArtworkViewer({
                   position: "absolute",
                   inset: 0,
                   display: "block",
-                  filter: `drop-shadow(0 16px 40px ${mix(20)})`,
+                  filter: "drop-shadow(0 20px 40px rgba(0,0,0,.35))",
                 }}
               >
                 <SmartImage
                   src={images[active]}
                   alt={title}
                   priority
-                  sizes="(max-width: 1079px) 100vw, 45vw"
+                  sizes="(max-width: 1180px) 92vw, 640px"
                 />
               </motion.span>
             </AnimatePresence>
           </button>
 
-          <span
-            style={{
-              position: "absolute",
-              left: 0,
-              bottom: 0,
-              padding: "7px 13px",
-              background: "var(--panel)",
-              color: "#F5F4EF",
-              fontWeight: 500,
-              fontSize: 10,
-              letterSpacing: "0.16em",
-              textTransform: "uppercase",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {badge}
-          </span>
+          {chips.length > 0 && (
+            <span style={{ position: "absolute", top: 18, left: 18, display: "flex", gap: 8, flexWrap: "wrap", pointerEvents: "none" }}>
+              {chips.map((c) => (
+                <span
+                  key={c.label}
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    letterSpacing: "0.04em",
+                    background: CHIP_BG[c.tone][0],
+                    color: CHIP_BG[c.tone][1],
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {c.label}
+                </span>
+              ))}
+            </span>
+          )}
         </div>
 
         {images.length > 1 && (
@@ -153,11 +166,13 @@ export default function ArtworkViewer({
                 style={{
                   position: "relative",
                   aspectRatio: "1",
+                  minHeight: 44,
                   padding: 7,
                   cursor: "pointer",
-                  background: mix(4),
+                  background: "var(--card)",
+                  borderRadius: 12,
                   transition: "border-color .3s ease",
-                  border: `1px solid ${i === active ? "var(--acc)" : mix(12)}`,
+                  border: `1px solid ${i === active ? "var(--acc)" : "var(--line)"}`,
                 }}
               >
                 <span style={{ position: "absolute", inset: 7, display: "block" }}>

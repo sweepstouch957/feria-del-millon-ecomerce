@@ -284,7 +284,7 @@ export default function CheckoutPageClient() {
     // Carrito vacío
     if (mounted && items.length === 0 && step !== 3) {
         return (
-            <div style={ROOT_VARS}>
+            <div className="fdm-check-root" style={ROOT_VARS}>
                 <style>{CHECKOUT_CSS}</style>
                 <div
                     className="fdm-check"
@@ -318,21 +318,7 @@ export default function CheckoutPageClient() {
                             ? "Escanea el código QR junto a la obra que quieres comprar."
                             : "Agregá obras al carrito para continuar con el pago."}
                     </p>
-                    <Link
-                        href={fairMode ? "/" : "/catalogo"}
-                        style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            height: 48,
-                            padding: "0 30px",
-                            background: "var(--fg)",
-                            color: "var(--bg)",
-                            borderRadius: 999,
-                            ...EYEBROW,
-                            fontSize: 11,
-                            letterSpacing: "0.12em",
-                        }}
-                    >
+                    <Link href={fairMode ? "/" : "/catalogo"} className="fdm-btn is-ghost">
                         {fairMode ? "Volver al inicio" : "Ver catálogo"}
                     </Link>
                 </div>
@@ -342,13 +328,14 @@ export default function CheckoutPageClient() {
     }
 
     return (
-        <div style={ROOT_VARS}>
+        <div className="fdm-check-root" style={ROOT_VARS}>
             <style>{CHECKOUT_CSS}</style>
             <style>{`
-              .fdm-check-grid { display: grid; grid-template-columns: minmax(0,1fr) 380px; gap: clamp(24px,4vw,64px); align-items: start; padding-bottom: clamp(40px,6vw,88px); }
+              .fdm-check-grid { display: grid; grid-template-columns: minmax(0,1fr) 380px; gap: clamp(24px,4vw,56px); align-items: start; padding-bottom: clamp(40px,6vw,88px); }
               .fdm-check-grid > * { min-width: 0; }
-              /* minmax(0,1fr): con 1fr el resumen ensanchaba la columna y el formulario se salía de la pantalla. */
-              @media (max-width: 960px) { .fdm-check-grid { grid-template-columns: minmax(0,1fr); } .fdm-check-grid > aside { position: static !important; } }
+              /* minmax(0,1fr): con 1fr el resumen ensanchaba la columna y el formulario se salía de la pantalla.
+                 En celular el resumen va primero: se ve qué se está comprando antes de llenar datos. */
+              @media (max-width: 960px) { .fdm-check-grid { grid-template-columns: minmax(0,1fr); gap: 18px; } .fdm-check-grid > aside { position: static !important; order: -1; } }
             `}</style>
             <main
                 className="fdm-check"
@@ -397,10 +384,10 @@ export default function CheckoutPageClient() {
                         <h1
                             style={{
                                 margin: 0,
-                                fontWeight: 200,
-                                fontSize: "clamp(34px,4.6vw,56px)",
-                                lineHeight: 1,
-                                letterSpacing: "-0.02em",
+                                fontWeight: 600,
+                                fontSize: "clamp(30px,4vw,46px)",
+                                lineHeight: 1.02,
+                                letterSpacing: "-0.025em",
                             }}
                         >
                             {step === 3 ? "Listo." : step === 2 ? "Pago." : "Tus datos."}

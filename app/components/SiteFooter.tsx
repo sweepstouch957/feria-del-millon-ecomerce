@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useSiteContent, useSiteNav } from "@provider/siteConfigProvider";
+import BrandLogo from "@components/BrandLogo";
 
 /* Footer editorial v2 — port del pie de Catalogo.dc.html / Obra.dc.html.
    Se monta una sola vez en el layout: los textos salen de site-config, así
    el admin los edita sin tocar código. */
 
 const JOST = "Jost, system-ui, sans-serif";
-const LOGO = "/assets/fdm/logo-fdm.jpg";
 const mix = (pct: number) =>
   `color-mix(in srgb, var(--fdm-fg,#0B0B0A) ${pct}%, transparent)`;
 
@@ -55,18 +55,7 @@ export default function SiteFooter() {
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <span
-            style={{
-              display: "block",
-              width: 92,
-              aspectRatio: "2.46",
-              backgroundImage: `url('${brand?.logo || LOGO}')`,
-              backgroundSize: "cover",
-              backgroundPosition: "49% center",
-              filter: "var(--fdm-logo-filter,none) contrast(1.25)",
-              mixBlendMode: "var(--fdm-logo-blend,multiply)" as any,
-            }}
-          />
+          <BrandLogo height={44} />
           <p style={{ margin: 0, maxWidth: "34ch", fontSize: 14.5, lineHeight: 1.65, color: mix(68) }}>
             {brand?.tagline || "Arte emergente colombiano al alcance de todos."}
           </p>

@@ -9,11 +9,11 @@ import { useMounted } from "@hooks/useMounted";
 import { useAuth } from "@provider/authProvider";
 import { useFairMode, useSiteContent, useSiteNav } from "@provider/siteConfigProvider";
 import ThemeToggle from "@components/views/home/v2/ThemeToggle";
+import BrandLogo from "@components/BrandLogo";
 
 const GREEN = "var(--fdm-green,#3FA46E)";
 const FG = "var(--fdm-fg,#0B0B0A)";
 const BG = "var(--fdm-bg,#F7F6F2)";
-const LOGO = "/assets/fdm/logo-fdm.jpg";
 
 const JOST = "Jost, system-ui, sans-serif";
 
@@ -132,18 +132,7 @@ export default function Navigation() {
       >
         {/* Marca */}
         <Link href="/" style={{ display: "flex", alignItems: "center", gap: 14, flex: "0 0 auto", whiteSpace: "nowrap" }} aria-label={`Ir al inicio - ${brand.name}`}>
-          <span
-            style={{
-              display: "block",
-              width: 58,
-              aspectRatio: "2.46",
-              backgroundImage: `url('${brand.logo || LOGO}')`,
-              backgroundSize: "cover",
-              backgroundPosition: "49% center",
-              filter: "var(--logoF,none) contrast(1.25)",
-              mixBlendMode: "multiply" as any,
-            }}
-          />
+          <BrandLogo height={compact ? 28 : 34} style={{ transition: "height .35s ease" }} />
           <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.05 }}>
             <span style={{ fontWeight: 500, fontSize: 16, letterSpacing: "0.08em", textTransform: "uppercase" }}>{brand.name}</span>
             <span className="fdm-tagline" style={{ fontWeight: 300, fontSize: 9, letterSpacing: "0.32em", textTransform: "uppercase", color: `color-mix(in srgb, ${FG} 50%, transparent)`, marginTop: 4 }}>

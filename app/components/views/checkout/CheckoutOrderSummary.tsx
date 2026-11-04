@@ -39,7 +39,8 @@ export function CheckoutOrderSummary({ items, subtotal, total }: Props) {
         style={{
           background: "var(--panel)",
           color: "#F5F4EF",
-          padding: "clamp(20px,2.2vw,28px)",
+          padding: "clamp(18px,2.2vw,26px)",
+          borderRadius: 16,
           display: "flex",
           flexDirection: "column",
           gap: 16,
@@ -66,10 +67,11 @@ export function CheckoutOrderSummary({ items, subtotal, total }: Props) {
                     position: "relative",
                     flex: "0 0 auto",
                     display: "block",
-                    width: 54,
+                    width: 60,
                     aspectRatio: "1",
                     padding: 5,
-                    background: "rgba(245,244,239,0.06)",
+                    borderRadius: 10,
+                    background: "rgba(245,244,239,0.08)",
                   }}
                 >
                   <span style={{ position: "absolute", inset: 5, display: "block" }}>

@@ -48,7 +48,8 @@ export default async function RootLayout({
     --fdm-fg:#F0EFEA;
     --fdm-panel:#161614;
     --fdm-green-deep:#0F3C2C;
-  }`;
+  }
+  :root[data-theme="dark"] .fdm-logo,.fdm-logo--on-dark{filter:invert(1) brightness(1.1);}`;
 
   return (
     <html lang="es">
@@ -58,7 +59,7 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
         {/* SDK de Mercado Pago disponible en todo el front */}

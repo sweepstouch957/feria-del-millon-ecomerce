@@ -12,13 +12,13 @@ import {
 } from "@provider/siteConfigProvider";
 import type { SectionKey } from "@lib/siteDefaults";
 import { subscribeToNewsletter } from "@services/events.service";
+import BrandLogo from "@components/BrandLogo";
 
 const GREEN = "var(--fdm-green,#3FA46E)";
 const PANEL = "var(--fdm-panel,#0B0B0A)";
 const FG = "var(--fdm-fg,#0B0B0A)";
 const BG = "var(--fdm-bg,#F7F6F2)";
 const ON_DARK = "#F5F4EF";
-const LOGO = "/assets/fdm/logo-fdm.jpg";
 
 // Kicker "01 —— Título" reutilizable
 function Kicker({ n, label, onDark = false }: { n: string; label: string; onDark?: boolean }) {
@@ -148,7 +148,6 @@ export default function HomePage() {
   const eventId = useEventId();
   const { hero, featured, techniques, contact, social } = content;
   const meta = landing.heroMeta;
-  const logoSrc = content.brand.logo || LOGO; // logo del CMS (o el wordmark FDM)
 
   // ── Bloques por clave (orden + visibilidad configurables) ──────────────
   const blocks: Record<SectionKey, React.ReactNode> = {
@@ -566,21 +565,9 @@ export default function HomePage() {
             overflow: "hidden",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              inset: "auto -8% -30% auto",
-              width: "min(62vw,760px)",
-              aspectRatio: "2.46",
-              backgroundImage: `url('${logoSrc}')`,
-              backgroundSize: "cover",
-              backgroundPosition: "49% center",
-              filter: "invert(1) contrast(1.5) brightness(1.05)",
-              mixBlendMode: "lighten",
-              opacity: 0.1,
-              pointerEvents: "none",
-            }}
-          />
+          <div aria-hidden style={{ position: "absolute", inset: "auto -6% -18% auto", width: "min(62vw,760px)", opacity: 0.08, pointerEvents: "none" }}>
+            <BrandLogo onDark height="auto" style={{ width: "100%" }} />
+          </div>
           <div style={{ position: "relative", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 14, fontWeight: 300, fontSize: 10.5, letterSpacing: "0.28em", textTransform: "uppercase", color: "rgba(245,244,239,0.6)" }}>
             <span>{meta.edition}</span>
             <span style={{ color: GREEN }}>{meta.location}</span>
@@ -588,18 +575,7 @@ export default function HomePage() {
           </div>
 
           <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "clamp(18px,2.4vw,30px)" }}>
-            <span
-              style={{
-                display: "block",
-                width: "clamp(100px,13vw,172px)",
-                aspectRatio: "2.46",
-                backgroundImage: `url('${logoSrc}')`,
-                backgroundSize: "cover",
-                backgroundPosition: "49% center",
-                filter: "invert(1) contrast(1.5) brightness(1.05)",
-                mixBlendMode: "lighten",
-              }}
-            />
+            <BrandLogo onDark height="clamp(48px,6vw,80px)" />
             <h1 style={{ margin: 0, fontWeight: 200, fontSize: "clamp(50px,11.2vw,190px)", lineHeight: 1.02, letterSpacing: "0.015em", textTransform: "uppercase" }}>
               <HeroTitle text={hero.title} color={ON_DARK} />
             </h1>
@@ -664,7 +640,7 @@ export default function HomePage() {
       <footer id="acceso" style={{ borderTop: `1px solid color-mix(in srgb, ${FG} 14%, transparent)`, padding: "clamp(30px,4vw,56px) clamp(20px,4vw,56px) 40px" }}>
         <div style={{ maxWidth: 1600, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,230px),1fr))", gap: "clamp(32px,4vw,64px)" }}>
           <div>
-            <span style={{ display: "block", width: "clamp(120px,14vw,180px)", aspectRatio: "2.46", backgroundImage: `url('${logoSrc}')`, backgroundSize: "cover", backgroundPosition: "49% center", filter: "var(--logoF,none) contrast(1.25)", mixBlendMode: "multiply" as any }} />
+            <BrandLogo height="clamp(48px,5vw,64px)" />
             <div style={{ fontWeight: 300, fontSize: "clamp(22px,2.4vw,30px)", letterSpacing: "0.02em", textTransform: "uppercase", marginTop: 18 }}>{content.brand.name}</div>
             <p style={{ margin: "14px 0 0", fontSize: 14, lineHeight: 1.7, color: `color-mix(in srgb, ${FG} 60%, transparent)`, maxWidth: "32ch" }}>{landing.footer.description}</p>
           </div>

@@ -177,20 +177,14 @@ export default function PaymentForm({
   const mainButtonLabel =
     method === "whatsapp" ? "Hablar con un asesor" : "Pagar con Mercado Pago";
 
-  const pill = (solid: boolean): React.CSSProperties => ({
-    display: "inline-flex", alignItems: "center", justifyContent: "center", height: 50, padding: "0 28px",
-    borderRadius: 999, border: "1px solid var(--fg)", background: solid ? "var(--fg)" : "transparent",
-    color: solid ? "var(--bg)" : "var(--fg)", fontFamily: "inherit", fontWeight: 500, fontSize: 11,
-    letterSpacing: "0.16em", textTransform: "uppercase", cursor: "pointer", transition: "all .3s ease", flex: "1 1 200px",
-  });
-
   return (
-    <section style={{ display: "flex", flexDirection: "column", gap: 26 }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12, paddingBottom: 10, borderBottom: `1px solid ${mix(12)}` }}>
-        <h2 style={{ margin: 0, fontWeight: 300, fontSize: "clamp(20px,2.2vw,26px)", letterSpacing: "-0.01em" }}>Cómo pagas</h2>
-        <span style={{ marginLeft: "auto", fontSize: 14, fontVariantNumeric: "tabular-nums" }}>
-          <span style={{ opacity: 0.6, marginRight: 8 }}>Total</span>
-          <b style={{ fontWeight: 500 }}>{formatMoney(total)}</b>
+    <section style={{ display: "flex", flexDirection: "column", gap: 20, padding: "clamp(18px,2.4vw,26px)", background: "var(--card)", border: "1px solid var(--line)", borderRadius: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ flex: "none", width: 28, height: 28, borderRadius: 999, display: "grid", placeItems: "center", background: "var(--inv)", color: "var(--invfg)", fontSize: 13, fontWeight: 600 }}>3</span>
+        <h2 style={{ margin: 0, fontWeight: 600, fontSize: "clamp(18px,1.8vw,21px)", letterSpacing: "-0.015em" }}>Cómo pagas</h2>
+        <span style={{ marginLeft: "auto", fontSize: 15, fontVariantNumeric: "tabular-nums" }}>
+          <span style={{ color: "var(--fg3)", marginRight: 8 }}>Total</span>
+          <b style={{ fontWeight: 600 }}>{formatMoney(total)}</b>
         </span>
       </div>
 
@@ -202,23 +196,23 @@ export default function PaymentForm({
         </p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span style={{ ...EYEBROW, fontSize: 9.5, opacity: 0.65 }}>Datos de la tarjeta · Mercado Pago</span>
-          {/* Contenedor donde se renderiza el Brick de Mercado Pago */}
-          <div id="mp-card-form" style={{ border: `1px solid ${mix(12)}`, padding: 12, background: mix(3) }} />
-          <span style={{ fontSize: 12.5, opacity: 0.6 }}>El botón de pagar está dentro del formulario de la tarjeta.</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--fg2)" }}>Datos de la tarjeta · Mercado Pago</span>
+          {/* Contenedor donde se renderiza el Brick de Mercado Pago (min-height: no salta al cargar). */}
+          <div id="mp-card-form" style={{ border: "1px solid var(--line2)", borderRadius: 14, padding: 12, background: "#fff", color: "#0B0B0A", minHeight: 320 }} />
+          <span style={{ fontSize: 12.5, color: "var(--fg3)" }}>El botón de pagar está dentro del formulario de la tarjeta.</span>
         </div>
       )}
 
       <LegalDisclaimer />
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
         {method === "whatsapp" && (
-          <button type="button" onClick={handlePayClick} disabled={isProcessing} style={pill(true)}>
+          <button type="button" className="fdm-btn" onClick={handlePayClick} disabled={isProcessing} style={{ flex: "1 1 220px" }}>
             {isProcessing ? "Procesando…" : mainButtonLabel}
           </button>
         )}
-        <button type="button" onClick={onBack} style={pill(false)}>
-          Volver a mis datos
+        <button type="button" className="fdm-btn is-ghost" onClick={onBack} style={{ flex: "1 1 220px" }}>
+          ← Volver a mis datos
         </button>
       </div>
 

@@ -27,7 +27,16 @@ export const ROOT_VARS = {
   overflowX: "hidden",
 } as React.CSSProperties;
 
+/* Mismos tokens que la ficha de la obra (tarjetas, líneas, botón verde),
+   con su versión oscura según el toggle global (data-theme). */
 export const CHECKOUT_CSS = `
+  .fdm-check-root { --card:#FAFAF7; --fg2:#5F5E57; --fg3:#8E8D86; --line:rgba(21,21,15,.1); --line2:rgba(21,21,15,.18); --inv:#0B0B0A; --invfg:#F5F4EF; }
+  :root[data-theme="dark"] .fdm-check-root { --card:#171716; --fg2:#B8B7AF; --line:rgba(255,255,255,.1); --line2:rgba(255,255,255,.16); --inv:#F5F4EF; --invfg:#0B0B0A; }
   .fdm-check a { transition: color .3s ease, border-color .3s ease, opacity .3s ease; }
   .fdm-check-link:hover { color: var(--acc); }
+  .fdm-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; height:52px; padding:0 26px; border-radius:14px; border:1px solid var(--acc); background:var(--acc); color:#0B0B0A; font-family:inherit; font-size:15px; font-weight:600; cursor:pointer; transition:background .25s ease, border-color .25s ease, color .25s ease, opacity .25s ease; text-decoration:none; }
+  .fdm-btn:hover:not(:disabled) { background:#2E8A58; border-color:#2E8A58; }
+  .fdm-btn:disabled { opacity:.45; cursor:not-allowed; }
+  .fdm-btn.is-ghost { background:transparent; color:var(--fg); border-color:var(--line2); }
+  .fdm-btn.is-ghost:hover:not(:disabled) { background:var(--inv); color:var(--invfg); border-color:var(--inv); }
 `;

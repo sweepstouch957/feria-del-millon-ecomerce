@@ -230,6 +230,9 @@ export default function Page() {
   const stock = Number(doc.stock ?? (copies.length ? 1 : 0));
   const availableCopy = copies.find((c: any) => c.status === "available");
   const inStock = stock > 0 && !!availableCopy;
+  // Edición = copias reales (sin anuladas). No se usa copy.total: queda viejo
+  // cuando el artista sube el stock (1 → 10 dejaba la copia 1 en "1/1").
+  const edition = Math.max(stock, copies.filter((c: any) => c.status !== "void").length);
   const isAvailable = inStock && !salesPaused;
 
   const artistFullName =
@@ -274,10 +277,7 @@ export default function Page() {
     doc.year && { k: "Año", v: String(doc.year) },
     availableCopy && {
       k: "Edición",
-      v:
-        Number(availableCopy.total) > 1
-          ? `Copia ${availableCopy.number} de ${availableCopy.total}`
-          : "Pieza única",
+      v: edition > 1 ? `${stock} de ${edition} disponibles` : "Pieza única",
     },
     doc.pavilionInfo?.name && { k: "Pabellón", v: doc.pavilionInfo.name },
     doc.shippingNotes && { k: "Entrega", v: String(doc.shippingNotes) },
@@ -358,11 +358,7 @@ export default function Page() {
           <ArtworkViewer
             images={images}
             title={doc.title}
-            badge={
-              availableCopy && Number(availableCopy.total) > 1
-                ? `Copia ${availableCopy.number}/${availableCopy.total}`
-                : "Pieza única"
-            }
+            badge={edition > 1 ? `Edición de ${edition}` : "Pieza única"}
           />
 
           {/* Ficha */}

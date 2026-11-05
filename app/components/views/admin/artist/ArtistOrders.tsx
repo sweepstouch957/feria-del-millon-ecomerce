@@ -72,17 +72,27 @@ export default function ArtistOrders() {
     isLoading,
     isError,
     error,
-  } = useArtistOrders(isAccepted);
+  } = useArtistOrders(true);
+  // Siempre se piden: los artistas puestos directo en el pabellón no tienen
+  // postulación, y con el filtro por isAccepted nunca veían a sus compradores.
   const setDelivery = useSetItemDelivery();
-  const [filter, setFilter] = useState<FilterKey>("pending");
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const [q, setQ] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
 
   const rows = useMemo(() => {
-    if (filter === "all") return orders;
-    return orders
-      .map((o) => ({ ...o, items: o.items.filter((i) => i.deliveryStatus === filter) }))
-      .filter((o) => o.items.length > 0);
-  }, [orders, filter]);
+    const byStatus = filter === "all"
+      ? orders
+      : orders
+          .map((o) => ({ ...o, items: o.items.filter((i) => i.deliveryStatus === filter) }))
+          .filter((o) => o.items.length > 0);
+    const needle = q.trim().toLowerCase();
+    if (!needle) return byStatus;
+    return byStatus.filter((o) =>
+      [o.code, o.buyer?.name, o.buyer?.email, o.buyer?.phone, o.buyer?.document, ...o.items.map((i) => i.title)]
+        .some((v) => String(v ?? "").toLowerCase().includes(needle))
+    );
+  }, [orders, filter, q]);
 
   const pendingCount = useMemo(
     () =>
@@ -111,7 +121,7 @@ export default function ArtistOrders() {
     }
   };
 
-  if (loadingApps) {
+  if (loadingApps || isLoading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <Skeleton w="35%" h={11} />
@@ -121,7 +131,7 @@ export default function ArtistOrders() {
     );
   }
 
-  if (!isAccepted) {
+  if (!isAccepted && !orders.length) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         <p style={{ margin: 0, maxWidth: "56ch", fontSize: 15, lineHeight: 1.6, color: mix(72) }}>
@@ -199,9 +209,32 @@ export default function ArtistOrders() {
         </div>
       </div>
 
+      {orders.length > 0 && (
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Buscar por comprador, correo, teléfono, obra o código"
+          style={{
+            width: "100%",
+            height: 46,
+            padding: "0 14px",
+            borderRadius: 12,
+            border: `1px solid ${mix(22)}`,
+            background: "transparent",
+            color: "inherit",
+            font: "inherit",
+            fontSize: 16,
+            outline: "none",
+          }}
+        />
+      )}
+
       {rows.length === 0 ? (
         <p style={{ margin: 0, maxWidth: "52ch", fontSize: 15, lineHeight: 1.6, color: mix(70) }}>
-          {filter === "pending"
+          {q.trim()
+            ? "Nada coincide con la búsqueda."
+            : filter === "pending"
             ? "No tenés entregas pendientes."
             : orders.length === 0
             ? "Todavía no hay pedidos de tus obras. Cuando alguien compre una pieza tuya, vas a ver acá sus datos de entrega."

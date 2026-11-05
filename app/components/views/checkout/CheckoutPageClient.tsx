@@ -54,8 +54,12 @@ export default function CheckoutPageClient() {
     // Cities
     const { data: cities = [], isLoading: loadingCities } = useCities();
 
-    const [step, setStep] = useState<1 | 2 | 3>(1);
-    const steps = ["Tus datos", "Pago", "Confirmación"];
+    // 4 = confirmación (el stepper queda con los 3 pasos hechos).
+    const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+    const steps = ["Datos personales", "Entrega", "Pago"];
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }, [step]);
 
     const { user } = useAuth();
     const salesPause = useCatalogSalesPaused();
@@ -240,7 +244,7 @@ export default function CheckoutPageClient() {
             const newOrder = await createOrderMutation.mutateAsync(payload);
 
             setCurrentOrder(newOrder);
-            setStep(2);
+            setStep(3);
         } catch (error: any) {
             console.error("Error creando la orden:", error);
             const code = error?.response?.data?.error;
@@ -273,7 +277,7 @@ export default function CheckoutPageClient() {
             try {
                 localStorage.removeItem(DRAFT_KEY);
             } catch {}
-            setStep(3);
+            setStep(4);
         } catch (error) {
             console.error("Error procesando pago:", error);
         } finally {
@@ -282,7 +286,7 @@ export default function CheckoutPageClient() {
     };
 
     // Carrito vacío
-    if (mounted && items.length === 0 && step !== 3) {
+    if (mounted && items.length === 0 && step !== 4) {
         return (
             <div className="fdm-check-root" style={ROOT_VARS}>
                 <style>{CHECKOUT_CSS}</style>
@@ -335,7 +339,8 @@ export default function CheckoutPageClient() {
               .fdm-check-grid > * { min-width: 0; }
               /* minmax(0,1fr): con 1fr el resumen ensanchaba la columna y el formulario se salía de la pantalla.
                  En celular el resumen va primero: se ve qué se está comprando antes de llenar datos. */
-              @media (max-width: 960px) { .fdm-check-grid { grid-template-columns: minmax(0,1fr); gap: 18px; } .fdm-check-grid > aside { position: static !important; order: -1; } }
+              @media (max-width: 960px) { .fdm-check-grid { grid-template-columns: minmax(0,1fr); gap: 18px; } .fdm-check-grid > aside { position: static !important; order: -1; } .fdm-sum-extra { display: none !important; } }
+              @media (max-width: 640px) { .fdm-check-head { padding: 14px 0 12px !important; margin-bottom: 16px !important; } .fdm-check-head h1 { font-size: 26px !important; } }
             `}</style>
             <main
                 className="fdm-check"
@@ -362,7 +367,7 @@ export default function CheckoutPageClient() {
                             <span aria-hidden>/</span>
                         </>
                     )}
-                    <span aria-current="page" style={{ color: mix(85) }}>{steps[step - 1]}</span>
+                    <span aria-current="page" style={{ color: mix(85) }}>{steps[step - 1] || "Confirmación"}</span>
                 </nav>
 
                 {/* Cabecera: un solo título y los pasos en línea */}
@@ -390,7 +395,7 @@ export default function CheckoutPageClient() {
                                 letterSpacing: "-0.025em",
                             }}
                         >
-                            {step === 3 ? "Listo." : step === 2 ? "Pago." : "Tus datos."}
+                            {step === 4 ? "Listo." : step === 3 ? "Pago." : step === 2 ? "Entrega." : "Tus datos."}
                         </h1>
                     </div>
                     <Stepper
@@ -398,41 +403,43 @@ export default function CheckoutPageClient() {
                         current={step}
                         lockForward
                         onStepChange={(next) => {
-                            if (next < step) setStep(next as 1 | 2 | 3);
+                            if (next < step && step < 4) setStep(next as 1 | 2);
                         }}
                     />
                 </header>
 
                 <div className="fdm-check-grid">
                     <div style={{ minWidth: 0 }}>
-                        {step === 1 && (
+                        {step <= 2 && (
                             <CheckoutPersonalForm
+                                part={step as 1 | 2}
+                                onBack={() => setStep(1)}
                                 cities={cities}
                                 loadingCities={loadingCities}
                                 isProcessing={isProcessing}
-                                onSubmit={handleSubmitInfo}
+                                onSubmit={step === 1 ? handleSubmit(() => setStep(2)) : handleSubmitInfo}
                                 register={register}
                                 control={control}
                                 errors={errors}
                             />
                         )}
 
-                        {step === 2 && currentOrder && (
+                        {step === 3 && currentOrder && (
                             <PaymentForm
                                 total={subtotal}
                                 isProcessing={isProcessing}
                                 onPay={handlePayment}
-                                onBack={() => setStep(1)}
+                                onBack={() => setStep(2)}
                                 orderId={currentOrder.id}
                             />
                         )}
 
-                        {step === 3 && (
+                        {step === 4 && (
                             <CheckoutConfirmation orderNumber={orderNumber} />
                         )}
                     </div>
 
-                    {step !== 3 && (
+                    {step !== 4 && (
                         <CheckoutOrderSummary
                             items={items}
                             total={subtotal}

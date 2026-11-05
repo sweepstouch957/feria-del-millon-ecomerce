@@ -124,6 +124,7 @@ export function CheckoutOrderSummary({ items, subtotal, total }: Props) {
         </div>
 
         <div
+          className="fdm-sum-extra"
           style={{
             display: "flex",
             alignItems: "baseline",
@@ -156,6 +157,7 @@ export function CheckoutOrderSummary({ items, subtotal, total }: Props) {
         </div>
 
         <ul
+          className="fdm-sum-extra"
           style={{
             margin: 0,
             padding: 0,

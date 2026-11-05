@@ -30,6 +30,9 @@ export type CheckoutFormData = {
 };
 
 type Props = {
+  /** 1 = datos personales, 2 = entrega. Una sección a la vez: menos scroll en celular. */
+  part: 1 | 2;
+  onBack?: () => void;
   cities: CityOption[];
   loadingCities: boolean;
   isProcessing: boolean;
@@ -71,6 +74,8 @@ export const FORM_CSS = `
   .fdm-f-btn:hover:not(:disabled) { background: #2E8A58; border-color: #2E8A58; }
   .fdm-f-btn:disabled { opacity: .45; cursor: not-allowed; }
   .fdm-f-note { margin: 0; font-size: 12.5px; color: var(--fg3); text-align: center; }
+  .fdm-f-back { background: none; border: 0; padding: 6px; color: var(--fg3); font: inherit; font-size: 14px; cursor: pointer; align-self: center; }
+  .fdm-f-back:hover { color: var(--acc); }
 `;
 
 function Field({ label, error, hint, children, className, required }: { label: string; error?: string; hint?: string; children: ReactNode; className?: string; required?: boolean }) {
@@ -86,7 +91,7 @@ function Field({ label, error, hint, children, className, required }: { label: s
   );
 }
 
-export function CheckoutPersonalForm({ cities, loadingCities, isProcessing, onSubmit, register, control, errors }: Props) {
+export function CheckoutPersonalForm({ part, onBack, cities, loadingCities, isProcessing, onSubmit, register, control, errors }: Props) {
   const handleZipChange = (e: ChangeEvent<HTMLInputElement>, originalOnChange: (event: ChangeEvent<HTMLInputElement>) => void) => {
     e.target.value = e.target.value.replace(/\D/g, "");
     originalOnChange(e);
@@ -102,11 +107,11 @@ export function CheckoutPersonalForm({ cities, loadingCities, isProcessing, onSu
     <form onSubmit={onSubmit} className="fdm-f" noValidate>
       <style>{FORM_CSS}</style>
 
-      <section className="fdm-f-sec">
+      {part === 1 && <section className="fdm-f-sec">
         <div className="fdm-f-h">
           <span className="fdm-f-n">1</span>
           <div>
-            <h2>Quién compra</h2>
+            <h2>Datos personales</h2>
             <p>Sin cuenta ni contraseña.</p>
           </div>
         </div>
@@ -147,9 +152,9 @@ export function CheckoutPersonalForm({ cities, loadingCities, isProcessing, onSu
             />
           </Field>
         </div>
-      </section>
+      </section>}
 
-      <section className="fdm-f-sec">
+      {part === 2 && <section className="fdm-f-sec">
         <div className="fdm-f-h">
           <span className="fdm-f-n">2</span>
           <div>
@@ -179,11 +184,16 @@ export function CheckoutPersonalForm({ cities, loadingCities, isProcessing, onSu
         <Field label="Notas para la entrega" hint="Opcional: horarios, portería, referencias.">
           <textarea {...register("notes")} rows={2} disabled={isProcessing} placeholder="Ej.: entregar en portería después de las 2 p.m." />
         </Field>
-      </section>
+      </section>}
 
       <button type="submit" className="fdm-f-btn" disabled={isProcessing}>
-        {isProcessing ? "Guardando…" : "Continuar al pago →"}
+        {isProcessing ? "Guardando…" : part === 1 ? "Continuar a la entrega →" : "Continuar al pago →"}
       </button>
+      {part === 2 && onBack && (
+        <button type="button" className="fdm-f-back" onClick={onBack} disabled={isProcessing}>
+          ← Volver a datos personales
+        </button>
+      )}
       <p className="fdm-f-note">Tus datos se guardan en este equipo por si recargas la página.</p>
     </form>
   );

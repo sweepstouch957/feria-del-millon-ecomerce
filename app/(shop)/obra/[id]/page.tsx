@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCatalogSalesPaused, useFairMode } from "@provider/siteConfigProvider";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
+import { useArtistProfile } from "@hooks/queries/useArtistProfile";
 import { mergeImages, pickSrc } from "@lib/utils";
 import { formatCOP } from "@lib/money";
 import Skeleton from "@components/ui/Skeleton";
@@ -117,6 +118,8 @@ export default function Page() {
   const related = data?.relatedArtworks ?? [];
 
   const images = useMemo(() => mergeImages(doc?.image, doc?.images), [doc?.image, doc?.images]);
+  // La foto que el artista eligió para su página (solicitud); la del usuario casi nunca está.
+  const { data: artistProfile } = useArtistProfile(doc?.artist ? String(doc.artist) : undefined);
 
   /* Carga: misma estructura que la vista real, así al llegar los datos nada salta. */
   if (isLoading) {
@@ -180,7 +183,7 @@ export default function Page() {
 
   const artistFullName =
     [doc.artistInfo?.firstName, doc.artistInfo?.lastName].filter(Boolean).join(" ") || "Artista";
-  const artistPhoto = pickSrc(doc.artistInfo?.image);
+  const artistPhoto = pickSrc(artistProfile?.photoUrl) || pickSrc(doc.artistInfo?.image);
   const artistHref = doc.artist ? `/artista/${encodeURIComponent(String(doc.artist))}` : "";
 
   const pavilionId = doc.pavilionInfo?._id ? String(doc.pavilionInfo._id) : "";

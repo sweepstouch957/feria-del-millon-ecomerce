@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Share2, QrCode, Pencil, Plus, Minus, RefreshCw, X, Expand } from "lucide-react";
-import type { ArtworkDetailResponse } from "@services/artworks.service";
+import { useQueryClient } from "@tanstack/react-query";
+import { patchArtwork, type ArtworkDetailResponse } from "@services/artworks.service";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { formatCOP } from "@lib/money";
 
@@ -72,7 +73,7 @@ export default function ArtworkDetailModal({
         ["Técnica", doc.techniqueInfo?.name || doc.technique || "—"],
         ["Dimensiones", (doc as any)?.dimensionsText || "—"],
         ["Año", doc.year || "—"],
-        ["Precio", <span style={{ fontVariantNumeric: "tabular-nums" }}>{money(doc.price, doc.currency)}</span>],
+        ["Precio", id ? <PriceEditor id={id} price={doc.price} currency={doc.currency} /> : money(doc.price, doc.currency)],
         [(doc as any)?.reproducible ? "Copias" : "Cantidad", typeof doc.stock === "number" ? doc.stock : "—"],
         ["Pabellón", doc.pavilionInfo?.name || "—"],
         ["Tag del sistema", (doc as any)?.tagId || "Se asigna con el QR"],
@@ -216,6 +217,73 @@ export default function ArtworkDetailModal({
         <ImagePreviewModal src={doc.image} alt={doc.title} onClose={() => setPreviewOpen(false)} />
       )}
     </>
+  );
+}
+
+/** El precio se puede corregir siempre, aunque la carga esté cerrada: así la web sale bien. */
+function PriceEditor({ id, price, currency }: { id: string; price?: number; currency?: string }) {
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const start = () => {
+    setValue(price ? String(price) : "");
+    setError("");
+    setEditing(true);
+  };
+  const save = async () => {
+    const n = Number(value.replace(/[^\d]/g, ""));
+    if (!n || n <= 0) return setError("Escribe un precio mayor que 0.");
+    setSaving(true);
+    setError("");
+    try {
+      await patchArtwork(id, { price: n });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["artwork-detail", id] }),
+        qc.invalidateQueries({ queryKey: ["artworks"] }),
+      ]);
+      setEditing(false);
+    } catch (e: any) {
+      setError(e?.response?.data?.error || "No se pudo guardar. Intenta de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const link: React.CSSProperties = { background: "none", border: 0, padding: 0, cursor: "pointer", color: mix(60), textDecoration: "underline", fontSize: 12.5 };
+
+  if (!editing) {
+    return (
+      <span style={{ display: "inline-flex", gap: 10, alignItems: "baseline", fontVariantNumeric: "tabular-nums" }}>
+        {money(price, currency)}
+        <button type="button" style={link} onClick={start}>Corregir</button>
+      </span>
+    );
+  }
+  return (
+    <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+      <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+        <input
+          inputMode="numeric"
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && save()}
+          aria-label="Nuevo precio"
+          style={{ width: 140, height: 32, padding: "0 8px", border: `1px solid ${mix(30)}`, background: "transparent", color: "inherit", fontSize: 14, textAlign: "right" }}
+        />
+        <button type="button" style={{ ...btnSolid, height: 32, padding: "0 12px" }} onClick={save} disabled={saving}>
+          {saving ? "Guardando…" : "Guardar"}
+        </button>
+        <button type="button" style={link} onClick={() => setEditing(false)} disabled={saving}>Cancelar</button>
+      </span>
+      {value && Number(value.replace(/[^\d]/g, "")) > 0 && (
+        <span style={{ fontSize: 12, color: mix(55) }}>{money(Number(value.replace(/[^\d]/g, "")), currency)}</span>
+      )}
+      {error && <span style={{ fontSize: 12, color: "#B3261E" }}>{error}</span>}
+    </span>
   );
 }
 

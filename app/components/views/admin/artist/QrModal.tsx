@@ -22,28 +22,19 @@ export default function QRModal({
   const enabled = Boolean(open && artworkId);
   const { data, isFetching } = useArtworkDetail(enabled ? artworkId! : undefined);
 
-  const { savedImg, savedTarget, title } = useMemo(() => {
-    const doc: any = data?.doc;
-    const qr = doc?.meta?.qrPublic || {};
-    return {
-      savedImg: qr.imageUrl as string | undefined,
-      savedTarget: qr.target as string | undefined,
-      title: (doc?.title as string) || "Obra",
-    };
-  }, [data]);
+  const title = useMemo(() => ((data?.doc as any)?.title as string) || "Obra", [data]);
 
-  // Obras sin QR guardado (falló el servicio al cargarlas): se genera aquí
-  // mismo hacia su ficha, igual que las etiquetas del panel.
-  const fallbackTarget = artworkId && typeof window !== "undefined" ? `${window.location.origin}/obra/${artworkId}` : "";
-  const [fallbackImg, setFallbackImg] = useState("");
+  // Siempre se genera aquí hacia la ficha en el dominio actual, igual que las
+  // etiquetas del panel: el QR guardado en la obra puede tener el dominio viejo.
+  const qrTarget = artworkId && typeof window !== "undefined" ? `${window.location.origin}/obra/${artworkId}` : "";
+  const [png, setPng] = useState("");
   useEffect(() => {
-    setFallbackImg("");
-    if (!open || savedImg || !fallbackTarget || !data) return;
-    QRCode.toDataURL(fallbackTarget, { width: 1024, margin: 2 }).then(setFallbackImg).catch(() => setFallbackImg(""));
-  }, [open, savedImg, fallbackTarget, data]);
+    setPng("");
+    if (!open || !qrTarget) return;
+    QRCode.toDataURL(qrTarget, { width: 1024, margin: 2 }).then(setPng).catch(() => setPng(""));
+  }, [open, qrTarget]);
 
-  const qrImg = savedImg || fallbackImg || undefined;
-  const qrTarget = savedImg ? savedTarget : fallbackTarget || undefined;
+  const qrImg = png || undefined;
 
   const downloadQr = async () => {
     if (!qrImg) return;

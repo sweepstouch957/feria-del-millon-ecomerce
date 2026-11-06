@@ -13,6 +13,7 @@ import SmartImage from "@components/ui/SmartImage";
 import Skeleton from "@components/ui/Skeleton";
 import { formatCOP } from "@lib/money";
 import { pickSrc } from "@lib/utils";
+import { photoPosition } from "@services/applications.service";
 
 /* ──────────────────────────────────────────────────────────────
    Perfil de artista — mismo sistema que /obra/[id] (tarjetas con
@@ -166,7 +167,14 @@ export default function ArtistPage() {
       <motion.header className="fdm-art-hero" {...rise}>
         <span className="fdm-art-photo">
           {photo ? (
-            <SmartImage src={photo} alt={portrait ? name : `Obra de ${name}`} fit="cover" sizes="170px" priority />
+            <SmartImage
+              src={photo}
+              alt={portrait ? name : `Obra de ${name}`}
+              fit="cover"
+              sizes="170px"
+              priority
+              style={portrait ? { objectPosition: photoPosition(profile?.photoY) } : undefined}
+            />
           ) : (
             <span style={{ display: "grid", placeItems: "center", width: "100%", height: "100%", fontWeight: 500, fontSize: "clamp(32px,4vw,52px)", color: "var(--fg3)" }}>
               {initials}

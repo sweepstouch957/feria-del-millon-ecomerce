@@ -48,6 +48,8 @@ export interface MyProject {
   projectReview: string;
   bio?: string;
   profilePhotoUrl?: string;
+  /** Encuadre vertical de la foto en el círculo: 0 arriba, 100 abajo. */
+  profilePhotoY?: number | null;
   inventorySentAt?: string | null;
 }
 
@@ -126,7 +128,11 @@ export interface PublicArtistProfile {
   projectTitle?: string;
   projectReview: string;
   photoUrl: string;
+  photoY?: number | null;
 }
+
+/** Encuadre de la foto de perfil: sin ajuste, un poco arriba del centro (ahí suele ir la cara). */
+export const photoPosition = (y?: number | null) => `50% ${y ?? 25}%`;
 
 export const getPublicArtistProfile = async (
   artistId: string

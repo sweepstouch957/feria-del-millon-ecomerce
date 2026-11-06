@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import QRCode from "qrcode";
 import { Download, ExternalLink } from "lucide-react";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
 
@@ -21,15 +22,28 @@ export default function QRModal({
   const enabled = Boolean(open && artworkId);
   const { data, isFetching } = useArtworkDetail(enabled ? artworkId! : undefined);
 
-  const { qrImg, qrTarget, title } = useMemo(() => {
+  const { savedImg, savedTarget, title } = useMemo(() => {
     const doc: any = data?.doc;
     const qr = doc?.meta?.qrPublic || {};
     return {
-      qrImg: qr.imageUrl as string | undefined,
-      qrTarget: qr.target as string | undefined,
+      savedImg: qr.imageUrl as string | undefined,
+      savedTarget: qr.target as string | undefined,
       title: (doc?.title as string) || "Obra",
     };
   }, [data]);
+
+  // Obras sin QR guardado (falló el servicio al cargarlas): se genera aquí
+  // mismo hacia su ficha, igual que las etiquetas del panel.
+  const fallbackTarget = artworkId && typeof window !== "undefined" ? `${window.location.origin}/obra/${artworkId}` : "";
+  const [fallbackImg, setFallbackImg] = useState("");
+  useEffect(() => {
+    setFallbackImg("");
+    if (!open || savedImg || !fallbackTarget || !data) return;
+    QRCode.toDataURL(fallbackTarget, { width: 1024, margin: 2 }).then(setFallbackImg).catch(() => setFallbackImg(""));
+  }, [open, savedImg, fallbackTarget, data]);
+
+  const qrImg = savedImg || fallbackImg || undefined;
+  const qrTarget = savedImg ? savedTarget : fallbackTarget || undefined;
 
   const downloadQr = async () => {
     if (!qrImg) return;
@@ -79,7 +93,7 @@ export default function QRModal({
             border: `1px solid ${mix(14)}`,
           }}
         >
-          <Image src={qrImg} alt={`Código QR de ${title}`} fill style={{ objectFit: "contain", padding: 18 }} />
+          <Image src={qrImg} alt={`Código QR de ${title}`} fill unoptimized={qrImg.startsWith("data:")} style={{ objectFit: "contain", padding: 18 }} />
         </div>
       ) : (
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.6, color: mix(70) }}>

@@ -307,9 +307,10 @@ export default function Page() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div className="fdm-obra-actions" style={{ display: "flex" }}>{buyButton}</div>
-              {/* Fuera de .fdm-obra-actions: también se ve en celular (ahí la compra en línea va en la barra fija). */}
-              {inStock && <CajaQrButton id={String(doc._id)} title={doc.title} price={formatCOP(doc.price, { currency })} />}
+              <div className="fdm-obra-actions" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {buyButton}
+                {inStock && <CajaQrButton id={String(doc._id)} title={doc.title} price={formatCOP(doc.price, { currency })} />}
+              </div>
               {/* El aviso de la pausa se ve también en celular (ahí el botón va en la barra fija). */}
               {salesPaused && inStock && (
                 <p style={{ margin: 0, padding: "12px 14px", borderRadius: 12, background: "var(--card)", border: "1px solid var(--line)", fontSize: 13.5, lineHeight: 1.5, color: "var(--fg2)" }}>
@@ -409,6 +410,7 @@ export default function Page() {
           <span style={{ fontSize: 18, fontWeight: 600, whiteSpace: "nowrap" }}>{formatCOP(doc.price, { currency })}</span>
           <span style={{ fontSize: 11, color: inStock ? "var(--acc)" : "var(--fg3)", marginTop: 3 }}>{statusText}</span>
         </div>
+        {inStock && <CajaQrButton compact id={String(doc._id)} title={doc.title} price={formatCOP(doc.price, { currency })} />}
         {buyButton}
       </div>
     </Root>

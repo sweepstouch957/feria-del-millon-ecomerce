@@ -312,6 +312,10 @@ export default function Page() {
                   {salesPausedMsg}
                 </p>
               )}
+              {/* Ventas que no quedaron registradas (caja sin orden): el comprador lo reporta. */}
+              <Link href={`/reclamo?obra=${encodeURIComponent(String(doc._id))}`} className="fdm-obra-link" style={{ fontSize: 13, color: "var(--fg3)" }}>
+                ¿Ya compró esta obra y no tiene confirmación?
+              </Link>
             </div>
 
             {specs.length > 0 && (

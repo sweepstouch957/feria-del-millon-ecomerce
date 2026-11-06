@@ -253,3 +253,14 @@ export const confirmDelivery = async (
     const { data } = await apiClient.post(`/order/orders/delivery/${encodeURIComponent(token)}`, body);
     return data;
 };
+
+/** Reclamo de venta perdida: "compré esta obra y no tengo confirmación". Público. */
+export type ClaimMethod = "efectivo" | "datafono" | "transferencia" | "en_linea" | "otro";
+export const createSaleClaim = async (body: {
+    name: string; email: string; phone: string; document?: string; address?: string;
+    artwork: string; purchasedOn: string; method: ClaimMethod; amount?: string;
+    voucher?: string; seller?: string; note?: string;
+}): Promise<{ ok: boolean; id: string; alreadyRegistered: boolean }> => {
+    const { data } = await apiClient.post("/order/orders/claims", body);
+    return data;
+};

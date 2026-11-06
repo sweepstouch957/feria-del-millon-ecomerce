@@ -38,6 +38,9 @@ export default function PaymentForm({
 }: PaymentFormProps) {
   // solo usamos estos 2 métodos: mercado_pago | whatsapp
   const [method, setMethod] = useState<PaymentMethod>("mercadopago");
+  // Rechazo o falla de Mercado Pago: queda en pantalla (un toast se va y el
+  // comprador no sabe si la obra quedó suya). null = sin problema.
+  const [failure, setFailure] = useState<{ title: string; reason: string } | null>(null);
 
   // ────────────────────────────────────────────────────────────────────────────
   // Mercado Pago Brick (NO lo quitamos, solo le metemos toasts)
@@ -81,9 +84,10 @@ export default function PaymentForm({
             },
             onError: (error: any) => {
               console.error("Error en Brick de Mercado Pago:", error);
-              toast.error(
-                "Hubo un error cargando el formulario de Mercado Pago."
-              );
+              setFailure({
+                title: "No pudimos cargar el pago con tarjeta",
+                reason: "Mercado Pago no respondió. Puedes recargar la página o terminar la compra con un asesor por WhatsApp.",
+              });
             },
             onSubmit: async (cardFormData: any) => {
               const {
@@ -96,6 +100,7 @@ export default function PaymentForm({
               const issuerId = cardFormData.issuer_id ?? cardFormData.issuerId;
 
               const loadingId = toast.loading("Procesando pago...");
+              setFailure(null);
 
               try {
                 const res = await chargeMercadoPagoCard({
@@ -117,9 +122,7 @@ export default function PaymentForm({
                   onPay({ method: "mercadopago" as PaymentMethod });
                 } else {
                   console.error("Pago no aprobado:", res);
-                  toast.error(
-                    "No se pudo aprobar el pago. Revisa los datos o intenta con otra tarjeta."
-                  );
+                  setFailure({ title: "Tu pago no fue aprobado", reason: "Revisa los datos o intenta con otra tarjeta." });
                 }
               } catch (err: any) {
                 console.error("Error cobrando con Mercado Pago:", err);
@@ -127,13 +130,17 @@ export default function PaymentForm({
                 // El backend explica el motivo: rechazo de la tarjeta (400), en
                 // proceso / se vendió (409) o el error de Mercado Pago (500).
                 const data = err?.response?.data;
-                toast.error(
+                const reason =
                   data?.message ||
-                    (data?.detail?.message ? `Mercado Pago: ${data.detail.message}` : "") ||
-                    "Ocurrió un error procesando el pago. Intenta de nuevo.",
-                  { duration: 8000 }
-                );
+                  (data?.detail?.message ? `Mercado Pago: ${data.detail.message}` : "") ||
+                  "Ocurrió un error procesando el pago.";
+                setFailure({
+                  title: data?.error === "sin_stock" ? "Esta obra ya se vendió" : "Tu pago no fue aprobado",
+                  reason,
+                });
               }
+              // Que el comprador vea el recuadro (ya pintado), no el formulario.
+              setTimeout(() => document.getElementById("mp-pay-failure")?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
             },
           },
         });
@@ -188,7 +195,39 @@ export default function PaymentForm({
         </span>
       </div>
 
-      <PaymentMethodSelector method={method} onChange={setMethod} />
+      <PaymentMethodSelector method={method} onChange={(m) => { setFailure(null); setMethod(m); }} />
+
+      {failure && method === "mercadopago" && (
+        <div id="mp-pay-failure" role="alert" style={{ border: "2px solid #B42318", background: "#FEF3F2", color: "#0B0B0A", borderRadius: 14, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <b style={{ fontSize: 16 }}>{failure.title}</b>
+          <span style={{ fontSize: 14.5, lineHeight: 1.55 }}>
+            <b>La obra no quedó comprada y no se hizo ningún cobro.</b> {failure.reason}
+          </span>
+          {failure.title !== "Esta obra ya se vendió" && (
+            <span style={{ fontSize: 14, lineHeight: 1.55 }}>
+              Las compras de valor alto a veces las rechaza el banco o Mercado Pago por seguridad. Puedes intentar con otra
+              tarjeta aquí abajo o terminar la compra con un asesor de la feria.
+            </span>
+          )}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 4 }}>
+            <button
+              type="button"
+              className="fdm-btn"
+              style={{ flex: "1 1 200px" }}
+              onClick={() => {
+                const text = encodeURIComponent(`Hola, quiero comprar una obra en la Feria del Millón por ${formatMoney(total)}. Mercado Pago no aprobó mi pago. Pedido: ${orderId}`);
+                window.open(`https://api.whatsapp.com/send/?phone=573007485406&text=${text}`, "_blank");
+              }}
+            >
+              Comprar con un asesor (WhatsApp)
+            </button>
+            <button type="button" className="fdm-btn is-ghost" style={{ flex: "1 1 200px" }}
+              onClick={() => { setFailure(null); document.getElementById("mp-card-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>
+              Intentar con otra tarjeta
+            </button>
+          </div>
+        </div>
+      )}
 
       {method === "whatsapp" ? (
         <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: mix(75), maxWidth: "60ch" }}>

@@ -215,6 +215,12 @@ export const setArtistItemDelivery = async (
   return data.item;
 };
 
+/** Estado de la orden (público): para esperar el resultado final de un pago "en revisión". */
+export const getOrderPayStatus = async (orderId: string): Promise<string> => {
+    const { data } = await apiClient.get<{ status: string }>(`/order/orders/${encodeURIComponent(orderId)}/pay-status`);
+    return data?.status || "";
+};
+
 /** Llave pública de Mercado Pago: la del build (NEXT_PUBLIC_MP_PUBLIC_KEY) o,
  *  si no está, la que sirve payments-svc (MERCADOPAGO_PUBLIC_KEY en Railway). */
 let mpKeyCache: string | null = null;

@@ -13,7 +13,7 @@ import LegalDisclaimer from "@components/LegalDisclaimer";
 import {
   PaymentMethodSelector,
 } from "./PaymentMethodSelector";
-import { chargeMercadoPagoCard, getMpPublicKey } from "@services/order.service";
+import { chargeMercadoPagoCard, getMpPublicKey, getOrderPayStatus } from "@services/order.service";
 import toast from "react-hot-toast";
 
 export type PaymentFormPayload = {
@@ -41,6 +41,10 @@ export default function PaymentForm({
   // Rechazo o falla de Mercado Pago: queda en pantalla (un toast se va y el
   // comprador no sabe si la obra quedó suya). null = sin problema.
   const [failure, setFailure] = useState<{ title: string; reason: string } | null>(null);
+  // Pago "en revisión": Mercado Pago responde pending y decide segundos o minutos
+  // después (a veces rechaza). No se muestra "gracias" hasta saber. "slow" = pasó
+  // el tiempo de espera y sigue sin respuesta.
+  const [review, setReview] = useState<null | "waiting" | "slow">(null);
 
   // ────────────────────────────────────────────────────────────────────────────
   // Mercado Pago Brick (NO lo quitamos, solo le metemos toasts)
@@ -118,8 +122,28 @@ export default function PaymentForm({
                   toast.success(<span>Pago aprobado <Check size={16} style={{ verticalAlign: "-2px" }} /></span>);
                   onPay({ method: "mercadopago" as PaymentMethod });
                 } else if (res.ok && res.status === "pending") {
-                  toast("Tu pago está en revisión…", { icon: <Hourglass size={16} /> });
-                  onPay({ method: "mercadopago" as PaymentMethod });
+                  // Espera el veredicto real (el webhook de MP actualiza la orden).
+                  setReview("waiting");
+                  setTimeout(() => document.getElementById("mp-pay-review")?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+                  // ponytail: polling cada 4 s por 3 min; webhook típico tarda < 1 min.
+                  for (let i = 0; i < 45; i++) {
+                    await new Promise((r) => setTimeout(r, 4000));
+                    const st = await getOrderPayStatus(orderId).catch(() => "");
+                    if (st === "paid") {
+                      setReview(null);
+                      toast.success(<span>Pago aprobado <Check size={16} style={{ verticalAlign: "-2px" }} /></span>);
+                      onPay({ method: "mercadopago" as PaymentMethod });
+                      return;
+                    }
+                    if (st === "failed" || st === "canceled") {
+                      setReview(null);
+                      setFailure({ title: "Tu pago no fue aprobado", reason: "Mercado Pago revisó el pago y lo rechazó." });
+                      setTimeout(() => document.getElementById("mp-pay-failure")?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+                      return;
+                    }
+                  }
+                  setReview("slow");
+                  return;
                 } else {
                   console.error("Pago no aprobado:", res);
                   setFailure({ title: "Tu pago no fue aprobado", reason: "Revisa los datos o intenta con otra tarjeta." });
@@ -229,12 +253,35 @@ export default function PaymentForm({
         </div>
       )}
 
+      {review && method === "mercadopago" && (
+        <div id="mp-pay-review" role="status" style={{ border: "2px solid #B54708", background: "#FFFAEB", color: "#0B0B0A", borderRadius: 14, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <b style={{ fontSize: 16, display: "flex", alignItems: "center", gap: 8 }}>
+            <Hourglass size={18} /> {review === "waiting" ? "Estamos confirmando tu pago…" : "Tu pago sigue en revisión"}
+          </b>
+          <span style={{ fontSize: 14.5, lineHeight: 1.55 }}>
+            {review === "waiting"
+              ? <>Mercado Pago está revisando el pago. Puede tardar hasta un par de minutos: <b>no cierres esta página ni vuelvas a pagar</b>.</>
+              : <>Mercado Pago todavía no responde. <b>No vuelvas a pagar.</b> Si lo aprueba, la obra queda tuya y te llega la confirmación al correo. Si lo rechaza, no se hace ningún cobro.</>}
+          </span>
+          {review === "slow" && (
+            <button type="button" className="fdm-btn" style={{ alignSelf: "flex-start" }}
+              onClick={() => {
+                const text = encodeURIComponent(`Hola, mi pago de ${formatMoney(total)} en la Feria del Millón quedó en revisión. Pedido: ${orderId}`);
+                window.open(`https://api.whatsapp.com/send/?phone=573007485406&text=${text}`, "_blank");
+              }}>
+              Preguntar a un asesor (WhatsApp)
+            </button>
+          )}
+        </div>
+      )}
+
       {method === "whatsapp" ? (
         <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.6, color: mix(75), maxWidth: "60ch" }}>
           Te llevamos a WhatsApp para coordinar el pago con un asesor de la Feria del Millón. La obra queda tuya cuando el asesor confirme el pago; hasta entonces alguien más podría comprarla.
         </p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        // En revisión se oculta (no desmonta) el formulario: que no paguen dos veces.
+        <div style={{ display: review ? "none" : "flex", flexDirection: "column", gap: 8 }}>
           <span style={{ fontSize: 13, fontWeight: 500, color: "var(--fg2)" }}>Datos de la tarjeta · Mercado Pago</span>
           {/* Contenedor donde se renderiza el Brick de Mercado Pago (min-height: no salta al cargar). */}
           <div id="mp-card-form" style={{ border: "1px solid var(--line2)", borderRadius: 14, padding: 12, background: "#fff", color: "#0B0B0A", minHeight: 320 }} />

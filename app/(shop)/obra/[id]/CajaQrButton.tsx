@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 
 /* "Comprar en caja": QR grande de la obra para que la cajera lo escanee
@@ -34,7 +35,8 @@ export default function CajaQrButton({ id, title, price, compact = false }: { id
         {compact ? "En caja" : "Comprar en caja"}
       </button>
 
-      {open && (
+      {/* Portal: la barra fija tiene backdrop-filter, que vuelve "fixed" relativo a ella. */}
+      {open && createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -67,7 +69,8 @@ export default function CajaQrButton({ id, title, price, compact = false }: { id
               Cerrar
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

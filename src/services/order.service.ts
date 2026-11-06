@@ -226,3 +226,30 @@ export const getMpPublicKey = async (): Promise<string> => {
     mpKeyCache = data?.publicKey || "";
     return mpKeyCache;
 };
+
+/* ── Confirmar dirección de entrega (llega del correo con un token) ── */
+export interface DeliveryView {
+    name: string;
+    email: string;
+    phone: string;
+    address: { line1?: string; line2?: string } | null;
+    cityId: string;
+    cityName: string;
+    confirmedAt: string | null;
+    total: number;
+    refs: string[];
+    items: { title: string; image: string; artist: string; technique: string; dimensions: string; qty: number; price: number }[];
+}
+
+export const getDelivery = async (token: string): Promise<DeliveryView> => {
+    const { data } = await apiClient.get<DeliveryView>(`/order/orders/delivery/${encodeURIComponent(token)}`);
+    return data;
+};
+
+export const confirmDelivery = async (
+    token: string,
+    body: { line1: string; line2: string; cityId: string; phone: string }
+): Promise<{ ok: boolean }> => {
+    const { data } = await apiClient.post(`/order/orders/delivery/${encodeURIComponent(token)}`, body);
+    return data;
+};

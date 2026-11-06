@@ -47,3 +47,5 @@ export const useCatalogSalesPaused = () => {
 };
 /** Modo feria (switch del panel): sin catálogo ni carrito; se compra una obra a la vez desde su QR. */
 export const useFairMode = () => !!useContext(SiteConfigCtx).landing.catalogSales?.fairMode;
+/** Enlace "¿Ya compró esta obra…?" (reclamo de venta perdida). Apagado salvo que el panel lo encienda. */
+export const useClaimLink = () => !!useContext(SiteConfigCtx).landing.catalogSales?.claimLink;

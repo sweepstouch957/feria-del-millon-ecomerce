@@ -65,7 +65,7 @@ export interface LandingConfig {
   showPrices: boolean;
   priceLabel: string;
   /** Congelamiento de la venta en línea (días de feria: solo compra presencial). Fechas YYYY-MM-DD, inclusive, hora Bogotá. */
-  catalogSales: { pausedFrom: string; pausedTo: string; message: string; fairMode?: boolean };
+  catalogSales: { pausedFrom: string; pausedTo: string; message: string; fairMode?: boolean; claimLink?: boolean };
   convocatoriaPage: ConvocatoriaPage;
   linktree: LinktreeConfig;
 }

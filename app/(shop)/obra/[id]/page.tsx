@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useCatalogSalesPaused, useFairMode } from "@provider/siteConfigProvider";
+import { useCatalogSalesPaused, useClaimLink, useFairMode } from "@provider/siteConfigProvider";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
 import { useArtistProfile } from "@hooks/queries/useArtistProfile";
 import { mergeImages, pickSrc } from "@lib/utils";
@@ -104,6 +104,7 @@ export default function Page() {
   const { paused: salesPaused, message: salesPausedMsg } = useCatalogSalesPaused();
   // Modo feria: se llega por el QR de la obra; se compra solo esta, sin carrito ni catálogo.
   const fairMode = useFairMode();
+  const claimLink = useClaimLink();
   const reduce = useReducedMotion();
   const rise = reduce
     ? {}
@@ -313,9 +314,11 @@ export default function Page() {
                 </p>
               )}
               {/* Ventas que no quedaron registradas (caja sin orden): el comprador lo reporta. */}
-              <Link href={`/reclamo?obra=${encodeURIComponent(String(doc._id))}`} className="fdm-obra-link" style={{ fontSize: 13, color: "var(--fg3)" }}>
-                ¿Ya compró esta obra y no tiene confirmación?
-              </Link>
+              {claimLink && (
+                <Link href={`/reclamo?obra=${encodeURIComponent(String(doc._id))}`} className="fdm-obra-link" style={{ fontSize: 13, color: "var(--fg3)" }}>
+                  ¿Ya compró esta obra y no tiene confirmación?
+                </Link>
+              )}
             </div>
 
             {specs.length > 0 && (

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { getMyApplications, type ArtistApplication } from "@services/applications.service";
 import Skeleton from "@components/ui/Skeleton";
+import { useInFairPavilion } from "@hooks/queries/usePavilionsByUser";
 
 /* Estado de la postulación del artista: en qué paso va, qué falta y qué
    puede hacer ahora. Los estados salen del modelo ArtistApplication. */
@@ -27,7 +28,19 @@ const STEPS: Step[] = [
 ];
 
 /** Traduce el estado del backend a: paso actual, tono y qué hacer ahora. */
-function readStatus(app: ArtistApplication | null) {
+function readStatus(app: ArtistApplication | null, inPavilion = false) {
+  // Ya tiene pabellón: está dentro, quede como quede la postulación (a varios
+  // los metieron a mano con la postulación en borrador).
+  if (inPavilion && app?.status !== "accepted" && !app?.invited) {
+    return {
+      current: 3,
+      title: "¡Estás dentro!",
+      detail: "Ya tienes pabellón en la feria. Tus obras y entregas están en tu estudio.",
+      tone: "ok" as const,
+      cta: { href: "/admin/artist", label: "Ir a mi estudio" },
+      done: true,
+    };
+  }
   // El invitado no pasó por convocatoria: no hay pago pendiente ni curaduría
   // esperándolo, y ofrecerle "pagar inscripción" es pedirle plata de más.
   if (app?.invited) {
@@ -147,6 +160,7 @@ export default function ApplicationStatusCard() {
     staleTime: 60_000,
     retry: false,
   });
+  const inPavilion = useInFairPavilion();
 
   if (isLoading) {
     return (
@@ -164,7 +178,7 @@ export default function ApplicationStatusCard() {
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   )[0] ?? null;
 
-  const s = readStatus(app);
+  const s = readStatus(app, inPavilion);
   const accent = TONE[s.tone];
 
   return (

@@ -10,6 +10,7 @@ import ApplicationStatusCard from "@components/views/admin/artist/ApplicationSta
 import { useArtistOrders, useSetItemDelivery } from "@hooks/queries/useArtistOrders";
 import type { ArtistOrder, ArtistOrderAddress } from "@services/order.service";
 import Skeleton from "@components/ui/Skeleton";
+import { useInFairPavilion } from "@hooks/queries/usePavilionsByUser";
 import { formatCOP } from "@lib/money";
 
 /* Agenda de entregas del artista: quién compró, a dónde va y en qué estado.
@@ -53,7 +54,7 @@ function formatDate(iso?: string) {
   }
 }
 
-export default function ArtistOrders() {
+export default function ArtistOrders({ inFair = false }: { inFair?: boolean }) {
   // Las entregas solo existen si el artista ya está en la feria. Antes de eso
   // lo útil no es un listado vacío (ni un error de red), sino en qué punto va
   // su postulación y qué le toca hacer.
@@ -65,7 +66,9 @@ export default function ArtistOrders() {
   });
 
   // El invitado está dentro por invitación: no hay postulación que esperar.
-  const isAccepted = (apps ?? []).some((a) => a.status === "accepted" || a.invited);
+  // inFair: el estudio ya decidió que está dentro (pabellón u obras cargadas).
+  const inPavilion = useInFairPavilion();
+  const isAccepted = inFair || inPavilion || (apps ?? []).some((a) => a.status === "accepted" || a.invited);
 
   const {
     data: orders = [],

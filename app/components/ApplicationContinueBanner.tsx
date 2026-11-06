@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@provider/authProvider";
+import { useInFairPavilion } from "@hooks/queries/usePavilionsByUser";
 import {
   getMyApplications,
   type ArtistApplication,
@@ -233,6 +234,9 @@ const BANNER_CSS = `
 
 export function ApplicationContinueBanner() {
   const { isAuthenticated, isAuthLoading } = useAuth();
+  // Estar en un pabellón ya es estar dentro, aunque la postulación haya
+  // quedado en borrador (a varios los metieron a mano sin aceptarla).
+  const inPavilion = useInFairPavilion();
   const pathname = usePathname();
   const [dismissed, setDismissed] = useState(false);
 
@@ -268,7 +272,9 @@ export function ApplicationContinueBanner() {
      invitado— no se le puede seguir pidiendo que pague una inscripción. El
      banner agarraba la primera postulación accionable de la lista, así que un
      borrador viejo sin pagar lo perseguía por todo el sitio. */
-  const alreadyIn = (apps ?? []).some((a) => a.invited || a.status === "accepted");
+  const alreadyIn =
+    inPavilion ||
+    (apps ?? []).some((a) => a.invited || a.status === "accepted");
 
   let info: ActionableInfo | null = null;
   if (!onHiddenPath && !dismissed && isAuthenticated && !isAuthLoading && apps && !alreadyIn) {

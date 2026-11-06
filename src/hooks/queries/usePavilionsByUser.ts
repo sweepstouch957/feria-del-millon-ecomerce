@@ -3,6 +3,8 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@provider/authProvider";
+import { useEventId } from "@provider/editionProvider";
 import {
   listPavilionsByUser,
   type ListPavilionsByUserResponse,
@@ -79,4 +81,15 @@ export function usePavilionsByUser(
     },
     select: selectPavilions,
   });
+}
+
+/** ¿El usuario logueado tiene pabellón en la edición actual? Estar en uno es
+ *  estar dentro de la feria, aunque su postulación haya quedado en borrador.
+ *  Misma queryKey que usa el estudio, así que comparte caché. */
+export function useInFairPavilion(): boolean {
+  const { user, isAuthenticated } = useAuth();
+  const eventId = useEventId();
+  const userId = isAuthenticated ? ((user as any)?.id || (user as any)?._id) : undefined;
+  const { data } = usePavilionsByUser(eventId, userId, true);
+  return (data?.rows?.length ?? 0) > 0;
 }

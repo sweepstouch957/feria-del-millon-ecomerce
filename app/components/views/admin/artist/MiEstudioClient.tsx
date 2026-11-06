@@ -364,7 +364,13 @@ export default function MiEstudioClient() {
     );
   }
 
-  const isApproved = isInvited || apps.some((app) => app.status === "accepted");
+  // Si ya tiene obras cargadas en la feria, está dentro aunque su postulación
+  // haya quedado en borrador o la consulta de pabellones haya fallado.
+  const isApproved =
+    isInvited || rows.length > 0 || apps.some((app) => app.status === "accepted");
+  if (!isApproved && artworksQuery.isLoading) {
+    return <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "70vh" }} />;
+  }
   if (!isApproved && !appsLoading) {
     return (
       <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "60vh" }}>
@@ -667,7 +673,7 @@ export default function MiEstudioClient() {
                 Quién compró una obra tuya, a dónde va y qué falta por entregar.
               </p>
             </div>
-            <ArtistOrders />
+            <ArtistOrders inFair />
           </div>
         )}
       </div>

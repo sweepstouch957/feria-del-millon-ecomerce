@@ -411,7 +411,10 @@ export default function Page() {
           <span style={{ fontSize: 11, color: inStock ? "var(--acc)" : "var(--fg3)", marginTop: 3 }}>{statusText}</span>
         </div>
         {inStock && <CajaQrButton compact id={String(doc._id)} title={doc.title} price={formatCOP(doc.price, { currency })} />}
-        {buyButton}
+        {/* Al lado de "En caja": la otra opción es "En línea". */}
+        <button type="button" className="fdm-obra-buy" onClick={handleBuyNow} disabled={!isAvailable}>
+          {isAvailable ? "En línea" : buyLabel}
+        </button>
       </div>
     </Root>
   );

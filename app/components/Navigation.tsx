@@ -176,7 +176,7 @@ export default function Navigation() {
           {/* Auth (desktop) */}
           <div className="fdm-desk-only" style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {!isAuthLoading && !isAuthenticated && (
-              <Link href="/login" className="fdm-link" style={{ ...ticketPill, background: "transparent", color: FG, border: `1px solid color-mix(in srgb, ${FG} 40%, transparent)` }}>Acceder</Link>
+              <Link href="/login" className="fdm-link" style={{ ...ticketPill, background: "transparent", color: FG, border: `1px solid color-mix(in srgb, ${FG} 40%, transparent)` }}>Acceso artistas</Link>
             )}
             {!isAuthLoading && isAuthenticated && isArtist && (
               <Link href="/admin/artist" style={{ ...ticketPill, background: GREEN, color: "#0B0B0A" }}>Mi estudio</Link>
@@ -247,7 +247,7 @@ export default function Navigation() {
           {!isAuthLoading && (isArtist && isAuthenticated ? (
             <Link href="/admin/artist" onClick={() => setIsMenuOpen(false)} style={{ ...ticketPill, width: "100%", justifyContent: "center", height: 48, marginBottom: 10, background: GREEN, color: "#0B0B0A" }}>Mi estudio</Link>
           ) : !isAuthenticated ? (
-            <Link href="/login" onClick={() => setIsMenuOpen(false)} style={{ ...ticketPill, width: "100%", justifyContent: "center", height: 48, marginBottom: 10, background: "transparent", color: FG, border: `1px solid color-mix(in srgb, ${FG} 40%, transparent)` }}>Acceder · artistas y compradores</Link>
+            <Link href="/login" onClick={() => setIsMenuOpen(false)} style={{ ...ticketPill, width: "100%", justifyContent: "center", height: 48, marginBottom: 10, background: "transparent", color: FG, border: `1px solid color-mix(in srgb, ${FG} 40%, transparent)` }}>Acceso artistas</Link>
           ) : null)}
           <div style={{ display: "flex", flexDirection: "column" }}>
             {items.map((it, idx) =>
@@ -271,7 +271,6 @@ export default function Navigation() {
           </div>
           {!isAuthLoading && !isAuthenticated && (
             <div style={{ display: "flex", gap: 18, marginTop: 14 }}>
-              <Link href="/login" onClick={() => setIsMenuOpen(false)} className="fdm-link" style={{ fontFamily: JOST, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>Acceder</Link>
               <a href={social?.instagram || "https://www.instagram.com/feriadelmillon/"} className="fdm-link" style={{ fontFamily: JOST, fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>Instagram</a>
             </div>
           )}

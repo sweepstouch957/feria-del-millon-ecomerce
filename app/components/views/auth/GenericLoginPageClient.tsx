@@ -100,13 +100,17 @@ export default function GenericLoginPageClient() {
   const search = useSearchParams();
   const { login } = useAuth();
 
+  // ponytail: login de compradores apagado por ahora; solo artistas. Para
+  // volver a abrirlo, poner BUYER_LOGIN_ENABLED = true (vuelven las pestañas).
+  const BUYER_LOGIN_ENABLED = false;
   const roleParam = (search.get("role") || "buyer").toLowerCase() as Role;
-  const [role, setRole] = useState<Role>(
-    (["artist", "buyer"] as const).includes(roleParam) ? roleParam : "buyer"
-  );
+  const pickRole = (r: Role): Role =>
+    !BUYER_LOGIN_ENABLED ? "artist" : (["artist", "buyer"] as const).includes(r) ? r : "buyer";
+  const [role, setRole] = useState<Role>(pickRole(roleParam));
 
   useEffect(() => {
-    setRole((["artist", "buyer"] as const).includes(roleParam) ? roleParam : "buyer");
+    setRole(pickRole(roleParam));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleParam]);
 
   const isArtist = role === "artist";
@@ -347,7 +351,7 @@ export default function GenericLoginPageClient() {
             style={{ width: "100%", maxWidth: 440, display: "flex", flexDirection: "column" }}
           >
             {/* Pestañas de rol */}
-            <div
+            {BUYER_LOGIN_ENABLED && <div
               style={{
                 display: "flex",
                 gap: 26,
@@ -380,7 +384,7 @@ export default function GenericLoginPageClient() {
                   </Link>
                 );
               })}
-            </div>
+            </div>}
 
             <h2
               style={{

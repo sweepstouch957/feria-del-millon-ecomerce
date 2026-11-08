@@ -6,7 +6,6 @@ import { AlertCircle, Check } from "lucide-react";
 import type { ArtworkRow } from "@hooks/queries/useArtworksCursor";
 import { formatCOP } from "@lib/money";
 import { missingFields } from "@lib/artwork";
-import InventoryQrCards from "./InventoryQrCards";
 import { BODY, EYEBROW, hair, mix } from "./studioTheme";
 import { Eyebrow, StudioButton } from "./ui";
 
@@ -32,6 +31,7 @@ export default function ReviewPanel({
   artistId,
   sentAt,
   onFix,
+  onGoQr,
 }: {
   rows: ArtworkRow[];
   projectTitle: string;
@@ -40,6 +40,7 @@ export default function ReviewPanel({
   artistId: string;
   sentAt?: string;
   onFix?: (id: string) => void;
+  onGoQr?: () => void;
 }) {
   const gaps = gapsOf(rows);
   const delivered = !!sentAt;
@@ -211,12 +212,14 @@ export default function ReviewPanel({
             Tus códigos QR
           </h3>
           <p style={{ ...BODY, marginTop: 8, maxWidth: "56ch" }}>
-            Descárgalos e imprímelos para tu stand: quien los escanee ve tu obra y
-            puede comprarla ahí mismo.
+            Tu QR de artista y el QR de cada obra están juntos en la pestaña
+            «Mis QR», con lo que va en cada lugar del stand.
           </p>
-          <div style={{ marginTop: 22 }}>
-            <InventoryQrCards artistId={artistId} />
-          </div>
+          {onGoQr && (
+            <div style={{ marginTop: 18 }}>
+              <StudioButton variant="solid" onClick={onGoQr}>Ir a mis QR</StudioButton>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -34,7 +34,7 @@ import { useEventId } from "@provider/editionProvider";
 
 import CreateEditArtworkModal from "./CreateEditArtworkModal";
 import QRModal from "./QrModal";
-import ArtistQrModal from "./ArtistQrModal";
+import QrHub from "./QrHub";
 import ApplicationStatusCard from "@components/views/admin/artist/ApplicationStatusCard";
 import StudioSheet from "./StudioSheet";
 import StudioStepper, { type Step, type StepKey } from "./StudioStepper";
@@ -157,7 +157,6 @@ export default function MiEstudioClient() {
   const [detailId, setDetailId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [qrForId, setQrForId] = useState<string | null>(null);
-  const [artistQrOpen, setArtistQrOpen] = useState(false);
 
   const { data: techniques = [] } = useTechniques();
 
@@ -278,7 +277,6 @@ export default function MiEstudioClient() {
   // render del padre es una hoja que se reinicia por dentro sin motivo.
   const closeDetail = useCallback(() => setDetailId(null), []);
   const closeQr = useCallback(() => setQrForId(null), []);
-  const closeArtistQr = useCallback(() => setArtistQrOpen(false), []);
   const closeConfirm = useCallback(() => setConfirming(false), []);
   const editFromDetail = useCallback((id: string) => {
     setDetailId(null);
@@ -445,6 +443,7 @@ export default function MiEstudioClient() {
             <div style={segmentWrap} role="tablist" aria-label="Qué estoy viendo">
               {[
                 { key: "inventario", label: "Inventario" },
+                { key: "qr", label: "Mis QR" },
                 { key: "orders", label: "Entregas" },
               ].map((s) => (
                 <button
@@ -464,10 +463,10 @@ export default function MiEstudioClient() {
             <button
               type="button"
               style={{ ...btnGhost, height: 34, padding: "0 16px" }}
-              onClick={() => setArtistQrOpen(true)}
+              onClick={() => setTab("qr")}
             >
               <QrCode size={13} strokeWidth={1.6} />
-              Mi QR
+              Mis QR
             </button>
             {/* Todo lo del artista a un clic: perfil (foto, bio, redes) y su página pública */}
             <Link href="/admin/account" style={{ ...btnGhost, height: 34, padding: "0 16px" }}>
@@ -667,6 +666,7 @@ export default function MiEstudioClient() {
                   pavilionName={pavilionNames || undefined}
                   artistId={String(artistId)}
                   sentAt={sentAt}
+                  onGoQr={() => setTab("qr")}
                   onFix={(id) => {
                     setEditingId(id);
                     setModalOpen(true);
@@ -674,6 +674,26 @@ export default function MiEstudioClient() {
                 />
               )}
             </div>
+          </div>
+        )}
+
+        {/* ── MIS QR: el de artista y uno por obra, con dónde va cada uno ─── */}
+        {tab === "qr" && (
+          <div style={{ marginTop: "clamp(24px,3vw,36px)" }}>
+            <QrHub
+              artistId={String(artistId)}
+              artistName={[user?.firstName, user?.lastName].filter(Boolean).join(" ")}
+              rows={rows}
+              loading={artworksQuery.isLoading}
+              hasMore={!!artworksQuery.hasNextPage}
+              onLoadMore={loadMore}
+              filtering={filtering}
+              onClearFilters={() => {
+                setQ("");
+                setTech("all");
+                setPavilion("all");
+              }}
+            />
           </div>
         )}
 
@@ -877,7 +897,6 @@ export default function MiEstudioClient() {
 
       <QRModal artworkId={qrForId} open={!!qrForId} onClose={closeQr} />
 
-      <ArtistQrModal artistId={String(artistId)} open={artistQrOpen} onClose={closeArtistQr} />
     </div>
   );
 }

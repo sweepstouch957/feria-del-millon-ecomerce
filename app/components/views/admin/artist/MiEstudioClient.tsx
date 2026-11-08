@@ -443,10 +443,9 @@ export default function MiEstudioClient() {
           {/* Pestañas: una sola fila de ancho completo, con icono y para qué
               sirve cada una. Antes eran píldoras chicas mezcladas con botones y
               no se notaba que cambiaban de sección. */}
-          <div role="tablist" aria-label="Secciones del estudio" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", borderBottom: hair(18) }}>
+          <div role="tablist" aria-label="Secciones del estudio" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", borderBottom: hair(18) }}>
             {[
               { key: "inventario", label: "Inventario", hint: "Tus obras", Icon: LayoutGrid },
-              { key: "qr", label: "Mis QR", hint: "Para el stand", Icon: QrCode },
               { key: "orders", label: "Entregas", hint: "Tus ventas", Icon: Truck },
             ].map(({ key, label, hint, Icon }) => {
               const on = tab === key;
@@ -481,6 +480,37 @@ export default function MiEstudioClient() {
               );
             })}
           </div>
+
+          {/* QR: fuera de las pestañas, como acceso propio que dice qué es */}
+          <button
+            type="button"
+            className="fdm-studio-plain"
+            onClick={() => setTab(tab === "qr" ? "inventario" : "qr")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              width: "100%",
+              padding: "12px 14px",
+              textAlign: "left",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              color: "var(--fg)",
+              background: tab === "qr" ? "color-mix(in srgb, var(--acc) 14%, transparent)" : mix(3),
+              border: `1px solid ${tab === "qr" ? "var(--acc)" : mix(20)}`,
+            }}
+          >
+            <QrCode size={26} strokeWidth={1.6} style={{ color: "var(--acc)", flexShrink: 0 }} />
+            <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+              <span style={{ ...EYEBROW, fontSize: 11, letterSpacing: "0.12em" }}>
+                {tab === "qr" ? "← Volver al inventario" : "Mis códigos QR para el stand"}
+              </span>
+              <span style={{ fontSize: 12.5, lineHeight: 1.4, color: mix(62) }}>
+                QR de artista (muestra todas tus obras) y QR de cada obra
+              </span>
+            </span>
+            {tab !== "qr" && <ArrowRight size={16} strokeWidth={1.6} style={{ color: mix(55), flexShrink: 0 }} />}
+          </button>
         </header>
 
         {/* ── INVENTARIO: los tres pasos ────────────────────────────────── */}

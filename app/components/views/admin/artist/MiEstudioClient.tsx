@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import type { FormikProps } from "formik";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -359,7 +360,12 @@ export default function MiEstudioClient() {
   if (!isAuthenticated || !artistId) {
     return (
       <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "60vh", display: "grid", placeItems: "center" }}>
-        <p style={{ ...BODY, textAlign: "center" }}>Debes iniciar sesión para entrar a tu estudio.</p>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          <p style={{ ...BODY, textAlign: "center" }}>Debes iniciar sesión para entrar a tu estudio.</p>
+          <Link href="/login?role=artist&redirect=%2Fadmin%2Fartist" style={{ ...btnGhost, height: 44, padding: "0 24px" }}>
+            Ingresar como artista
+          </Link>
+        </div>
       </div>
     );
   }
@@ -463,6 +469,13 @@ export default function MiEstudioClient() {
               <QrCode size={13} strokeWidth={1.6} />
               Mi QR
             </button>
+            {/* Todo lo del artista a un clic: perfil (foto, bio, redes) y su página pública */}
+            <Link href="/admin/account" style={{ ...btnGhost, height: 34, padding: "0 16px" }}>
+              Mi perfil
+            </Link>
+            <Link href={`/artista/${artistId}`} target="_blank" style={{ ...btnGhost, height: 34, padding: "0 16px" }}>
+              Ver mi página ↗
+            </Link>
           </div>
         </header>
 

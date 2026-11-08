@@ -176,7 +176,10 @@ export default function Navigation() {
           {/* Auth (desktop) */}
           <div className="fdm-desk-only" style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {!isAuthLoading && !isAuthenticated && (
-              <Link href="/login" className="fdm-link" style={{ ...linkStyle, color: `color-mix(in srgb, ${FG} 58%, transparent)` }}>Acceder</Link>
+              <Link href="/login" className="fdm-link" style={{ ...ticketPill, background: "transparent", color: FG, border: `1px solid color-mix(in srgb, ${FG} 40%, transparent)` }}>Acceder</Link>
+            )}
+            {!isAuthLoading && isAuthenticated && isArtist && (
+              <Link href="/admin/artist" style={{ ...ticketPill, background: GREEN, color: "#0B0B0A" }}>Mi estudio</Link>
             )}
             {!isAuthLoading && isAuthenticated && (
               <div style={{ position: "relative" }}>
@@ -197,14 +200,14 @@ export default function Navigation() {
                       <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>{fullName}</p>
                       <p style={{ margin: 0, fontSize: 12, opacity: 0.6 }}>{user?.email}</p>
                     </div>
-                    <Link href="/admin/account" role="menuitem" onClick={() => setUserOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", fontSize: 13 }}>
-                      <BadgeCheck className="h-4 w-4" /> Mi cuenta
-                    </Link>
                     {isArtist && (
-                      <Link href="/admin/artist" role="menuitem" onClick={() => setUserOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", fontSize: 13 }}>
-                        <LayoutDashboard className="h-4 w-4" /> Panel de artista
+                      <Link href="/admin/artist" role="menuitem" onClick={() => setUserOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", fontSize: 13, fontWeight: 600 }}>
+                        <LayoutDashboard className="h-4 w-4" /> Mi estudio
                       </Link>
                     )}
+                    <Link href="/admin/account" role="menuitem" onClick={() => setUserOpen(false)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", fontSize: 13 }}>
+                      <BadgeCheck className="h-4 w-4" /> {isArtist ? "Mi perfil" : "Mi cuenta"}
+                    </Link>
                     <button onClick={async () => { setUserOpen(false); await logout(); }} style={{ display: "flex", width: "100%", alignItems: "center", gap: 8, padding: "10px 16px", fontSize: 13, borderTop: `1px solid color-mix(in srgb, ${FG} 12%, transparent)`, background: "transparent", cursor: "pointer", color: "inherit" }}>
                       <LogOut className="h-4 w-4" /> Cerrar sesión
                     </button>
@@ -240,6 +243,12 @@ export default function Navigation() {
       {/* Panel mobile */}
       {isMenuOpen && (
         <div style={{ borderTop: `1px solid color-mix(in srgb, ${FG} 12%, transparent)`, padding: "12px clamp(16px,4vw,56px) 22px", background: "color-mix(in srgb, var(--fdm-bg,#F7F6F2) 96%, transparent)", backdropFilter: "blur(14px)" }}>
+          {/* Móvil: arriba de todo lo que más se busca — entrar o volver al estudio */}
+          {!isAuthLoading && (isArtist && isAuthenticated ? (
+            <Link href="/admin/artist" onClick={() => setIsMenuOpen(false)} style={{ ...ticketPill, width: "100%", justifyContent: "center", height: 48, marginBottom: 10, background: GREEN, color: "#0B0B0A" }}>Mi estudio</Link>
+          ) : !isAuthenticated ? (
+            <Link href="/login" onClick={() => setIsMenuOpen(false)} style={{ ...ticketPill, width: "100%", justifyContent: "center", height: 48, marginBottom: 10, background: "transparent", color: FG, border: `1px solid color-mix(in srgb, ${FG} 40%, transparent)` }}>Acceder · artistas y compradores</Link>
+          ) : null)}
           <div style={{ display: "flex", flexDirection: "column" }}>
             {items.map((it, idx) =>
               it.enabled ? (
@@ -268,8 +277,7 @@ export default function Navigation() {
           )}
           {!isAuthLoading && isAuthenticated && (
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 14 }}>
-              <Link href="/admin/account" onClick={() => setIsMenuOpen(false)} className="fdm-link" style={{ fontFamily: JOST, fontSize: 13 }}>Mi cuenta</Link>
-              {isArtist && <Link href="/admin/artist" onClick={() => setIsMenuOpen(false)} className="fdm-link" style={{ fontFamily: JOST, fontSize: 13 }}>Panel de artista</Link>}
+              <Link href="/admin/account" onClick={() => setIsMenuOpen(false)} className="fdm-link" style={{ fontFamily: JOST, fontSize: 13 }}>{isArtist ? "Mi perfil" : "Mi cuenta"}</Link>
               <button onClick={async () => { setIsMenuOpen(false); await logout(); }} style={{ textAlign: "left", background: "transparent", border: "none", cursor: "pointer", color: "inherit", fontFamily: JOST, fontSize: 13, padding: 0 }}>Cerrar sesión</button>
             </div>
           )}

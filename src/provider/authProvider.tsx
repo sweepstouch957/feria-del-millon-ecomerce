@@ -45,7 +45,14 @@ const LAST_PUBLIC_PATH_KEY = "last_public_path";
 // Rutas que requieren autenticación
 // El checkout es público: el comprador deja nombre, correo, celular y dirección,
 // sin cuenta. Lo que sigue (pedidos, perfil, panel de artista) sí pide sesión.
-const PROTECTED_ROUTES = ["/account", "/orders", "/me", "/artist"];
+const PROTECTED_ROUTES = ["/account", "/orders", "/me", "/admin/artist", "/admin/account"];
+
+// El artista siempre aterriza en su estudio, no en la tienda: entre por la
+// pestaña que entre, ahí tiene obras, ventas y postulación a mano.
+const ARTIST_HOME = "/admin/artist";
+const isArtistUser = (u: any) => Boolean(u?.roles?.artista);
+/** ¿El destino es la tienda pública (home/catálogo) y no algo que pidió a propósito? */
+const isShopFallback = (p?: string | null) => !p || p === "/" || p === "/login" || p === "/register";
 
 // ¿El path actual es protegido?
 function isProtectedPath(pathname?: string | null) {
@@ -169,8 +176,8 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
         if (onAuthPages) {
           const fromParam = getRedirectParam();
           const lastPublic = getLastPublicPath();
-          const fallback = "/";
-          const destination = fromParam || lastPublic || fallback;
+          const fallback = isArtistUser(me) ? ARTIST_HOME : "/";
+          const destination = fromParam || (isArtistUser(me) ? ARTIST_HOME : lastPublic) || fallback;
           router.replace(destination);
         }
       } catch {
@@ -214,13 +221,17 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
       } catch {}
       return me;
     },
-    onSuccess: () => {
-      // Respeta ?redirect=... si existe; si no usa LOGIN_NEXT, última pública o "/"
-      let redirect = getRedirectParam();
-      if (!redirect && typeof window !== "undefined") {
-        redirect = sessionStorage.getItem("LOGIN_NEXT");
+    onSuccess: (me) => {
+      // Respeta ?redirect=... si existe; si no usa LOGIN_NEXT, última pública o "/".
+      // Artista sin destino explícito → su estudio.
+      const explicit = getRedirectParam();
+      let next: string | null = null;
+      if (typeof window !== "undefined") {
+        next = sessionStorage.getItem("LOGIN_NEXT");
+        sessionStorage.removeItem("LOGIN_NEXT");
       }
-      redirect = redirect || getLastPublicPath() || "/";
+      let redirect = explicit || next || getLastPublicPath() || "/";
+      if (isArtistUser(me) && !explicit && isShopFallback(next)) redirect = ARTIST_HOME;
       router.replace(redirect);
     },
   });

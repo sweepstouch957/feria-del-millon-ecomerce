@@ -19,6 +19,7 @@ import {
 } from "@components/ui/avatar";
 import { Switch } from "@components/ui/switch";
 
+import Link from "next/link";
 import {
   Loader2,
   Camera,
@@ -233,7 +234,10 @@ export default function MiCuentaClient() {
   if (!isAuthenticated || !userId) {
     return (
       <div className="min-h-[60vh] grid place-items-center text-gray-600">
-        Debes iniciar sesión para acceder a tu cuenta.
+        <div className="flex flex-col items-center gap-4">
+          Debes iniciar sesión para acceder a tu cuenta.
+          <Link href="/login?redirect=%2Fadmin%2Faccount" className="underline">Ingresar</Link>
+        </div>
       </div>
     );
   }
@@ -267,7 +271,11 @@ export default function MiCuentaClient() {
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <span style={{ ...EYEBROW, color: "var(--acc)" }}>
-              {isArtist ? "Panel de artista" : "Mi cuenta"}
+              {isArtist ? (
+                <Link href="/admin/artist">← Volver a mi estudio</Link>
+              ) : (
+                "Mi cuenta"
+              )}
             </span>
             <h1
               style={{
@@ -279,7 +287,7 @@ export default function MiCuentaClient() {
                 textTransform: "uppercase",
               }}
             >
-              Mi cuenta
+              {isArtist ? "Mi perfil" : "Mi cuenta"}
             </h1>
           </div>
           <Button

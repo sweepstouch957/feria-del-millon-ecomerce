@@ -119,7 +119,7 @@ export default function GenericLoginPageClient() {
         heading: "Entrá a tu perfil",
         subheading: "Gestioná tus obras, precios y ventas de la edición 2026.",
         submitText: "Ingresar como artista",
-        next: "/artist",
+        next: "/admin/artist",
         registerHref: "/convocatoria/register",
         registerText: "Crear cuenta →",
       };

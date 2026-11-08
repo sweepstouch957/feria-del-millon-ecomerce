@@ -9,11 +9,13 @@ import {
   ArrowRight,
   CalendarClock,
   Check,
+  LayoutGrid,
   Lock,
   Plus,
   QrCode,
   Search,
   Send,
+  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -55,8 +57,6 @@ import {
   fieldInput,
   hair,
   mix,
-  segment,
-  segmentWrap,
 } from "./studioTheme";
 
 /** Título del paso: es el que manda en la pantalla. */
@@ -410,17 +410,8 @@ export default function MiEstudioClient() {
         }}
       >
         {/* ── Cabecera: quién soy y en qué estoy ────────────────────────── */}
-        <header
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 16,
-            paddingBottom: 16,
-            borderBottom: hair(16),
-          }}
-        >
+        <header style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             <h1
               style={{
@@ -438,43 +429,57 @@ export default function MiEstudioClient() {
             )}
           </div>
 
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-            {/* El interruptor de asunto: chico, porque la navegación son los pasos */}
-            <div style={segmentWrap} role="tablist" aria-label="Qué estoy viendo">
-              {[
-                { key: "inventario", label: "Inventario" },
-                { key: "qr", label: "Mis QR" },
-                { key: "orders", label: "Entregas" },
-              ].map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === s.key}
-                  className="fdm-studio-plain"
-                  onClick={() => setTab(s.key)}
-                  style={segment(tab === s.key)}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              style={{ ...btnGhost, height: 34, padding: "0 16px" }}
-              onClick={() => setTab("qr")}
-            >
-              <QrCode size={13} strokeWidth={1.6} />
-              Mis QR
-            </button>
-            {/* Todo lo del artista a un clic: perfil (foto, bio, redes) y su página pública */}
-            <Link href="/admin/account" style={{ ...btnGhost, height: 34, padding: "0 16px" }}>
+          {/* Enlaces secundarios: texto chico, para que no compitan con las pestañas */}
+          <div style={{ display: "flex", gap: 18 }}>
+            <Link href="/admin/account" style={{ ...EYEBROW, fontSize: 10, color: mix(62), textDecoration: "underline", textUnderlineOffset: 4 }}>
               Mi perfil
             </Link>
-            <Link href={`/artista/${artistId}`} target="_blank" style={{ ...btnGhost, height: 34, padding: "0 16px" }}>
+            <Link href={`/artista/${artistId}`} target="_blank" style={{ ...EYEBROW, fontSize: 10, color: mix(62), textDecoration: "underline", textUnderlineOffset: 4 }}>
               Ver mi página ↗
             </Link>
+          </div>
+          </div>
+
+          {/* Pestañas: una sola fila de ancho completo, con icono y para qué
+              sirve cada una. Antes eran píldoras chicas mezcladas con botones y
+              no se notaba que cambiaban de sección. */}
+          <div role="tablist" aria-label="Secciones del estudio" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", borderBottom: hair(18) }}>
+            {[
+              { key: "inventario", label: "Inventario", hint: "Tus obras", Icon: LayoutGrid },
+              { key: "qr", label: "Mis QR", hint: "Para el stand", Icon: QrCode },
+              { key: "orders", label: "Entregas", hint: "Tus ventas", Icon: Truck },
+            ].map(({ key, label, hint, Icon }) => {
+              const on = tab === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  className="fdm-studio-plain"
+                  onClick={() => setTab(key)}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 4,
+                    padding: "12px 4px 11px",
+                    marginBottom: -1,
+                    background: on ? mix(5) : "transparent",
+                    border: 0,
+                    borderBottom: `3px solid ${on ? "var(--acc)" : "transparent"}`,
+                    color: on ? "var(--fg)" : mix(55),
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "color .2s ease, background .2s ease, border-color .2s ease",
+                  }}
+                >
+                  <Icon size={18} strokeWidth={on ? 2 : 1.6} style={{ color: on ? "var(--acc)" : undefined }} />
+                  <span style={{ ...EYEBROW, fontSize: 11, letterSpacing: "0.12em", fontWeight: on ? 600 : 500 }}>{label}</span>
+                  <span style={{ fontSize: 11, color: mix(on ? 60 : 45) }}>{hint}</span>
+                </button>
+              );
+            })}
           </div>
         </header>
 

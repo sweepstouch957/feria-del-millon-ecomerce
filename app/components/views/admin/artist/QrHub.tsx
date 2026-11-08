@@ -155,7 +155,7 @@ export default function QrHub({
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
           <Explainer
             n="1"
-            title="QR de artista (uno solo)"
+            title="QR de artista: muestra TODAS tus obras (uno solo)"
             where="en la pared o la entrada de tu stand, bien visible."
             goes="tu página con todas tus obras disponibles."
           />
@@ -178,7 +178,7 @@ export default function QrHub({
       <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <div className="fdm-qr-noprint">
           <span style={{ ...EYEBROW, color: "var(--acc)" }}>1 · Para la pared del stand</span>
-          <h3 style={{ ...HEADING, marginTop: 6 }}>Tu QR de artista</h3>
+          <h3 style={{ ...HEADING, marginTop: 6 }}>Tu QR de artista · todas tus obras</h3>
         </div>
         <div className="fdm-qr-card" style={{ display: "flex", flexWrap: "wrap", gap: 18, alignItems: "center", border: hair(16), padding: 16 }}>
           <div style={{ width: "min(240px,100%)" }}>

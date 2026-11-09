@@ -7,6 +7,7 @@ import { Download, ExternalLink, Printer } from "lucide-react";
 
 import type { ArtworkRow } from "@hooks/queries/useArtworksCursor";
 import { BODY, EYEBROW, HEADING, btnGhost, btnSolid, hair, mix } from "./studioTheme";
+import { ARTIST_DOWNLOADS_ENABLED, NO_PRINT_CSS, canDownload } from "./lock";
 
 /* Todos los QR del artista en un solo lugar.
    Preguntaban una y otra vez cuál QR va dónde: acá se dice con palabras
@@ -62,6 +63,7 @@ function Actions({ png, file, url }: { png: string; file: string; url: string })
       <a
         href={png || undefined}
         download={file}
+        onClick={(e) => { if (!canDownload()) e.preventDefault(); }}
         style={{ ...btnSolid, height: 34, padding: "0 14px", flex: "1 1 auto", opacity: png ? 1 : 0.45, pointerEvents: png ? "auto" : "none" }}
       >
         <Download size={13} strokeWidth={1.8} />
@@ -143,7 +145,7 @@ export default function QrHub({
 
   return (
     <div className="fdm-qr-print" style={{ display: "flex", flexDirection: "column", gap: "clamp(26px,3vw,40px)" }}>
-      <style>{PRINT_CSS}</style>
+      <style>{ARTIST_DOWNLOADS_ENABLED ? PRINT_CSS : NO_PRINT_CSS}</style>
 
       {/* ── Los dos tipos, en palabras simples ─────────────────────────── */}
       <div className="fdm-qr-noprint" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -167,7 +169,7 @@ export default function QrHub({
           />
         </div>
         <div>
-          <button type="button" className="fdm-studio-plain" style={{ ...btnGhost, height: 40 }} onClick={() => window.print()}>
+          <button type="button" className="fdm-studio-plain" style={{ ...btnGhost, height: 40 }} onClick={() => { if (canDownload()) window.print(); }}>
             <Printer size={14} strokeWidth={1.6} />
             Imprimir todos los QR
           </button>

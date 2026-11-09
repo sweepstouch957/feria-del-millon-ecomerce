@@ -37,6 +37,7 @@ import { useEventId } from "@provider/editionProvider";
 import CreateEditArtworkModal from "./CreateEditArtworkModal";
 import QRModal from "./QrModal";
 import QrHub from "./QrHub";
+import { ARTIST_DOWNLOADS_ENABLED, NO_PRINT_CSS } from "./lock";
 import ApplicationStatusCard from "@components/views/admin/artist/ApplicationStatusCard";
 import StudioSheet from "./StudioSheet";
 import StudioStepper, { type Step, type StepKey } from "./StudioStepper";
@@ -401,6 +402,7 @@ export default function MiEstudioClient() {
   return (
     <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "100vh" }}>
       <style>{STUDIO_CSS}</style>
+      {!ARTIST_DOWNLOADS_ENABLED && <style>{NO_PRINT_CSS}</style>}
 
       <div
         style={{

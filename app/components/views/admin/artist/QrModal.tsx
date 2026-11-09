@@ -8,6 +8,7 @@ import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
 
 import StudioSheet from "./StudioSheet";
 import { EYEBROW, btnGhost, btnSolid, mix } from "./studioTheme";
+import { canDownload } from "./lock";
 
 /** El QR de una obra: se escanea en el stand y lleva a su ficha de compra. */
 export default function QRModal({
@@ -37,7 +38,7 @@ export default function QRModal({
   const qrImg = png || undefined;
 
   const downloadQr = async () => {
-    if (!qrImg) return;
+    if (!qrImg || !canDownload()) return;
     const resp = await fetch(qrImg);
     const blob = await resp.blob();
     const a = document.createElement("a");

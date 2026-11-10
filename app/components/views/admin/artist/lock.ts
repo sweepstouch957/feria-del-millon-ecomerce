@@ -1,6 +1,5 @@
-// Bloqueo hasta nuevo aviso: el panel de artista no descarga ni imprime nada
-// (QR, listas, entregas). Al intentarlo se muestra un error del sistema. Para reabrir: true.
-export const ARTIST_DOWNLOADS_ENABLED = false;
+// En true el panel del artista descarga e imprime normal (QR, listas, entregas).
+export const ARTIST_DOWNLOADS_ENABLED = true;
 
 export const DOWNLOAD_ERROR = "Ocurrió un error al generar el archivo. Intenta de nuevo más tarde.";
 
@@ -11,5 +10,5 @@ export function canDownload(): boolean {
   return false;
 }
 
-/** Con el bloqueo, Ctrl+P sale en blanco en todo el panel del artista. */
+/** Sin efecto con el panel abierto; solo bloquea la impresión cuando está desactivado. */
 export const NO_PRINT_CSS = "@media print { body { display: none !important; } }";

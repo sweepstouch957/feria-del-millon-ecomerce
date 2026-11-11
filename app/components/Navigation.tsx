@@ -217,8 +217,8 @@ export default function Navigation() {
             )}
           </div>
 
-          {/* Carrito: oculto, la compra va directo con "Comprar ahora". */}
-          {false && !fairMode && (
+          {/* Carrito: visible salvo en modo feria (ahí se compra solo desde el QR de la obra). */}
+          {!fairMode && (
             <Link href="/carrito" aria-label="Ir al carrito" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", height: 42, width: 42, borderRadius: 999, border: `1px solid color-mix(in srgb, ${FG} 26%, transparent)` }}>
               <ShoppingCart className="h-4 w-4" />
               {cartCount > 0 && (

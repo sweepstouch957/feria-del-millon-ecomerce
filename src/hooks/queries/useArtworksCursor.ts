@@ -1,7 +1,7 @@
   "use client";
 
   import { useMemo } from "react";
-  import { useInfiniteQuery } from "@tanstack/react-query";
+  import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
   import {
     listArtworks,
     type CursorListResponse,
@@ -38,6 +38,9 @@
     /** Trae también las obras que esperan a que se publique el catálogo.
      *  Lo usa el artista en su estudio: son sus propias obras. */
     includeHidden?: boolean | number | string;
+    /** Solo campos de tarjeta (sin descripción, galería ni etiquetas): la
+     *  página pesa la mitad. Lo usa el catálogo; el resto pide el doc completo. */
+    lite?: boolean;
   };
 
   export function useArtworksCursor(filters: ArtworksCursorFilters = {}) {
@@ -54,6 +57,7 @@
         sortBy: filters.sortBy || undefined,
         sortDir: filters.sortDir || undefined,
         includeHidden: filters.includeHidden || undefined,
+        lite: filters.lite ? 1 : undefined,
       }),
       [
         filters.q,
@@ -67,6 +71,7 @@
         filters.sortBy,
         filters.sortDir,
         filters.includeHidden,
+        filters.lite,
       ]
     );
 
@@ -81,7 +86,11 @@
       queryFn: ({ pageParam }) => listArtworks({ ...params, cursor: pageParam }),
       getNextPageParam: (last) => last.nextCursor ?? undefined,
       initialPageParam: undefined,
-      staleTime: 10_000,
+      // Volver de la obra al catálogo no vuelve a pedir nada durante 5 min.
+      staleTime: 5 * 60_000,
+      // Al cambiar un filtro se queda la grilla anterior (atenuada) en vez del
+      // esqueleto: la nueva llega en ~150 ms y no parpadea.
+      placeholderData: keepPreviousData,
     });
 
     const pages = useMemo(

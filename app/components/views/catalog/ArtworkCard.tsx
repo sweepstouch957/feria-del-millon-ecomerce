@@ -36,14 +36,18 @@ export function useArtActions(art: CardArt) {
   };
 }
 
-function Img({ art, sizes, cls = "ph" }: { art: CardArt; sizes: string; cls?: string }) {
+function Img({ art, sizes, cls = "ph", eager }: { art: CardArt; sizes: string; cls?: string; eager?: boolean }) {
   if (!art.image) return <span className="empty">Imagen</span>;
   return (
     <span className={cls}>
-      <SmartImage src={art.image} alt={art.title} sizes={sizes} />
+      <SmartImage src={art.image} alt={art.title} sizes={sizes} priority={eager} />
     </span>
   );
 }
+
+/* 400px en escritorio y la mitad del ancho en celular: con los deviceSizes de
+   next.config solo salen dos derivaciones (400 y 828) por obra. */
+const CARD_SIZES = "(max-width: 767px) 50vw, 400px";
 
 export function HeartButton({ art, plain = false }: { art: CardArt; plain?: boolean }) {
   const { isFav, toggleFav } = useArtActions(art);
@@ -81,7 +85,7 @@ export function AddButton({ art }: { art: CardArt }) {
   );
 }
 
-export function ArtworkCard({ art }: { art: CardArt }) {
+export function ArtworkCard({ art, eager }: { art: CardArt; eager?: boolean }) {
   const href = `/obra/${encodeURIComponent(art.id)}`;
   const { soldOut } = useArtActions(art);
   const meta = [art.technique, art.kind].filter(Boolean).join(" · ");
@@ -90,7 +94,7 @@ export function ArtworkCard({ art }: { art: CardArt }) {
       {/* El enlace cubre la imagen; el corazón es hermano (nada de botón dentro de <a>). */}
       <div className="fdm-card-img">
         <Link href={href} className="fdm-card-cover" aria-label={art.title} />
-        <Img art={art} sizes="(max-width: 767px) 50vw, (max-width: 1280px) 33vw, 300px" />
+        <Img art={art} sizes={CARD_SIZES} eager={eager} />
         {soldOut && <span className="fdm-sold">Vendida</span>}
         <HeartButton art={art} />
       </div>

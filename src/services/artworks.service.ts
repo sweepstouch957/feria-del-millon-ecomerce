@@ -95,6 +95,8 @@ export interface CursorListParams {
 
   // Proyección opcional (campos extra)
   project?: string | string[];
+  /** 1 = solo campos de tarjeta (catálogo público). */
+  lite?: number;
 }
 
 /** Respuesta “cruda” del backend */

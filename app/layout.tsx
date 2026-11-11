@@ -52,11 +52,17 @@ export default async function RootLayout({
   }
   :root[data-theme="dark"] .fdm-logo,.fdm-logo--on-dark{filter:invert(1) brightness(1.1);}`;
 
+  // suppressHydrationWarning: el boot script pone data-theme antes de hidratar (a propósito).
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <style id="brand-theme-vars" dangerouslySetInnerHTML={{ __html: themeVars }} />
+        {/* Las conexiones al API y al CDN de imágenes se abren antes de que el JS las pida. */}
+        {process.env.NEXT_PUBLIC_API_URL?.startsWith("https://") && (
+          <link rel="preconnect" href={new URL(process.env.NEXT_PUBLIC_API_URL).origin} crossOrigin="" />
+        )}
+        <link rel="preconnect" href="https://res.cloudinary.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link

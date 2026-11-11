@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 export type CatalogMode = "general" | "pabellon";
 
@@ -19,7 +19,6 @@ type Opts = {
 };
 
 export function useCatalogState(opts: Opts) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
@@ -83,7 +82,10 @@ export function useCatalogState(opts: Opts) {
       (mode === "pabellon" ? "pabellon" : "") !== currentMode ||
       techniqueIds.join(",") !== currentTech
     ) {
-      router.replace(nextUrl, { scroll: false });
+      // replaceState nativo: Next lo sincroniza con useSearchParams sin pedir
+      // la página al servidor. router.replace hacía un viaje a Vercel por cada
+      // letra buscada o filtro tocado.
+      window.history.replaceState(window.history.state, "", nextUrl);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, pavilion, artistId, mode, techniqueIds, basePath]);
@@ -120,7 +122,8 @@ export function useCatalogState(opts: Opts) {
     sp.delete("artistId");
     sp.delete("modo");
     sp.delete("tecnica");
-    router.replace(`${basePath}?${sp.toString()}`, { scroll: false });
+    const rest = sp.toString();
+    window.history.replaceState(window.history.state, "", `${basePath}${rest ? `?${rest}` : ""}`);
   };
 
   const clearAllAndRefetch = (refetch: () => void) => {

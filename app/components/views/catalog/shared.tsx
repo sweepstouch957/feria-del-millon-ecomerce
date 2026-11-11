@@ -263,6 +263,7 @@ export const SHOP_CSS = `
 
 /* Grilla y tarjeta */
 .fdm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:40px 24px}
+.fdm-grid[aria-busy="true"],.fdm-rows[aria-busy="true"]{opacity:.55;transition:opacity .15s}
 .fdm-card{display:flex;flex-direction:column;gap:12px;min-width:0}
 .fdm-card-img{position:relative;display:block;aspect-ratio:4/5;background:var(--tile);padding:16px;overflow:hidden}
 .fdm-card-cover{position:absolute;inset:0;z-index:0}

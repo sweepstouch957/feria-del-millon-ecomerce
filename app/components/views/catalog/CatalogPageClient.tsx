@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { usePavilions } from "@hooks/queries/usePavilions";
 import { useArtworksCursor, type ArtworksCursorFilters } from "@hooks/queries/useArtworksCursor";
 import { useTechniques } from "@hooks/queries/useTechniques";
 import { useEventArtists } from "@hooks/queries/useEventArtists";
@@ -85,7 +84,6 @@ export default function CatalogPageClient() {
   };
 
   const { data: techniquesData = [] } = useTechniques();
-  const { data: pavilionsData = [] } = usePavilions(eventId);
   const { data: artistsResp } = useEventArtists(
     eventId,
     { sort: "name", page: 1, limit: 500 },
@@ -102,10 +100,11 @@ export default function CatalogPageClient() {
     [artistsResp]
   );
 
-  const pavilionOptions = useMemo(() => {
-    const src = pavilionsData.length > 0 ? pavilionsData : pavilions;
-    return src.map((p: any) => ({ value: String(p.id ?? p._id), label: String(p.name ?? "") }));
-  }, [pavilionsData, pavilions]);
+  // Los pabellones ya vienen con la edición (render del servidor): sin pedirlos otra vez.
+  const pavilionOptions = useMemo(
+    () => pavilions.map((p: any) => ({ value: String(p.id ?? p._id), label: String(p.name ?? "") })),
+    [pavilions]
+  );
 
   const { rows: rawRows, total, isLoading, isFetching, isFetchingNextPage, hasNextPage, loadMore } = useArtworksCursor({
     q: dq,
@@ -118,6 +117,7 @@ export default function CatalogPageClient() {
     maxPrice: priceTouched ? maxPrice : undefined,
     sortBy: sort === "asc" || sort === "desc" ? "price" : "createdAt",
     sortDir: sort === "asc" ? "asc" : "desc",
+    lite: true,
   } as ArtworksCursorFilters);
 
   // El tope del slider sale de la data (nunca por debajo de $1.000.000) y solo crece.
@@ -345,11 +345,11 @@ export default function CatalogPageClient() {
         )}
 
         {!isLoading && works.length > 0 && (viewMode === "grid" ? (
-          <section className="fdm-grid" aria-label="Obras">
-            {works.map((w) => <ArtworkCard key={w.id} art={w} />)}
+          <section className="fdm-grid" aria-label="Obras" aria-busy={isFetching && !isFetchingNextPage}>
+            {works.map((w, i) => <ArtworkCard key={w.id} art={w} eager={i < 8} />)}
           </section>
         ) : (
-          <section className="fdm-rows" aria-label="Obras">
+          <section className="fdm-rows" aria-label="Obras" aria-busy={isFetching && !isFetchingNextPage}>
             {works.map((w) => <ArtworkRow key={w.id} art={w} />)}
           </section>
         ))}

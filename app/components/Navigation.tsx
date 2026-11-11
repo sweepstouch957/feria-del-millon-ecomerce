@@ -66,6 +66,8 @@ const CSS = `
 .fdm-nav-badge{position:absolute;top:2px;right:0;min-width:18px;height:18px;padding:0 4px;border-radius:999px;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center}
 .fdm-nav-ghost{height:44px;margin:0 4px;padding:0 16px;display:flex;align-items:center;gap:8px;border:1px solid var(--line2);background:transparent;border-radius:999px;font-size:14px;white-space:nowrap}
 .fdm-nav-ghost:hover{border-color:var(--fg)}
+.fdm-nav-slot{display:block;width:154px;height:44px;margin:0 4px}
+@media (max-width:1440px){.fdm-nav-slot{width:146px}}
 .fdm-nav-user{height:44px;padding:0 10px 0 4px;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);border-radius:999px;font-size:14px;font-weight:500;white-space:nowrap}
 .fdm-nav-user:hover{border-color:var(--fg)}
 .fdm-nav-av{position:relative;flex:none;width:36px;height:36px;border-radius:999px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;letter-spacing:.04em}
@@ -119,7 +121,7 @@ export default function Navigation() {
   const [userOpen, setUserOpen] = useState(false);
   const userRef = useRef<HTMLDivElement | null>(null);
 
-  const { user, isAuthLoading, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { brand } = useSiteContent();
   const nav = useSiteNav();
   const fairMode = useFairMode();
@@ -154,7 +156,9 @@ export default function Navigation() {
   const firstName = fullName.split(" ")[0];
   const initials = fullName.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "U";
   const isArtist = Boolean((user as any)?.roles?.artista);
-  const ready = !isAuthLoading;
+  // Sin saltos: antes de montar se reserva el hueco; después manda el usuario
+  // guardado (no se esconde mientras /me revalida la sesión).
+  const ready = mounted;
   const doLogout = async () => {
     setUserOpen(false);
     setMenuOpen(false);
@@ -173,12 +177,14 @@ export default function Navigation() {
       </span>
     );
 
+  // Sin div envolvente: un sticky solo se pega dentro de su padre, y el header
+  // tiene que acompañar toda la página.
   return (
-    <div className="fdm-nav">
+    <>
       <style>{CSS}</style>
 
       {shop && inShop && (
-        <div className="fdm-nav-top">
+        <div className="fdm-nav fdm-nav-top">
           <div className="fdm-nav-pad">
             <i aria-hidden="true" />
             <span>Todas las obras hasta $ 1.000.000 · Venta directa del artista</span>
@@ -186,7 +192,7 @@ export default function Navigation() {
         </div>
       )}
 
-      <header className="fdm-nav-head">
+      <header className="fdm-nav fdm-nav-head">
         <div className="fdm-nav-pad fdm-nav-bar">
           <Link href="/" className="fdm-nav-brand" aria-label={`Ir al inicio - ${brand.name}`}>
             <BrandLogo height={38} />
@@ -202,6 +208,8 @@ export default function Navigation() {
 
           <div className="fdm-nav-right">
             <ThemeToggle className="fdm-nav-icon fdm-nav-wide" />
+
+            {!ready && <span className="fdm-nav-slot fdm-nav-wide" aria-hidden="true" />}
 
             {ready && !isAuthenticated && (
               <Link href="/login" className="fdm-nav-ghost fdm-nav-wide">
@@ -323,6 +331,6 @@ export default function Navigation() {
           </nav>
         )}
       </header>
-    </div>
+    </>
   );
 }

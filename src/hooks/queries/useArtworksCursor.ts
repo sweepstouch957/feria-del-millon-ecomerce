@@ -31,6 +31,10 @@
     limit?: number;
     artist?: string;
     reproducible?: boolean;
+    /** Tope de precio: filtra en el servidor para que el total sea el real. */
+    maxPrice?: number;
+    sortBy?: "createdAt" | "price";
+    sortDir?: "asc" | "desc";
     /** Trae también las obras que esperan a que se publique el catálogo.
      *  Lo usa el artista en su estudio: son sus propias obras. */
     includeHidden?: boolean | number | string;
@@ -46,6 +50,9 @@
         limit: filters.limit ?? 24,
         artist: filters.artist || undefined,
         reproducible: filters.reproducible,
+        maxPrice: filters.maxPrice || undefined,
+        sortBy: filters.sortBy || undefined,
+        sortDir: filters.sortDir || undefined,
         includeHidden: filters.includeHidden || undefined,
       }),
       [
@@ -56,6 +63,9 @@
         filters.limit,
         filters.artist,
         filters.reproducible,
+        filters.maxPrice,
+        filters.sortBy,
+        filters.sortDir,
         filters.includeHidden,
       ]
     );
@@ -95,5 +105,8 @@
         ? "—"
         : `${rows.length}`;
 
-    return { ...query, rows, totalLabel, loadMore: () => query.fetchNextPage() };
+    // Total numérico: el real del servidor si lo manda; si no, lo cargado.
+    const total = typeof totalFromApi === "number" ? totalFromApi : rows.length;
+
+    return { ...query, rows, total, totalLabel, loadMore: () => query.fetchNextPage() };
   }

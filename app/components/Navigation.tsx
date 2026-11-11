@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShoppingCart, LogOut, ChevronDown, LayoutDashboard, BadgeCheck } from "lucide-react";
+import { ShoppingCart, Heart, LogOut, ChevronDown, LayoutDashboard, BadgeCheck } from "lucide-react";
 import useCart from "@store/useCart";
+import useFavorites from "@store/useFavorites";
 import { useMounted } from "@hooks/useMounted";
 import { useAuth } from "@provider/authProvider";
 import { useFairMode, useSiteContent, useSiteNav } from "@provider/siteConfigProvider";
@@ -33,6 +34,10 @@ export default function Navigation() {
   const cart = useCart((s) => s.items);
   const mounted = useMounted();
   const cartCount = useMemo(() => (mounted ? cart.reduce((a, i) => a + (i.quantity ?? 1), 0) : 0), [cart, mounted]);
+  const favs = useFavorites((s) => s.items);
+  const favCount = mounted ? favs.length : 0;
+  const iconBtn: React.CSSProperties = { position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", height: 42, width: 42, borderRadius: 999, border: `1px solid color-mix(in srgb, ${FG} 26%, transparent)` };
+  const badge = (bg: string): React.CSSProperties => ({ position: "absolute", top: -6, right: -6, background: bg, color: "#fff", fontSize: 11, borderRadius: 999, height: 20, minWidth: 20, padding: "0 5px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 });
 
   useEffect(() => {
     const handler = () => {
@@ -217,13 +222,17 @@ export default function Navigation() {
             )}
           </div>
 
-          {/* Carrito: visible salvo en modo feria (ahí se compra solo desde el QR de la obra). */}
+          {/* Favoritos y carrito: visibles salvo en modo feria (ahí se compra solo desde el QR de la obra). */}
           {!fairMode && (
-            <Link href="/carrito" aria-label="Ir al carrito" style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", height: 42, width: 42, borderRadius: 999, border: `1px solid color-mix(in srgb, ${FG} 26%, transparent)` }}>
+            <Link href="/favoritos" aria-label={favCount > 0 ? `Favoritos (${favCount})` : "Favoritos"} style={{ ...iconBtn, color: pathname === "/favoritos" ? "#C2410C" : "inherit" }}>
+              <Heart className="h-4 w-4" fill={pathname === "/favoritos" ? "currentColor" : "none"} />
+              {favCount > 0 && <span style={badge("#C2410C")}>{favCount}</span>}
+            </Link>
+          )}
+          {!fairMode && (
+            <Link href="/carrito" aria-label={cartCount > 0 ? `Carrito (${cartCount})` : "Ir al carrito"} style={iconBtn}>
               <ShoppingCart className="h-4 w-4" />
-              {cartCount > 0 && (
-                <span style={{ position: "absolute", top: -6, right: -6, background: GREEN, color: "#0B0B0A", fontSize: 11, borderRadius: 999, height: 20, minWidth: 20, padding: "0 5px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{cartCount}</span>
-              )}
+              {cartCount > 0 && <span style={{ ...badge(GREEN), color: "#0B0B0A" }}>{cartCount}</span>}
             </Link>
           )}
 

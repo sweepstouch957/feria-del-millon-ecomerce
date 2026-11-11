@@ -1,13 +1,17 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-type CartItem = {
+export type CartItem = {
   id: string;
   title: string;
   artist: string;
   price: number;
   image?: string;
   quantity: number;
+  /** Ficha corta para el carrito (opcionales: los pone el catálogo nuevo). */
+  technique?: string;
+  kind?: string;
+  pavilion?: string;
 };
 
 type CartState = {

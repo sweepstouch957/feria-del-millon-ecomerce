@@ -1,5 +1,6 @@
 import Navigation from "@components/Navigation";
 import { ApplicationContinueBanner } from "@components/ApplicationContinueBanner";
+import FavoritesSync from "@components/FavoritesSync";
 import "./globals.css";
 import { AuthProvider } from "@provider/authProvider";
 import ReactQueryProvider from "@provider/reactQueryProvider";
@@ -74,6 +75,7 @@ export default async function RootLayout({
             <ReactQueryProvider>
               <AuthProvider>
                 <Navigation />
+                <FavoritesSync />
                 {children}
                 <ApplicationContinueBanner />
                 <Toaster position="top-right" toastOptions={{ duration: 4000 }} />

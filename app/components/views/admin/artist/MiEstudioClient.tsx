@@ -570,7 +570,6 @@ export default function MiEstudioClient() {
       {/* ══ OBRAS · proyecto ════════════════════════════════════ */}
       {tab === "obras" && sub === "proyecto" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <button type="button" className="fdm-st-back fdm-studio-plain" onClick={backToList}><Ico name="back" />Volver a mis obras</button>
           <ProjectFields
             initial={initialValues}
             loading={projectLoading}
@@ -578,13 +577,14 @@ export default function MiEstudioClient() {
             formRef={projectForm}
             onStateChange={onProjectState}
             onSave={saveProject}
+            onBack={backToList}
+            onAccount={() => go("cuenta")}
+            artistName={artistName}
+            rows={rows}
           />
-          <p className="fdm-st-note">
-            Tu foto y tu presentación como artista se editan en{" "}
-            <button type="button" className="fdm-st-link fdm-studio-plain" style={{ height: "auto", display: "inline" }} onClick={() => go("cuenta")}>Cuenta</button>.
-          </p>
           <div className="fdm-st-bar">
-            <span className="st">
+            <span className="st" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: !projectState.dirty && savedTitle ? "var(--green)" : "var(--warn-line)" }} />
               <b>{projectState.dirty ? "Cambios sin guardar" : savedTitle ? "Proyecto guardado" : "Ponle título a tu proyecto"}</b>
             </span>
             <div className="acts">

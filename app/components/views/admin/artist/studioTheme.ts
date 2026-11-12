@@ -443,6 +443,21 @@ export const STUDIO_CSS = `
   .fdm-st-ck { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--fg2); }
   .fdm-st-ck.is-on { color: var(--fg); }
 
+  /* Tu proyecto: pasos, consejos y medidor de palabras */
+  .fdm-st-journey { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+  .fdm-st-journey .s { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--fg2); white-space: nowrap; }
+  .fdm-st-journey .n { flex: none; width: 26px; height: 26px; border-radius: 999px; border: 2px solid var(--fg4); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+  .fdm-st-journey .s.is-done { color: var(--fg); }
+  .fdm-st-journey .s.is-done .n { background: var(--green); border-color: var(--green); color: #fff; }
+  .fdm-st-journey .s.is-on { color: var(--fg); font-weight: 500; }
+  .fdm-st-journey .s.is-on .n { background: var(--inv); border-color: var(--inv); color: var(--invfg); }
+  .fdm-st-journey i { flex: 1 1 16px; max-width: 56px; height: 2px; background: var(--line2); }
+  .fdm-st-tips { padding: 20px; background: var(--tile); border-radius: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .fdm-st-tips span { display: flex; gap: 10px; font-size: 15px; line-height: 1.45; }
+  .fdm-st-tips b { color: var(--green); font-weight: 600; }
+  .fdm-st-meter { flex: 1; height: 4px; background: var(--line3); border-radius: 999px; overflow: hidden; }
+  .fdm-st-meter > i { display: block; height: 4px; background: var(--green); transition: width .2s ease; }
+
   /* QR */
   .fdm-st-qrgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
   .fdm-st-qr { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }

@@ -1,8 +1,8 @@
 "use client";
 import { ImageUpload } from "@components/ui/FileUpload";
 import { type ArtworkImageEntry } from "@services/applications.service";
-import { Check } from "lucide-react";
 import { useEdition } from "@provider/editionProvider";
+import { Dot, Ico } from "./applyUi";
 
 interface ApplicationStepImagesProps {
   artworkImages: ArtworkImageEntry[];
@@ -16,240 +16,134 @@ interface ApplicationStepImagesProps {
 }
 
 const CURRENT_YEAR = new Date().getFullYear();
+const cop = (n: number) => "$ " + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
-function formatCOP(n: number) {
-  return `$${n.toLocaleString("es-CO")} COP`;
-}
-
-export function ApplicationStepImages({
-  artworkImages,
-  techniques,
-  onAddImage,
-  onUpdateImage,
-  onRemoveImage,
-  onBack,
-  onNext,
-  isSaving,
-}: ApplicationStepImagesProps) {
-  // Requisitos configurables por convocatoria (Fase 2), con defaults sensatos.
+/** Paso 3 de la postulación: las obras del proyecto, una tarjeta por obra. */
+export function ApplicationStepImages({ artworkImages, techniques, onAddImage, onUpdateImage, onRemoveImage, onBack, onNext, isSaving }: ApplicationStepImagesProps) {
+  // Requisitos configurables por convocatoria, con valores por defecto.
   const { convocatoria } = useEdition();
   const req = convocatoria?.requirements || {};
   const PRICE_MIN = req.priceMin ?? 800_000;
   const PRICE_MAX = req.priceMax ?? 2_350_000;
   const MAX_IMAGES = req.maxImages ?? 15;
   const allowedIds = convocatoria?.allowedTechniqueIds || [];
-  const allowedTechniques = allowedIds.length
-    ? techniques.filter((t: any) => allowedIds.includes(String(t.id || t._id)))
-    : techniques;
-  const priceLabel = `$${PRICE_MIN.toLocaleString("es-CO")} – $${PRICE_MAX.toLocaleString("es-CO")} COP`;
+  const allowedTechniques = allowedIds.length ? techniques.filter((t: any) => allowedIds.includes(String(t.id || t._id))) : techniques;
+  const priceLabel = `entre ${cop(PRICE_MIN)} y ${cop(PRICE_MAX)}`;
   const priceValid = (p?: number) => p !== undefined && p >= PRICE_MIN && p <= PRICE_MAX;
   const artworkComplete = (img: ArtworkImageEntry) => !!img.url && !!img.title && priceValid(img.price);
 
   const validCount = artworkImages.filter(artworkComplete).length;
-  const canAdvance =
-    !isSaving &&
-    artworkImages.length > 0 &&
-    artworkImages.every(artworkComplete);
+  const allValid = artworkImages.length > 0 && validCount === artworkImages.length;
+  const canAdvance = !isSaving && allValid;
 
   return (
-    <div className="app-section">
-      {/* ── Header ── */}
-      <div style={{ marginBottom: 24 }}>
-        <h2 className="app-section__title" style={{ marginBottom: 6 }}>
-          Obras del proyecto
-        </h2>
-        <p className="app-section__desc" style={{ marginBottom: 12 }}>
-          Agrega hasta <strong>{MAX_IMAGES} obras</strong>. Cada una requiere imagen, título y precio.
-          Los campos de técnica, dimensiones y año son opcionales pero recomendados.
-        </p>
+    <>
+      <section className="fdm-ap-sec">
+        <div className="hd">
+          <h2 className="fdm-st-h3">Las obras de tu proyecto</h2>
+          <span className="fdm-ap-help">
+            Agrega hasta {MAX_IMAGES} obras. Cada una necesita <b style={{ fontWeight: 500, color: "var(--fg)" }}>foto, título y precio</b> ({priceLabel}). Técnica, medidas y año son opcionales, pero ayudan al jurado.
+          </span>
+        </div>
 
-        {/* Progress pill */}
-        {artworkImages.length > 0 && (
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            background: validCount === artworkImages.length
-              ? "rgba(34,197,94,.1)" : "rgba(251,191,36,.08)",
-            border: `1px solid ${validCount === artworkImages.length ? "rgba(34,197,94,.25)" : "rgba(251,191,36,.2)"}`,
-            borderRadius: 100, padding: "5px 14px", fontSize: 12, fontWeight: 700,
-            color: validCount === artworkImages.length ? "#4ade80" : "#fbbf24",
-          }}>
-            <span style={{
-              width: 7, height: 7, borderRadius: "50%",
-              background: validCount === artworkImages.length ? "#4ade80" : "#fbbf24",
-              display: "inline-block",
-            }} />
-            {validCount} de {artworkImages.length} {artworkImages.length === 1 ? "obra completa" : "obras completas"}
-          </div>
-        )}
-      </div>
-
-      {/* ── Artwork list ── */}
-      <div className="app-images-list">
         {artworkImages.map((img, i) => {
           const ok = artworkComplete(img);
+          const lacks = [!img.url && "la foto", !img.title && "el título", !priceValid(img.price) && "el precio"].filter(Boolean) as string[];
           return (
-            <div key={i} className="app-image-entry" style={{
-              borderColor: ok
-                ? "rgba(34,197,94,.2)"
-                : img.url || img.title ? "rgba(251,191,36,.2)" : undefined,
-            }}>
-              {/* Card header */}
-              <div className="app-image-entry__header">
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{
-                    width: 26, height: 26, borderRadius: "50%",
-                    background: ok ? "rgba(34,197,94,.15)" : "rgba(255,255,255,.06)",
-                    border: `1.5px solid ${ok ? "rgba(34,197,94,.4)" : "rgba(255,255,255,.12)"}`,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 11, fontWeight: 800,
-                    color: ok ? "#4ade80" : "rgba(255,255,255,.4)",
-                    flexShrink: 0,
-                  }}>
-                    {ok ? <Check size={14} /> : i + 1}
-                  </span>
-                  <span style={{ fontWeight: 700, fontSize: 14 }}>
-                    {img.title || `Obra #${i + 1}`}
-                  </span>
-                </div>
-                <button className="app-image-remove" onClick={() => onRemoveImage(i)}>
-                  Quitar
-                </button>
+            <article key={i} className="fdm-ap-work">
+              <div className="top">
+                <span className="t">
+                  <Dot on={ok} size="xs" />
+                  {img.title || `Obra ${i + 1}`}
+                </span>
+                <button type="button" className="fdm-st-link is-mute fdm-studio-plain" onClick={() => onRemoveImage(i)}>Quitar</button>
               </div>
-
-              {/* Image upload */}
-              <div className="app-field" style={{ marginBottom: 16 }}>
+              <div className="bd">
                 <ImageUpload
-                  label="Fotografía de la obra *"
+                  label="Foto de la obra"
                   value={img.url}
                   onChange={(url) => onUpdateImage(i, "url", url)}
                   folder="convocatoria/artworks"
-                  hint="JPG o PNG · Máx. 5 MB · Fondo neutro, buena iluminación, obra completa"
+                  hint="De frente, con luz pareja, la obra completa y sin reflejos."
                 />
-              </div>
 
-              {/* Fields grid */}
-              <div className="app-image-grid">
-
-                {/* Title */}
-                <div className="app-field">
-                  <label>Título de la obra *</label>
-                  <input
-                    value={img.title}
-                    onChange={(e) => onUpdateImage(i, "title", e.target.value)}
-                    placeholder="Ej: Sin título #3"
-                  />
-                </div>
-
-                {/* Technique */}
-                <div className="app-field">
-                  <label>Técnica</label>
-                  <select
-                    value={img.technique || ""}
-                    onChange={(e) => onUpdateImage(i, "technique", e.target.value)}
-                  >
-                    <option value="">Selecciona una técnica…</option>
-                    {allowedTechniques.map((t: any) => (
-                      <option key={t.id || t._id} value={t.name}>{t.name}</option>
-                    ))}
-                    <option value="Otra">Otra</option>
-                  </select>
-                </div>
-
-                {/* Dimensions */}
-                <div className="app-field">
-                  <label>Dimensiones</label>
-                  <input
-                    value={img.dimensions || ""}
-                    onChange={(e) => onUpdateImage(i, "dimensions", e.target.value)}
-                    placeholder="Ej: 120 × 80 × 5"
-                  />
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 4, display: "block" }}>
-                    Alto × Ancho × Profundidad en cm
-                  </span>
-                </div>
-
-                {/* Year */}
-                <div className="app-field">
-                  <label>Año de creación</label>
-                  <input
-                    type="number"
-                    min={1900}
-                    max={CURRENT_YEAR}
-                    value={img.year || ""}
-                    onChange={(e) => onUpdateImage(i, "year", Number(e.target.value))}
-                    placeholder={String(CURRENT_YEAR)}
-                  />
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,.3)", marginTop: 4, display: "block" }}>
-                    Entre 1900 y {CURRENT_YEAR}
-                  </span>
-                </div>
-
-                {/* Price — full width */}
-                <div className="app-field" style={{ gridColumn: "1 / -1" }}>
-                  <label>
-                    Precio de venta *
-                    <span style={{
-                      marginLeft: 8, fontSize: 11, fontWeight: 600,
-                      color: "rgba(255,255,255,.35)", fontFamily: "monospace",
-                    }}>
-                      {priceLabel}
-                    </span>
-                  </label>
-                  <input
-                    type="number"
-                    min={PRICE_MIN}
-                    max={PRICE_MAX}
-                    step={10_000}
-                    value={img.price || ""}
-                    onChange={(e) => onUpdateImage(i, "price", Number(e.target.value))}
-                    placeholder="Ej: 1500000"
-                    style={img.price && !priceValid(img.price)
-                      ? { borderColor: "rgba(239,68,68,.6)" } : {}}
-                  />
-                  {img.price ? (
-                    priceValid(img.price)
-                      ? (
-                        <span style={{ fontSize: 12, color: "#4ade80", marginTop: 5, display: "block", fontWeight: 600 }}>
-                          <Check size={14} style={{ verticalAlign: "-2px" }} /> {formatCOP(img.price)}
-                        </span>
+                <div className="fdm-ap-grid">
+                  <div className="fdm-ap-field">
+                    <label htmlFor={`ap-t-${i}`}>Título</label>
+                    <input id={`ap-t-${i}`} value={img.title} onChange={(e) => onUpdateImage(i, "title", e.target.value)} placeholder="Como quieres que aparezca" />
+                  </div>
+                  <div className="fdm-ap-field">
+                    <label htmlFor={`ap-p-${i}`}>Precio (COP)</label>
+                    <input
+                      id={`ap-p-${i}`}
+                      type="number"
+                      inputMode="numeric"
+                      min={PRICE_MIN}
+                      max={PRICE_MAX}
+                      step={10_000}
+                      value={img.price || ""}
+                      onChange={(e) => onUpdateImage(i, "price", Number(e.target.value))}
+                      placeholder="0"
+                      aria-invalid={(!!img.price && !priceValid(img.price)) || undefined}
+                    />
+                    {img.price ? (
+                      priceValid(img.price) ? (
+                        <span className="fdm-ap-help is-ok">{cop(img.price)}</span>
                       ) : (
-                        <span style={{ fontSize: 12, color: "#f87171", marginTop: 5, display: "block" }}>
-                          Precio fuera del rango permitido ({priceLabel})
-                        </span>
+                        <span className="fdm-ap-help is-bad">Debe estar {priceLabel}.</span>
                       )
-                  ) : null}
+                    ) : (
+                      <span className="fdm-ap-help">Debe estar {priceLabel}.</span>
+                    )}
+                  </div>
                 </div>
 
+                <div className="fdm-ap-grid">
+                  <div className="fdm-ap-field">
+                    <label htmlFor={`ap-k-${i}`}>Técnica <small>opcional</small></label>
+                    <select id={`ap-k-${i}`} value={img.technique || ""} onChange={(e) => onUpdateImage(i, "technique", e.target.value)}>
+                      <option value="">Elige una opción</option>
+                      {allowedTechniques.map((t: any) => <option key={t.id || t._id} value={t.name}>{t.name}</option>)}
+                      <option value="Otra">Otra</option>
+                    </select>
+                  </div>
+                  <div className="fdm-ap-field">
+                    <label htmlFor={`ap-d-${i}`}>Medidas en cm <small>opcional</small></label>
+                    <input id={`ap-d-${i}`} value={img.dimensions || ""} onChange={(e) => onUpdateImage(i, "dimensions", e.target.value)} placeholder="Alto × ancho, por ejemplo 120 × 80" />
+                  </div>
+                  <div className="fdm-ap-field">
+                    <label htmlFor={`ap-y-${i}`}>Año <small>opcional</small></label>
+                    <input id={`ap-y-${i}`} type="number" inputMode="numeric" min={1900} max={CURRENT_YEAR} value={img.year || ""} onChange={(e) => onUpdateImage(i, "year", Number(e.target.value))} placeholder={String(CURRENT_YEAR)} />
+                  </div>
+                </div>
+
+                {!ok && (img.url || img.title || img.price) ? <span className="fdm-ap-help is-bad">A esta obra le falta {lacks.join(", ")}.</span> : null}
               </div>
-            </div>
+            </article>
           );
         })}
+
+        {artworkImages.length < MAX_IMAGES ? (
+          <button type="button" className="fdm-st-add fdm-studio-plain" style={artworkImages.length === 0 ? { minHeight: 140, flexDirection: "column" } : undefined} onClick={onAddImage}>
+            <Ico name="plus" size={artworkImages.length === 0 ? 24 : 18} />
+            {artworkImages.length === 0 ? <span style={{ fontSize: 18, fontWeight: 500 }}>Agregar mi primera obra</span> : "Agregar otra obra"}
+          </button>
+        ) : (
+          <span className="fdm-ap-help" style={{ textAlign: "center" }}>Llegaste al máximo de {MAX_IMAGES} obras.</span>
+        )}
+      </section>
+
+      <div className="fdm-st-bar">
+        <span className="st">
+          {artworkImages.length === 0 ? <>Agrega <b>al menos una obra</b></> : allValid ? <b>{validCount} {validCount === 1 ? "obra lista" : "obras listas"}</b> : <><b>{validCount} de {artworkImages.length}</b> obras completas</>}
+        </span>
+        <div className="acts">
+          <button type="button" className="fdm-st-btn fdm-studio-plain" onClick={onBack}>Atrás</button>
+          <button type="button" className="fdm-st-btn is-green is-main fdm-studio-plain" disabled={!canAdvance} onClick={onNext}>
+            {isSaving ? "Guardando…" : "Guardar y revisar"}
+          </button>
+        </div>
       </div>
-
-      {/* ── Add artwork button ── */}
-      {artworkImages.length < MAX_IMAGES && (
-        <button className="app-btn-add" onClick={onAddImage}>
-          {artworkImages.length === 0 ? "+ Agregar primera obra" : "+ Agregar otra obra"}
-        </button>
-      )}
-
-      {artworkImages.length >= MAX_IMAGES && (
-        <p style={{ textAlign: "center", fontSize: 13, color: "rgba(255,255,255,.3)", marginTop: 8 }}>
-          Límite alcanzado · {MAX_IMAGES} obras máximo
-        </p>
-      )}
-
-      {/* ── Navigation ── */}
-      <div className="app-actions">
-        <button className="app-btn-secondary" onClick={onBack}>← Atrás</button>
-        <button
-          className="app-btn-primary"
-          disabled={!canAdvance}
-          onClick={onNext}
-        >
-          {isSaving ? "Guardando…" : "Guardar y revisar →"}
-        </button>
-      </div>
-    </div>
+    </>
   );
 }

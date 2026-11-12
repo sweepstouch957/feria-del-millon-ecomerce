@@ -1,6 +1,5 @@
 "use client";
 import { ImageUpload, PDFUpload } from "@components/ui/FileUpload";
-import { User } from "lucide-react";
 
 interface ApplicationStepProfileProps {
   cvUrl: string;
@@ -14,60 +13,54 @@ interface ApplicationStepProfileProps {
   isSaving: boolean;
 }
 
-export function ApplicationStepProfile({
-  cvUrl,
-  setCvUrl,
-  profilePhotoUrl,
-  setProfilePhotoUrl,
-  bio,
-  setBio,
-  onBack,
-  onNext,
-  isSaving
-}: ApplicationStepProfileProps) {
+/** Paso 1 de la postulación: quién es el artista. */
+export function ApplicationStepProfile({ cvUrl, setCvUrl, profilePhotoUrl, setProfilePhotoUrl, bio, setBio, onNext, isSaving }: ApplicationStepProfileProps) {
+  const missing = [!profilePhotoUrl && "tu foto", !bio.trim() && "tu presentación", !cvUrl && "tu hoja de vida"].filter(Boolean) as string[];
+
   return (
-    <div className="app-section">
-      <h2 className="app-section__title"><User size={18} style={{ verticalAlign: "-3px" }} /> Perfil del artista</h2>
-      <p className="app-section__desc">Completa tu información personal antes de continuar con el proyecto.</p>
+    <>
+      <section className="fdm-st-card fdm-ap-sec">
+        <div className="hd">
+          <h2 className="fdm-st-h3">1. Tu foto</h2>
+          <span className="fdm-ap-help">Una foto tuya, de frente y con buena luz. Es la que acompaña tu nombre.</span>
+        </div>
+        <ImageUpload label="Foto de perfil" value={profilePhotoUrl} onChange={setProfilePhotoUrl} folder="convocatoria/profiles" />
+      </section>
 
-      <div className="app-field">
-        <PDFUpload
-          label="Tu CV (PDF) *"
-          value={cvUrl}
-          onChange={setCvUrl}
-          hint="Formato PDF · Máx. 10MB · Se sube de forma segura a nuestro almacenamiento"
-        />
-      </div>
+      <section className="fdm-st-card fdm-ap-sec">
+        <div className="hd">
+          <h2 className="fdm-st-h3">2. Preséntate</h2>
+          <span className="fdm-ap-help">Cuéntale al jurado quién eres, en tus palabras.</span>
+        </div>
+        <div className="fdm-ap-field">
+          <label htmlFor="ap-bio">Presentación <small>{bio.length} de 500 letras</small></label>
+          <textarea
+            id="ap-bio"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            maxLength={500}
+            rows={6}
+            placeholder="Dónde naciste, qué técnicas trabajas, qué has expuesto, becas o premios…"
+          />
+        </div>
+      </section>
 
-      <div className="app-field">
-        <ImageUpload
-          label="Foto de perfil *"
-          value={profilePhotoUrl}
-          onChange={setProfilePhotoUrl}
-          folder="convocatoria/profiles"
-          hint="640×480 px mínimo · JPG o PNG · Foto profesional, buena iluminación"
-        />
-      </div>
+      <section className="fdm-st-card fdm-ap-sec">
+        <div className="hd">
+          <h2 className="fdm-st-h3">3. Tu hoja de vida</h2>
+          <span className="fdm-ap-help">Tu trayectoria artística en un PDF. Si la tienes en Word, guárdala como PDF.</span>
+        </div>
+        <PDFUpload label="Hoja de vida (PDF)" value={cvUrl} onChange={setCvUrl} />
+      </section>
 
-      <div className="app-field">
-        <label>Biografía * <span className="app-chars">{bio.length}/500</span></label>
-        <textarea
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
-          maxLength={500}
-          rows={5}
-          placeholder="Ciudad de nacimiento, grupo poblacional, técnicas y trayectoria artística, becas, premios…"
-        />
+      <div className="fdm-st-bar">
+        <span className="st">{missing.length ? <>Te falta <b>{missing.join(", ")}</b></> : <b>Perfil completo</b>}</span>
+        <div className="acts">
+          <button type="button" className="fdm-st-btn is-green is-main fdm-studio-plain" disabled={isSaving} onClick={onNext}>
+            {isSaving ? "Guardando…" : "Guardar y seguir"}
+          </button>
+        </div>
       </div>
-
-      <div className="app-actions">
-        {onBack && (
-          <button className="app-btn-secondary" onClick={onBack}>← Atrás</button>
-        )}
-        <button className="app-btn-primary" disabled={isSaving} onClick={onNext}>
-          {isSaving ? "Guardando…" : "Guardar y continuar →"}
-        </button>
-      </div>
-    </div>
+    </>
   );
 }

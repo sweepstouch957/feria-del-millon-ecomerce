@@ -1,24 +1,22 @@
 "use client";
 
 import { memo, useCallback } from "react";
-import Image from "next/image";
-import { Eye, Pencil, Share2, QrCode, ImageOff, Plus } from "lucide-react";
+import SmartImage from "@components/ui/SmartImage";
 
 import { ArtworkRow } from "@hooks/queries/useArtworksCursor";
 import { formatCOP } from "@lib/money";
-import { BODY, EYEBROW, hair, mix } from "./studioTheme";
-import { Bone, Eyebrow, StudioButton } from "./ui";
+import { Bone, Ico } from "./ui";
 
-/* El índice de obras del artista.
-   No es una tabla de base de datos: la imagen manda, el resto son datos de
-   ficha. En pantalla angosta cada obra se apila sola; no hay scroll lateral. */
+/* Las obras del artista, una tarjeta por obra (port de "Mi estudio · Obras").
+   Miniatura, título, estado, ficha de cuatro datos y las acciones como botones
+   de 44px que se reparten el ancho: en celular quedan de a dos por fila. */
 
 type Props = {
   rows: ArtworkRow[];
   loading: boolean;
-  /** No se cargan obras nuevas (inventario enviado o carga cerrada). */
+  /** No se cargan obras nuevas (carga cerrada). */
   locked?: boolean;
-  /** Se pueden corregir las obras ya cargadas, aunque el inventario esté enviado. */
+  /** Se pueden corregir las obras ya cargadas. */
   canEdit?: boolean;
   /** Hay filtros puestos: cambia el texto del estado vacío. */
   filtering?: boolean;
@@ -32,40 +30,24 @@ type Props = {
   onOpenQr: (id: string) => void;
 };
 
-const money = (n?: number, currency = "COP") =>
-  typeof n === "number" ? formatCOP(n, { currency }) : "—";
+const money = (n?: number, currency = "COP") => (typeof n === "number" ? formatCOP(n, { currency }) : "—");
 
-/** Dato de ficha: etiqueta chica arriba, valor debajo. */
-function Cell({ label, value, width }: { label: string; value: React.ReactNode; width: number }) {
+function CardSkeleton() {
   return (
-    <div style={{ flex: `0 1 ${width}px`, minWidth: 92 }}>
-      <Eyebrow tone="faint" size={9} style={{ display: "block", marginBottom: 3 }}>
-        {label}
-      </Eyebrow>
-      <span style={{ fontSize: 14, lineHeight: 1.4, color: mix(82) }}>{value}</span>
-    </div>
-  );
-}
-
-function RowSkeleton() {
-  return (
-    <div style={{ display: "flex", gap: 18, alignItems: "center", padding: "18px 0", borderBottom: hair(10) }}>
-      <Bone w={76} h={76} style={{ flexShrink: 0 }} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 9 }}>
-        <Bone w="42%" h={15} />
-        <Bone w="26%" h={11} />
+    <div className="fdm-st-art" aria-hidden="true">
+      <Bone w={120} h={120} style={{ flex: "none", borderRadius: 0 }} />
+      <div className="body">
+        <Bone w="45%" h={22} />
+        <Bone w="30%" h={14} />
+        <Bone w="100%" h={44} style={{ borderRadius: 999 }} />
       </div>
-      <Bone w={90} h={11} />
     </div>
   );
 }
 
-/* Una fila por obra.
-
-   Va memoizada y recibe la obra entera en vez de diez props sueltas: con
-   treinta obras cargadas, escribir en el buscador volvía a dibujar las treinta
-   filas en cada tecla. */
-const Row = memo(function Row({
+/* Va memoizada y recibe la obra entera: con treinta obras, escribir en el
+   buscador volvía a dibujar las treinta en cada tecla. */
+const Card = memo(function Card({
   r,
   canEdit,
   onView,
@@ -84,150 +66,43 @@ const Row = memo(function Row({
   // La feria la devolvió para corregir: se edita aunque el resto esté cerrado.
   const returned = !!(r as any)?.editUnlocked;
   const note: string = (r as any)?.editNote || "";
+  const sub = [r.year, (r as any)?.dimensionsText].filter(Boolean).join(" · ") || "Sin año ni medidas";
 
   return (
-    <article
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        gap: "clamp(14px,2vw,26px)",
-        padding: "clamp(16px,2vw,22px) 0",
-        borderBottom: hair(11),
-      }}
-    >
-      {/* Imagen + nombre: el bloque por el que se reconoce la obra */}
-      <button
-        type="button"
-        className="fdm-studio-plain"
-        onClick={() => onView(r.id)}
-        style={{
-          flex: "1 1 260px",
-          minWidth: "min(100%,240px)",
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          background: "transparent",
-          border: 0,
-          padding: 0,
-          textAlign: "left",
-          cursor: "pointer",
-          color: "inherit",
-        }}
-        aria-label={`Ver ${r.title}`}
-      >
-        <div
-          style={{
-            width: "clamp(68px,7vw,84px)",
-            aspectRatio: "1",
-            flexShrink: 0,
-            background: mix(7),
-            border: `1px solid ${mix(12)}`,
-            display: "grid",
-            placeItems: "center",
-            overflow: "hidden",
-            position: "relative",
-          }}
-        >
-          {r.image ? (
-            <Image src={r.image} alt={r.title} fill sizes="84px" style={{ objectFit: "cover" }} />
-          ) : (
-            <ImageOff size={17} strokeWidth={1.4} style={{ color: mix(34) }} />
-          )}
-        </div>
-
-        <div style={{ minWidth: 0 }}>
-          <h3
-            style={{
-              margin: 0,
-              fontWeight: 400,
-              fontSize: "clamp(16px,1.6vw,19px)",
-              lineHeight: 1.25,
-              letterSpacing: "0.005em",
-            }}
-          >
-            {r.title}
-          </h3>
-          <p style={{ margin: "5px 0 0", display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-            <Eyebrow tone="faint" size={9}>
-              {[r.year, (r as any)?.dimensionsText].filter(Boolean).join(" · ") || "Sin año"}
-            </Eyebrow>
-            <span
-              style={{
-                ...EYEBROW,
-                fontSize: 8.5,
-                padding: "2px 8px",
-                border: `1px solid ${hidden ? mix(22) : "var(--acc)"}`,
-                color: hidden ? mix(56) : "var(--acc)",
-              }}
-            >
-              {hidden ? "Sin publicar" : "En el catálogo"}
-            </span>
-            {returned && (
-              <span
-                style={{
-                  ...EYEBROW,
-                  fontSize: 8.5,
-                  padding: "2px 8px",
-                  background: "var(--acc)",
-                  color: "#fff",
-                }}
-              >
-                La feria te pide corregirla
-              </span>
-            )}
-          </p>
-          {returned && note && (
-            <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.45, color: mix(70) }}>{note}</p>
-          )}
-        </div>
+    <article className="fdm-st-art">
+      <button type="button" className="fdm-st-thumb fdm-studio-plain" onClick={() => onView(r.id)} aria-label={`Ver ${r.title}`}>
+        {r.image ? <SmartImage src={r.image} alt="" fit="cover" sizes="120px" /> : "Sin foto"}
       </button>
 
-      <Cell label="Pabellón" value={r?.pavilionInfo?.name || "—"} width={130} />
-      <Cell label="Técnica" value={r?.techniqueInfo?.name || r.technique || "—"} width={130} />
-      <Cell
-        label="Precio"
-        value={<span style={{ fontVariantNumeric: "tabular-nums" }}>{money(r.price, r.currency)}</span>}
-        width={120}
-      />
-      <Cell
-        label={(r as any)?.reproducible ? "Copias" : "Stock"}
-        value={
-          <span style={{ fontVariantNumeric: "tabular-nums" }}>
-            {typeof r.stock === "number" ? r.stock : "—"}
+      <div className="body">
+        <div className="head">
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <span className="t">{r.title}</span>
+            <span className="s">{sub}</span>
+          </div>
+          <span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {returned && <span className="fdm-st-pill is-bad">La feria te pide corregirla</span>}
+            <span className={`fdm-st-pill ${hidden ? "is-warn" : "is-ok"}`}>{hidden ? "Sin publicar" : "En el catálogo"}</span>
           </span>
-        }
-        width={74}
-      />
+        </div>
 
-      {/* Acciones: texto, no cuatro botones compitiendo */}
-      <div
-        style={{
-          flex: "1 1 200px",
-          minWidth: "min(100%,180px)",
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "clamp(12px,1.6vw,20px)",
-        }}
-      >
-        <StudioButton variant="link" onClick={() => onView(r.id)}>
-          <Eye size={13} strokeWidth={1.6} />
-          Ver
-        </StudioButton>
-        {(canEdit || returned) && (
-          <StudioButton variant="link" onClick={() => onEdit(r.id)}>
-            <Pencil size={13} strokeWidth={1.6} />
-            Editar
-          </StudioButton>
-        )}
-        <StudioButton variant="link" onClick={() => onOpenQr(r.id)}>
-          <QrCode size={13} strokeWidth={1.6} />
-          QR
-        </StudioButton>
-        <StudioButton variant="link" onClick={() => onShare(r.id, r.title)}>
-          <Share2 size={13} strokeWidth={1.6} />
-          Compartir
-        </StudioButton>
+        {returned && note && <p className="fdm-st-note">{note}</p>}
+
+        <dl className="fdm-st-dl">
+          <div><dt className="fdm-st-label">Pabellón</dt><dd>{r?.pavilionInfo?.name || "—"}</dd></div>
+          <div><dt className="fdm-st-label">Técnica</dt><dd>{r?.techniqueInfo?.name || r.technique || "—"}</dd></div>
+          <div><dt className="fdm-st-label">Precio</dt><dd style={{ fontVariantNumeric: "tabular-nums" }}>{money(r.price, r.currency)}</dd></div>
+          <div><dt className="fdm-st-label">{(r as any)?.reproducible ? "Copias" : "Cantidad"}</dt><dd>{typeof r.stock === "number" ? r.stock : "—"}</dd></div>
+        </dl>
+
+        <div className="fdm-st-acts">
+          <button type="button" className="fdm-st-btn is-sm fdm-studio-plain" onClick={() => onView(r.id)}><Ico name="eye" />Ver</button>
+          {(canEdit || returned) && (
+            <button type="button" className="fdm-st-btn is-sm fdm-studio-plain" onClick={() => onEdit(r.id)}><Ico name="edit" />Editar</button>
+          )}
+          <button type="button" className="fdm-st-btn is-sm fdm-studio-plain" onClick={() => onOpenQr(r.id)}><Ico name="qr" />QR</button>
+          <button type="button" className="fdm-st-btn is-sm fdm-studio-plain" onClick={() => onShare(r.id, r.title)}><Ico name="share" />Compartir</button>
+        </div>
       </div>
     </article>
   );
@@ -269,64 +144,50 @@ export default function ArtworksTable({
 
   if (loading) {
     return (
-      <div>
-        {[0, 1, 2, 3].map((i) => (
-          <RowSkeleton key={i} />
-        ))}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <CardSkeleton />
+        <CardSkeleton />
       </div>
     );
   }
 
   if (!rows.length) {
-    return (
-      <div
-        style={{
-          padding: "clamp(26px,3vw,40px)",
-          border: `1px dashed ${mix(20)}`,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-start",
-          gap: 14,
-        }}
-      >
-        <h3 style={{ margin: 0, fontWeight: 400, fontSize: "clamp(17px,1.9vw,21px)", letterSpacing: "0.01em" }}>
-          {filtering ? "Nada con esos filtros" : "Todavía no hay obras"}
-        </h3>
-        <p style={{ ...BODY, maxWidth: "48ch" }}>
-          {filtering
-            ? "Prueba con otro título, otra técnica u otro pabellón."
-            : "Cada obra lleva su imagen, sus dimensiones, su técnica y su precio. Puedes cargarlas de a una y editarlas mientras la carga esté abierta."}
-        </p>
-        {!filtering && !locked && onCreate && (
-          <StudioButton onClick={onCreate}>
-            <Plus size={15} strokeWidth={1.8} />
-            Cargar mi primera obra
-          </StudioButton>
-        )}
+    return filtering ? (
+      <div className="fdm-st-empty">
+        <b>Nada con esos filtros</b>
+        Prueba con otro título, otra técnica u otro pabellón.
+      </div>
+    ) : !locked && onCreate ? (
+      <button type="button" className="fdm-st-add fdm-studio-plain" style={{ minHeight: 140, flexDirection: "column" }} onClick={onCreate}>
+        <Ico name="plus" size={24} />
+        <span style={{ fontSize: 18, fontWeight: 500 }}>Cargar mi primera obra</span>
+        <span style={{ fontSize: 14, color: "var(--fg2)" }}>Foto, título, técnica, medidas y precio. Toma dos minutos.</span>
+      </button>
+    ) : (
+      <div className="fdm-st-empty">
+        <b>Todavía no hay obras</b>
+        La carga de obras está cerrada.
       </div>
     );
   }
 
   return (
-    <div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {rows.map((r) => (
-        <Row
-          key={r.id}
-          r={r}
-          canEdit={canEdit}
-          onView={onView}
-          onEdit={onEdit}
-          onOpenQr={onOpenQr}
-          onShare={doShare}
-        />
+        <Card key={r.id} r={r} canEdit={canEdit} onView={onView} onEdit={onEdit} onOpenQr={onOpenQr} onShare={doShare} />
       ))}
 
       {hasMore && (
-        <div style={{ display: "flex", justifyContent: "center", paddingTop: "clamp(22px,2.6vw,34px)" }}>
-          <StudioButton disabled={loadingMore} onClick={onLoadMore}>
-            {loadingMore ? "Cargando…" : "Ver más obras"}
-          </StudioButton>
-        </div>
+        <button type="button" className="fdm-st-btn fdm-studio-plain" style={{ alignSelf: "center" }} disabled={loadingMore} onClick={onLoadMore}>
+          {loadingMore ? "Cargando…" : "Ver más obras"}
+        </button>
+      )}
+
+      {!locked && onCreate && !filtering && (
+        <button type="button" className="fdm-st-add fdm-studio-plain" onClick={onCreate}>
+          <Ico name="plus" />
+          Agregar otra obra
+        </button>
       )}
     </div>
   );

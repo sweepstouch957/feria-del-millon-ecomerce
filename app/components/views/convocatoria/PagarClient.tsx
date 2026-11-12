@@ -9,79 +9,13 @@ import {
 } from "@services/applications.service";
 import { useAuth } from "@provider/authProvider";
 import { clearAuth } from "@services/auth.service";
-import Skeleton from "@components/ui/Skeleton";
+import { Bone } from "@components/views/admin/artist/ui";
+import { Alert, ApplyShell, Ico, Journey } from "./applyUi";
 import LegalDisclaimer from "@components/LegalDisclaimer";
 
-/* ──────────────────────────────────────────────────────────────
-   Pago de inscripción — sistema editorial v2.
-   La lógica (carga de la postulación, redirecciones, MercadoPago
-   y el pago simulado de desarrollo) quedó intacta.
-   ────────────────────────────────────────────────────────────── */
-
-const STEPS = ["Crear cuenta", "Pagar inscripción", "Subir obras", "Resolución"];
-
-const mix = (pct: number) => `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
-
-const EYEBROW: React.CSSProperties = {
-  fontWeight: 500,
-  fontSize: 10,
-  letterSpacing: "0.18em",
-  textTransform: "uppercase",
-};
-
-const ROOT_VARS = {
-  "--bg": "var(--fdm-bg,#F7F6F2)",
-  "--fg": "var(--fdm-fg,#0B0B0A)",
-  "--acc": "var(--fdm-green,#3FA46E)",
-  "--panel": "var(--fdm-panel,#0B0B0A)",
-  background: "var(--bg)",
-  color: "var(--fg)",
-  fontFamily: "Jost, system-ui, sans-serif",
-  fontWeight: 400,
-  minHeight: "calc(100vh - 81px)",
-  width: "100%",
-  overflowX: "hidden",
-} as React.CSSProperties;
-
-const PAGE_CSS = `
-  .fdm-pay a { transition: color .3s ease, opacity .3s ease; }
-  .fdm-pay-cta:hover:not(:disabled) { background: var(--acc); border-color: var(--acc); color: #0B0B0A; }
-`;
-
-const CTA: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "100%",
-  height: 54,
-  borderRadius: 999,
-  border: "1px solid var(--fg)",
-  background: "var(--fg)",
-  color: "var(--bg)",
-  cursor: "pointer",
-  transition: "all .3s ease",
-  ...EYEBROW,
-  fontSize: 11,
-  letterSpacing: "0.16em",
-};
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={ROOT_VARS}>
-      <style>{PAGE_CSS}</style>
-      <div
-        className="fdm-pay"
-        style={{
-          maxWidth: 620,
-          margin: "0 auto",
-          padding: "clamp(28px,4vw,60px) clamp(20px,4vw,40px)",
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
+/* Pago de inscripción (paso 2 del camino de la postulación).
+   La lógica —carga de la postulación, redirecciones, Mercado Pago y el pago
+   simulado de desarrollo— no cambió; la vista usa el sistema de applyUi. */
 
 export default function PagarClient() {
   const router = useRouter();
@@ -194,250 +128,130 @@ export default function PagarClient() {
     }
   };
 
-  /* ── Carga ─────────────────────────────────────────────── */
-  if (isAuthLoading || (loadingApp && !isNotArtist)) {
+  return (
+    <PagarView
+      loading={isAuthLoading || (loadingApp && !isNotArtist)}
+      isNotArtist={isNotArtist}
+      email={user?.email}
+      isPaid={!!app?.isPaid}
+      isMock={isMock}
+      paying={paying}
+      error={error}
+      onSwitch={handleSwitchToArtist}
+      onHome={() => router.push("/")}
+      onPay={handlePay}
+      onMockPay={handleMockPay}
+      onForm={() => router.push(`/convocatoria/aplicar?appId=${appId}`)}
+    />
+  );
+}
+
+/* Solo presentación: el sistema de la postulación (applyUi). */
+function PagarView({
+  loading,
+  isNotArtist,
+  email,
+  isPaid,
+  isMock,
+  paying,
+  error,
+  onSwitch,
+  onHome,
+  onPay,
+  onMockPay,
+  onForm,
+}: {
+  loading: boolean;
+  isNotArtist: boolean;
+  email?: string;
+  isPaid: boolean;
+  isMock: boolean;
+  paying: boolean;
+  error: string;
+  onSwitch: () => void;
+  onHome: () => void;
+  onPay: () => void;
+  onMockPay: () => void;
+  onForm: () => void;
+}) {
+  if (loading) {
     return (
-      <Shell>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <Skeleton w="35%" h={11} />
-          <Skeleton w="70%" h={34} />
-          <Skeleton w="100%" h={90} />
-          <Skeleton w="100%" h={54} radius={999} />
-        </div>
-      </Shell>
+      <ApplyShell narrow>
+        <Bone h={56} style={{ borderRadius: 12 }} />
+        <Bone w="70%" h={40} />
+        <Bone h={260} style={{ borderRadius: 16 }} />
+      </ApplyShell>
     );
   }
 
-  /* ── Cuenta que no es de artista ───────────────────────── */
   if (isNotArtist) {
     return (
-      <Shell>
-        <span style={{ ...EYEBROW, color: "#C9902B" }}>Cuenta no autorizada</span>
-        <h1
-          style={{
-            margin: "10px 0 8px",
-            fontWeight: 300,
-            fontSize: "clamp(28px,3.4vw,44px)",
-            lineHeight: 1.05,
-            letterSpacing: "0.02em",
-            textTransform: "uppercase",
-          }}
-        >
-          Necesitás una cuenta de artista
-        </h1>
-        <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: mix(72) }}>
-          El pago de inscripción y la postulación están reservados a cuentas de tipo artista.
-        </p>
-
-        <div
-          style={{
-            margin: "22px 0",
-            padding: "16px 18px",
-            border: `1px solid ${mix(16)}`,
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-          }}
-        >
-          <span style={{ ...EYEBROW, fontSize: 9, color: mix(50) }}>Sesión iniciada como</span>
-          <span style={{ fontSize: 15, fontWeight: 500 }}>{user?.email || "Usuario"}</span>
-          <span style={{ fontSize: 13.5, color: "#C9902B" }}>Rol: comprador</span>
+      <ApplyShell narrow center>
+        <div className="fdm-ap-head">
+          <span className="fdm-st-eyebrow" style={{ color: "var(--warn)" }}>Esta cuenta no es de artista</span>
+          <h1 className="fdm-st-h1">Necesitas una cuenta de artista</h1>
+          <p className="fdm-st-lead">La inscripción y la postulación son solo para cuentas de artista.</p>
         </div>
-
-        <button type="button" className="fdm-pay-cta" style={CTA} onClick={handleSwitchToArtist}>
-          Entrar como artista
-        </button>
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          style={{
-            ...CTA,
-            marginTop: 12,
-            background: "transparent",
-            color: "inherit",
-            border: `1px solid ${mix(26)}`,
-          }}
-        >
-          Volver al inicio
-        </button>
-      </Shell>
+        <div className="fdm-st-card" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span className="fdm-st-label">Entraste como</span>
+          <span style={{ fontSize: 16, overflowWrap: "anywhere" }}>{email || "Usuario"}</span>
+        </div>
+        <button type="button" className="fdm-st-btn is-green is-lg fdm-studio-plain" onClick={onSwitch}>Entrar con mi cuenta de artista</button>
+        <button type="button" className="fdm-st-btn fdm-studio-plain" onClick={onHome}>Volver al inicio</button>
+      </ApplyShell>
     );
   }
 
-  /* ── Pago ──────────────────────────────────────────────── */
   return (
-    <Shell>
-      {/* Pasos */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: "clamp(24px,3vw,38px)" }}>
-        <div style={{ height: 2, background: mix(14) }}>
-          <div style={{ height: "100%", width: "25%", background: "var(--acc)" }} />
+    <ApplyShell narrow>
+      <Journey current={1} />
+
+      <div className="fdm-ap-head">
+        <span className="fdm-st-eyebrow">Paso 2 de 4</span>
+        <h1 className="fdm-st-h1">Paga tu inscripción</h1>
+        <p className="fdm-st-lead">Tu cuenta ya está creada. Con el pago se abre el formulario donde subes tu proyecto y tus obras.</p>
+      </div>
+
+      <section className="fdm-st-card" style={{ display: "flex", flexDirection: "column", gap: 20, padding: 24 }}>
+        <div className="fdm-ap-price">
+          <span className="fdm-st-label">Valor de la inscripción</span>
+          <b>$ 40.000</b>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${STEPS.length}, 1fr)`, gap: 6 }}>
-          {STEPS.map((label, i) => (
-            <span
-              key={label}
-              style={{
-                ...EYEBROW,
-                fontSize: 8.5,
-                letterSpacing: "0.1em",
-                textAlign: "center",
-                lineHeight: 1.3,
-                color: i === 1 ? "var(--acc)" : i < 1 ? mix(65) : mix(38),
-              }}
-            >
-              {label}
-            </span>
+        <div className="fdm-ap-checks">
+          {[
+            "Pago seguro con Mercado Pago.",
+            "Puedes pagar con tarjeta, PSE o efectivo.",
+            "Al pagar se abre el formulario de postulación.",
+            "Es una sola inscripción por convocatoria.",
+          ].map((t) => (
+            <span key={t}><Ico name="check" sw={1.8} />{t}</span>
           ))}
         </div>
-      </div>
 
-      <span style={{ ...EYEBROW, color: "var(--acc)" }}>Paso 2</span>
-      <h1
-        style={{
-          margin: "10px 0 8px",
-          fontWeight: 300,
-          fontSize: "clamp(28px,3.4vw,44px)",
-          lineHeight: 1.05,
-          letterSpacing: "0.02em",
-          textTransform: "uppercase",
-        }}
-      >
-        Pago de inscripción
-      </h1>
-      <p style={{ margin: 0, maxWidth: "52ch", fontSize: 15, lineHeight: 1.6, color: mix(72) }}>
-        Tu cuenta ya está creada. Con el pago se desbloquea el formulario donde subís tu proyecto y
-        tus obras.
-      </p>
+        {error && <Alert tone="bad" title="No se pudo iniciar el pago">{error}</Alert>}
 
-      {/* Importe */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          gap: 16,
-          margin: "clamp(20px,2.4vw,30px) 0",
-          padding: "18px 0",
-          borderTop: `1px solid ${mix(20)}`,
-          borderBottom: `1px solid ${mix(20)}`,
-        }}
-      >
-        <span style={{ ...EYEBROW, fontSize: 10, color: mix(55) }}>Valor de inscripción</span>
-        <span style={{ fontWeight: 500, fontSize: "clamp(26px,3vw,38px)", lineHeight: 1 }}>
-          $40.000
-        </span>
-      </div>
-
-      <ul
-        style={{
-          margin: "0 0 clamp(20px,2.4vw,28px)",
-          padding: 0,
-          listStyle: "none",
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-        }}
-      >
-        {[
-          "Pago seguro con MercadoPago",
-          "Acepta tarjetas, PSE y efectivo",
-          "Desbloquea el formulario de postulación",
-          "Una sola inscripción por convocatoria",
-        ].map((t) => (
-          <li key={t} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14.5, color: mix(75) }}>
-            <span style={{ width: 5, height: 5, borderRadius: 999, background: "var(--acc)", flex: "0 0 auto" }} />
-            {t}
-          </li>
-        ))}
-      </ul>
-
-      {error && (
-        <div
-          role="alert"
-          style={{
-            marginBottom: 18,
-            padding: "12px 14px",
-            borderLeft: "2px solid #B4472A",
-            background: mix(4),
-            fontSize: 14,
-            lineHeight: 1.5,
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {/* Pago simulado, solo en local */}
-      {isMock && !app?.isPaid && (
-        <div
-          style={{
-            marginBottom: 18,
-            padding: "16px 18px",
-            border: `1px solid ${mix(16)}`,
-            background: mix(3),
-            display: "flex",
-            flexDirection: "column",
-            gap: 10,
-          }}
-        >
-          <span style={{ ...EYEBROW, fontSize: 9, color: "#C9902B" }}>Entorno local</span>
-          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: mix(72) }}>
-            MercadoPago no funciona en localhost. Usá el pago simulado para seguir el flujo.
-          </p>
-          <button
-            type="button"
-            onClick={handleMockPay}
-            disabled={paying}
-            style={{
-              ...CTA,
-              height: 46,
-              background: "transparent",
-              color: "inherit",
-              border: `1px solid ${mix(26)}`,
-              opacity: paying ? 0.6 : 1,
-            }}
-          >
-            {paying ? "Procesando…" : "Simular pago exitoso"}
+        {isPaid ? (
+          <button type="button" className="fdm-st-btn is-green is-lg fdm-studio-plain" onClick={onForm}>Ir al formulario<Ico name="arrow" /></button>
+        ) : !isMock ? (
+          <button type="button" className="fdm-st-btn is-green is-lg fdm-studio-plain" style={{ height: 56 }} onClick={onPay} disabled={paying}>
+            {paying ? "Abriendo Mercado Pago…" : <>Pagar con Mercado Pago<Ico name="arrow" /></>}
           </button>
-        </div>
-      )}
+        ) : (
+          /* Pago simulado, solo en local: Mercado Pago no funciona en localhost. */
+          <>
+            <Alert tone="warn" title="Entorno local">Mercado Pago no funciona en localhost. Usa el pago simulado para seguir el flujo.</Alert>
+            <button type="button" className="fdm-st-btn is-lg fdm-studio-plain" onClick={onMockPay} disabled={paying}>
+              {paying ? "Procesando…" : "Simular pago exitoso"}
+            </button>
+          </>
+        )}
 
-      {app?.isPaid ? (
-        <button
-          type="button"
-          className="fdm-pay-cta"
-          style={CTA}
-          onClick={() => router.push(`/convocatoria/aplicar?appId=${appId}`)}
-        >
-          Ir al formulario →
-        </button>
-      ) : !isMock ? (
-        <button
-          type="button"
-          className="fdm-pay-cta"
-          style={{ ...CTA, opacity: paying ? 0.6 : 1, cursor: paying ? "wait" : "pointer" }}
-          onClick={handlePay}
-          disabled={paying}
-        >
-          {paying ? "Redirigiendo…" : "Pagar con MercadoPago →"}
-        </button>
-      ) : (
-        <button
-          type="button"
-          disabled
-          style={{
-            ...CTA,
-            background: "transparent",
-            color: mix(45),
-            border: `1px solid ${mix(18)}`,
-            cursor: "not-allowed",
-          }}
-        >
-          MercadoPago no disponible en localhost
-        </button>
-      )}
+        <LegalDisclaimer style={{ margin: 0, fontSize: 13 }}>El pago no es reembolsable.</LegalDisclaimer>
+      </section>
 
-      <LegalDisclaimer style={{ margin: "16px 0 0", fontSize: 12.5 }}>El pago no es reembolsable.</LegalDisclaimer>
-    </Shell>
+      <p className="fdm-st-note" style={{ textAlign: "center" }}>
+        ¿Problemas con el pago? Escríbenos a <a href="mailto:coordinaciongeneral@feriadelmillon.com" style={{ color: "var(--fg)", textDecoration: "underline" }}>coordinaciongeneral@feriadelmillon.com</a>
+      </p>
+    </ApplyShell>
   );
 }

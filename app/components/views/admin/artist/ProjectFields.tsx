@@ -47,18 +47,7 @@ export default function ProjectFields({
   return (
     <div style={{ display: "grid", gap: "clamp(22px,2.8vw,32px)", maxWidth: 760 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <h2
-          style={{
-            margin: 0,
-            fontWeight: 300,
-            fontSize: "clamp(26px,3.2vw,40px)",
-            lineHeight: 1.03,
-            letterSpacing: "0.02em",
-            textTransform: "uppercase",
-          }}
-        >
-          Tu proyecto
-        </h2>
+        <h1 className="fdm-st-h1">Tu proyecto</h1>
         <p style={{ ...BODY, maxWidth: "54ch" }}>
           Con qué participas en la feria. Las obras que cargaste son las piezas de
           este proyecto, y esto es lo que lee quien se para enfrente.
@@ -76,7 +65,7 @@ export default function ProjectFields({
           await onSave(values);
         }}
       >
-        <Form style={{ display: "grid", gap: "clamp(22px,2.8vw,32px)" }}>
+        <Form className="fdm-st-card" style={{ display: "grid", gap: 16 }}>
           <FormStateBridge onChange={onStateChange} />
 
           <TextInput

@@ -1,69 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { ApplyShell, Ico, Journey } from "./applyUi";
 
-/* Armazón compartido por las tres pantallas de resultado de pago
-   (exitoso, fallido, pendiente). Solo presentación: cada cliente
-   conserva su propia lógica de reconciliación con MercadoPago. */
+/* Armazón de las tres pantallas de resultado del pago (exitoso, fallido,
+   pendiente). Solo presentación: cada cliente conserva su propia lógica de
+   reconciliación con Mercado Pago. */
 
-const mix = (pct: number) => `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
-
-export const EYEBROW: React.CSSProperties = {
-  fontWeight: 500,
-  fontSize: 10,
-  letterSpacing: "0.18em",
-  textTransform: "uppercase",
-};
+export const EYEBROW: React.CSSProperties = { fontWeight: 500, fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase" };
 
 export const TONE = {
-  ok: "var(--fdm-green,#3FA46E)",
-  warn: "#C9902B",
-  error: "#B4472A",
+  ok: "var(--green,#1F7A50)",
+  warn: "var(--warn,#6B4E00)",
+  error: "var(--bad,#B4472A)",
 } as const;
 
-const ROOT_VARS = {
-  "--bg": "var(--fdm-bg,#F7F6F2)",
-  "--fg": "var(--fdm-fg,#0B0B0A)",
-  "--acc": "var(--fdm-green,#3FA46E)",
-  background: "var(--bg)",
-  color: "var(--fg)",
-  fontFamily: "Jost, system-ui, sans-serif",
-  fontWeight: 400,
-  minHeight: "calc(100vh - 81px)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "100%",
-  overflowX: "hidden",
-} as React.CSSProperties;
-
-export function ResultAction({
-  href,
-  children,
-  variant = "primary",
-}: {
-  href: string;
-  children: React.ReactNode;
-  variant?: "primary" | "ghost";
-}) {
+export function ResultAction({ href, children, variant = "primary" }: { href: string; children: React.ReactNode; variant?: "primary" | "ghost" }) {
   return (
-    <Link
-      href={href}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        height: 50,
-        padding: "0 28px",
-        borderRadius: 999,
-        ...EYEBROW,
-        fontSize: 10.5,
-        letterSpacing: "0.14em",
-        ...(variant === "primary"
-          ? { background: "var(--fg)", color: "var(--bg)", border: "1px solid var(--fg)" }
-          : { background: "transparent", color: "inherit", border: `1px solid ${mix(26)}` }),
-      }}
-    >
+    <Link href={href} className={`fdm-st-btn is-lg${variant === "primary" ? " is-green" : ""}`} style={{ flex: "1 1 200px" }}>
       {children}
     </Link>
   );
@@ -85,76 +39,33 @@ export default function PaymentResultShell({
   details?: { label: string; value: React.ReactNode }[];
   actions?: React.ReactNode;
 }) {
-  const color = TONE[tone];
-
   return (
-    <div style={ROOT_VARS}>
-      <main
-        style={{
-          width: "100%",
-          maxWidth: 560,
-          padding: "clamp(28px,4vw,60px) clamp(20px,4vw,40px)",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <span style={{ ...EYEBROW, color }}>{eyebrow}</span>
+    <ApplyShell narrow>
+      {/* Pagado: ya va en "Sube tu proyecto". Si no, sigue en el pago. */}
+      <Journey current={tone === "ok" ? 2 : 1} />
 
-        <h1
-          style={{
-            margin: "10px 0 0",
-            fontWeight: 300,
-            fontSize: "clamp(28px,3.6vw,48px)",
-            lineHeight: 1.05,
-            letterSpacing: "0.02em",
-            textTransform: "uppercase",
-          }}
-        >
-          {title}
-        </h1>
+      <span className={`fdm-ap-big${tone === "warn" ? " is-warn" : tone === "error" ? " is-bad" : ""}`}>
+        <Ico name={tone === "ok" ? "check" : tone === "warn" ? "clock" : "alert"} size={28} sw={1.8} />
+      </span>
 
-        {description && (
-          <p style={{ margin: "12px 0 0", maxWidth: "52ch", fontSize: 15, lineHeight: 1.6, color: mix(72) }}>
-            {description}
-          </p>
-        )}
+      <div className="fdm-ap-head">
+        <span className="fdm-st-eyebrow" style={{ color: TONE[tone] }}>{eyebrow}</span>
+        <h1 className="fdm-st-h1">{title}</h1>
+        {description && <p className="fdm-st-lead">{description}</p>}
+      </div>
 
-        {!!details?.length && (
-          <div style={{ marginTop: "clamp(20px,2.4vw,30px)", borderTop: `1px solid ${mix(20)}` }}>
-            {details.map((d) => (
-              <div
-                key={d.label}
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  justifyContent: "space-between",
-                  gap: 16,
-                  padding: "11px 0",
-                  borderBottom: `1px solid ${mix(12)}`,
-                }}
-              >
-                <span style={{ ...EYEBROW, fontSize: 9, color: mix(52) }}>{d.label}</span>
-                <span style={{ fontSize: 14.5, textAlign: "right", wordBreak: "break-word" }}>
-                  {d.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+      {!!details?.length && (
+        <div className="fdm-st-card fdm-ap-kv" style={{ paddingTop: 8, paddingBottom: 8 }}>
+          {details.map((d, i) => (
+            <div key={d.label} style={i === 0 ? { borderTop: "none" } : undefined}>
+              <span className="fdm-st-label">{d.label}</span>
+              <span>{d.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
-        {actions && (
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 12,
-              marginTop: "clamp(22px,2.6vw,32px)",
-            }}
-          >
-            {actions}
-          </div>
-        )}
-      </main>
-    </div>
+      {actions && <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>{actions}</div>}
+    </ApplyShell>
   );
 }

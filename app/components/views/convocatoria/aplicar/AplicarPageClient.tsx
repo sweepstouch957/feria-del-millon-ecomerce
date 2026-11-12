@@ -4,186 +4,177 @@ import { ApplicationStepProfile } from "@components/views/convocatoria/Applicati
 import { ApplicationStepProject } from "@components/views/convocatoria/ApplicationStepProject";
 import { ApplicationStepImages } from "@components/views/convocatoria/ApplicationStepImages";
 import { ApplicationStepReview } from "@components/views/convocatoria/ApplicationStepReview";
-import { ApplicationStepper } from "./ApplicationStepper";
+import { Bone } from "@components/views/admin/artist/ui";
 import { ApplicationStatusGate } from "./ApplicationStatusGate";
 import { useApplicationWizard } from "./useApplicationWizard";
-import { Pencil, AlertTriangle, CheckCircle2 } from "lucide-react";
-import styles from "./aplicar.module.css";
+import { Alert, ApplyShell, Journey } from "../applyUi";
 
-const STEP_LABELS = [
-  "Convocatoria",
-  "Perfil artista",
-  "Tu proyecto",
-  "Imágenes / obras",
-  "Confirmar y enviar",
-];
+/* Formulario de la postulación (paso 3 del camino: "Sube tu proyecto").
+   Cuatro pantallas cortas —Tu perfil, Tu proyecto, Tus obras, Revisar y
+   enviar— con la acción siempre en la barra de abajo. Cada "Guardar y seguir"
+   guarda en el servidor, así que se puede salir y volver sin perder nada.
+   Toda la lógica vive en useApplicationWizard. */
 
-/**
- * Main client-side wizard for the convocatoria application flow.
- * This component is purely presentational — all logic lives in useApplicationWizard.
- */
+const STEPS = [
+  { n: 1, label: "Tu perfil", title: "Cuéntanos quién eres" },
+  { n: 2, label: "Tu proyecto", title: "Tu proyecto" },
+  { n: 3, label: "Tus obras", title: "Tus obras" },
+  { n: 4, label: "Revisar y enviar", title: "Revisa y envía" },
+] as const;
+
 export default function AplicarPageClient() {
   const wiz = useApplicationWizard();
 
-  // ── Loading ──────────────────────────────────────────────────────────
   if (wiz.isLoading) {
     return (
-      <div className={styles.wrapper} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div className={styles.loading}>
-          <div className={styles.spinner} />
-          <p>Cargando tu postulación…</p>
-        </div>
-      </div>
+      <ApplyShell>
+        <Bone h={56} style={{ borderRadius: 12 }} />
+        <Bone w="60%" h={40} />
+        <Bone h={220} style={{ borderRadius: 16 }} />
+        <Bone h={220} style={{ borderRadius: 16 }} />
+      </ApplyShell>
     );
   }
 
   if (wiz.loadError) {
     const status = (wiz.loadError as any)?.response?.status;
     if (status === 401) {
-      // Redirect to login preserving the intention to apply
+      // Sin sesión: al login, conservando la intención de postular.
       if (typeof window !== "undefined") {
         const currentUrl = window.location.pathname + window.location.search;
-        window.location.href = `/login?callbackUrl=${encodeURIComponent(currentUrl)}`;
+        window.location.href = `/login?role=artist&redirect=${encodeURIComponent(currentUrl)}`;
       }
       return null;
     }
     return (
-      <div className={styles.wrapper} style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ padding: 24, background: "#331111", border: "1px solid #ff4444", borderRadius: 8, color: "#fff" }}>
-          Error al cargar postulación. {(wiz.loadError as any)?.message}
-        </div>
-      </div>
+      <ApplyShell narrow center>
+        <Alert tone="bad" title="No pudimos cargar tu postulación">
+          Revisa tu conexión y vuelve a intentar. Lo que ya guardaste sigue a salvo.
+        </Alert>
+        <button type="button" className="fdm-st-btn is-solid fdm-studio-plain" onClick={() => window.location.reload()}>Volver a intentar</button>
+      </ApplyShell>
     );
   }
 
-  // ── No application yet → picker ──────────────────────────────────────
+  // Sin postulación todavía → elegir convocatoria.
   if (!wiz.appDoc) {
-    return (
-      <ConvocatoriaPicker
-        onCreated={(doc: any) => {
-          wiz.router.push(`/convocatoria/pagar?appId=${doc._id}`);
-        }}
-      />
-    );
+    return <ConvocatoriaPicker onCreated={(doc: any) => wiz.router.push(`/convocatoria/pagar?appId=${doc._id}`)} />;
   }
 
-  // ── Status gate (pending payment / already submitted) ────────────────
   const docStatus = (wiz.appDoc as { status?: string }).status;
 
   if (!wiz.appDoc.isPaid || docStatus === "pending_payment") {
-    return (
-      <ApplicationStatusGate appId={wiz.appDoc._id} status="pending_payment" />
-    );
+    return <ApplicationStatusGate appId={wiz.appDoc._id} status="pending_payment" />;
   }
-
   if (docStatus && ["submitted", "under_review", "accepted", "rejected"].includes(docStatus)) {
     return <ApplicationStatusGate appId={wiz.appDoc._id} status={docStatus} />;
   }
 
-  // ── Wizard form ──────────────────────────────────────────────────────
   const isRevision = docStatus === "revision_requested";
   const revisionNotes = (wiz.appDoc as any).revisionNotes as string | undefined;
+  const step = Math.min(4, Math.max(1, wiz.step || 1));
+  const meta = STEPS[step - 1];
+  const goTo = (n: number) => {
+    wiz.setStep(n as any);
+    window.scrollTo(0, 0);
+  };
+  // Cambiar de pantalla sube al inicio: en celular se quedaba a media página.
+  const next = (n: 2 | 3 | 4) => async () => {
+    await wiz.handleSave(n);
+    window.scrollTo(0, 0);
+  };
 
   return (
-    <div className={styles.wrapper}>
-      <main className={styles.page}>
-        {/* Admin-requested revision alert */}
-        {isRevision && (
-          <div style={{
-            background: "rgba(251,191,36,.07)",
-            border: "1px solid rgba(251,191,36,.3)",
-            borderRadius: 16,
-            padding: "18px 24px",
-            margin: "0 auto 20px",
-            maxWidth: 760,
-            display: "flex",
-            gap: 16,
-            alignItems: "flex-start",
-          }}>
-            <span style={{ fontSize: 24, flexShrink: 0, marginTop: 1 }}><Pencil size={22} /></span>
-            <div>
-              <p style={{ margin: "0 0 4px", fontSize: 14, fontWeight: 800, color: "#fbbf24" }}>
-                El curador te invita a corregir tu postulación
-              </p>
-              <p style={{ margin: 0, fontSize: 13, color: "rgba(255,255,255,.6)", lineHeight: 1.6 }}>
-                {revisionNotes || "Realiza los cambios indicados y vuelve a enviar tu postulación para revisión."}
-              </p>
-            </div>
-          </div>
-        )}
+    <ApplyShell>
+      <Journey current={2} />
 
-        <ApplicationStepper labels={STEP_LABELS} current={wiz.step} />
+      <div className="fdm-ap-head">
+        <span className="fdm-st-eyebrow">Sube tu proyecto · parte {step} de 4</span>
+        <h1 className="fdm-st-h1">{meta.title}</h1>
+        <p className="fdm-st-lead">Ve a tu ritmo: cada vez que tocas «Guardar y seguir» queda guardado, y puedes volver después.</p>
+      </div>
 
-        <div className={styles.container}>
-          {wiz.error && <div className={styles.error}><AlertTriangle size={16} style={{ verticalAlign: "-3px" }} /> {wiz.error}</div>}
-          {wiz.success && <div className={styles.success}><CheckCircle2 size={16} style={{ verticalAlign: "-3px" }} /> {wiz.success}</div>}
+      {/* Las partes ya pasadas se pueden volver a abrir tocándolas. */}
+      <div className="fdm-ap-steps" role="group" aria-label="Partes del formulario">
+        {STEPS.map((s) => (
+          <button
+            key={s.n}
+            type="button"
+            className={`fdm-studio-plain ${s.n < step ? "is-done" : s.n === step ? "is-on" : ""}`}
+            disabled={s.n >= step}
+            aria-current={s.n === step ? "step" : undefined}
+            onClick={() => goTo(s.n)}
+          >
+            <i />
+            <span>{s.n}. {s.label}</span>
+          </button>
+        ))}
+      </div>
 
-          {/* Step 0 should never show in the wizard once paid — auto-advances.
-              If we land here briefly, show a transition state. */}
-          {wiz.step === 0 && (
-            <div style={{ textAlign: "center", padding: "48px 0", color: "#888" }}>
-              <p>Preparando formulario…</p>
-            </div>
-          )}
+      {isRevision && (
+        <Alert tone="warn" title="El jurado te pide corregir tu postulación">
+          {revisionNotes || "Haz los cambios que te indicaron y vuelve a enviarla para revisión."}
+        </Alert>
+      )}
+      {wiz.error && <Alert tone="bad" title="No se pudo guardar">{wiz.error}</Alert>}
+      {wiz.success && <Alert tone="ok">{wiz.success}</Alert>}
 
-          {wiz.step === 1 && (
-            <ApplicationStepProfile
-              bio={wiz.bio}
-              setBio={wiz.setBio}
-              cvUrl={wiz.cvUrl}
-              setCvUrl={wiz.setCvUrl}
-              profilePhotoUrl={wiz.profilePhotoUrl}
-              setProfilePhotoUrl={wiz.setProfilePhotoUrl}
-              onBack={undefined}
-              onNext={() => wiz.handleSave(2)}
-              isSaving={wiz.isSaving}
-            />
-          )}
+      {step === 1 && (
+        <ApplicationStepProfile
+          bio={wiz.bio}
+          setBio={wiz.setBio}
+          cvUrl={wiz.cvUrl}
+          setCvUrl={wiz.setCvUrl}
+          profilePhotoUrl={wiz.profilePhotoUrl}
+          setProfilePhotoUrl={wiz.setProfilePhotoUrl}
+          onNext={next(2)}
+          isSaving={wiz.isSaving}
+        />
+      )}
 
-          {wiz.step === 2 && (
-            <ApplicationStepProject
-              projectReview={wiz.projectReview}
-              setProjectReview={wiz.setProjectReview}
-              detailImageUrl={wiz.detailImageUrl}
-              setDetailImageUrl={wiz.setDetailImageUrl}
-              montageImageUrl={wiz.montageImageUrl}
-              setMontageImageUrl={wiz.setMontageImageUrl}
-              onBack={() => wiz.setStep(1)}
-              onNext={() => wiz.handleSave(3)}
-              isSaving={wiz.isSaving}
-            />
-          )}
+      {step === 2 && (
+        <ApplicationStepProject
+          projectReview={wiz.projectReview}
+          setProjectReview={wiz.setProjectReview}
+          detailImageUrl={wiz.detailImageUrl}
+          setDetailImageUrl={wiz.setDetailImageUrl}
+          montageImageUrl={wiz.montageImageUrl}
+          setMontageImageUrl={wiz.setMontageImageUrl}
+          onBack={() => goTo(1)}
+          onNext={next(3)}
+          isSaving={wiz.isSaving}
+        />
+      )}
 
-          {wiz.step === 3 && (
-            <ApplicationStepImages
-              artworkImages={wiz.artworkImages}
-              techniques={wiz.techniques}
-              onAddImage={wiz.addArtworkImage}
-              onUpdateImage={wiz.updateImage}
-              onRemoveImage={wiz.removeImage}
-              onBack={() => wiz.setStep(2)}
-              onNext={() => wiz.handleSave(4)}
-              isSaving={wiz.isSaving}
-            />
-          )}
+      {step === 3 && (
+        <ApplicationStepImages
+          artworkImages={wiz.artworkImages}
+          techniques={wiz.techniques}
+          onAddImage={wiz.addArtworkImage}
+          onUpdateImage={wiz.updateImage}
+          onRemoveImage={wiz.removeImage}
+          onBack={() => goTo(2)}
+          onNext={next(4)}
+          isSaving={wiz.isSaving}
+        />
+      )}
 
-          {wiz.step === 4 && (
-            <ApplicationStepReview
-              bio={wiz.bio}
-              cvUrl={wiz.cvUrl}
-              profilePhotoUrl={wiz.profilePhotoUrl}
-              projectReview={wiz.projectReview}
-              artworkImages={wiz.artworkImages}
-              detailImageUrl={wiz.detailImageUrl}
-              montageImageUrl={wiz.montageImageUrl}
-              onBack={() => wiz.setStep(3)}
-              onSubmit={wiz.handleSubmit}
-              isSubmitting={wiz.isSubmitting}
-              isSaving={wiz.isSaving}
-            />
-          )}
-        </div>
-      </main>
-    </div>
+      {step === 4 && (
+        <ApplicationStepReview
+          bio={wiz.bio}
+          cvUrl={wiz.cvUrl}
+          profilePhotoUrl={wiz.profilePhotoUrl}
+          projectReview={wiz.projectReview}
+          artworkImages={wiz.artworkImages}
+          detailImageUrl={wiz.detailImageUrl}
+          montageImageUrl={wiz.montageImageUrl}
+          onBack={() => goTo(3)}
+          onFix={goTo}
+          onSubmit={wiz.handleSubmit}
+          isSubmitting={wiz.isSubmitting}
+          isSaving={wiz.isSaving}
+        />
+      )}
+    </ApplyShell>
   );
 }

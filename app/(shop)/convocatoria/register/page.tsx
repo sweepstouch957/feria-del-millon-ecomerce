@@ -9,8 +9,25 @@ import type { CityDoc } from "@services/city.service";
 import { LoggedInArtistGate } from "@components/views/convocatoria/LoggedInArtistGate";
 import { useEdition } from "@provider/editionProvider";
 import ConvocatoriaClosed from "@components/views/convocatoria/ConvocatoriaClosed";
-
+import { Alert, ApplyShell, Ico, Journey } from "@components/views/convocatoria/applyUi";
 import PhoneInput from "@components/PhoneInput";
+
+/* Paso 1 del camino de la postulación: crear la cuenta de artista.
+   Tres tarjetas cortas (quién eres, tu contraseña, cómo te contactamos) y un
+   solo botón. Lo opcional está marcado como opcional. */
+
+const REG_CSS = `
+  .fdm-rg-combo { position: relative; }
+  .fdm-rg-drop { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30; margin: 0; padding: 6px; list-style: none; max-height: 240px; overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 24px 48px rgba(17,17,17,.16); }
+  .fdm-rg-drop li { min-height: 44px; padding: 0 12px; display: flex; align-items: center; border-radius: 8px; font-size: 16px; cursor: pointer; }
+  .fdm-rg-drop li:hover, .fdm-rg-drop li[aria-selected="true"] { background: var(--soft); }
+  .fdm-rg-pass { position: relative; }
+  .fdm-rg-pass input { padding-right: 96px !important; }
+  .fdm-rg-pass button { position: absolute; right: 4px; top: 4px; height: 44px; padding: 0 12px; border: none; background: transparent; font-size: 14px; color: var(--fg); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .fdm-rg-terms { display: flex; gap: 12px; align-items: flex-start; padding: 16px; border: 1px solid var(--line2); border-radius: 12px; background: var(--card); cursor: pointer; font-size: 15px !important; font-weight: 400 !important; line-height: 1.5; color: var(--fg2) !important; }
+  .fdm-rg-terms:has(input:checked) { border-color: var(--green); background: var(--green-soft); color: var(--fg) !important; }
+  .fdm-rg-terms input { margin-top: 2px; flex: none; }
+`;
 
 export default function ConvocatoriaRegisterPage() {
   const router = useRouter();
@@ -23,19 +40,19 @@ export default function ConvocatoriaRegisterPage() {
     password: "", confirmPassword: "",
     mobile: "", documentType: "CC", documentNumber: "", instagram: "",
   });
-  const [cityQuery,      setCityQuery]      = useState("");
+  const [cityQuery, setCityQuery] = useState("");
   const [selectedCityId, setSelectedCityId] = useState("");
-  const [cityOpen,       setCityOpen]       = useState(false);
-  const [loading,        setLoading]        = useState(false);
-  const [error,          setError]          = useState("");
-  const [acceptedTerms,  setAcceptedTerms]  = useState(false);
-  const [showPwd,        setShowPwd]        = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
 
   const cityRef = useRef<HTMLDivElement>(null);
 
   const filteredCities = allCities
-    .filter(c => c.active)
-    .filter(c => !cityQuery || c.name.toLowerCase().includes(cityQuery.toLowerCase()))
+    .filter((c) => c.active)
+    .filter((c) => !cityQuery || c.name.toLowerCase().includes(cityQuery.toLowerCase()))
     .slice(0, 14);
 
   useEffect(() => {
@@ -46,577 +63,184 @@ export default function ConvocatoriaRegisterPage() {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const selectCity = (c: CityDoc) => { setCityQuery(c.name); setSelectedCityId(c.id); setCityOpen(false); };
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm(f => ({ ...f, [k]: e.target.value }));
+  const selectCity = (c: CityDoc) => {
+    setCityQuery(c.name);
+    setSelectedCityId(c.id);
+    setCityOpen(false);
+  };
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const fail = (msg: string) => {
+    setError(msg);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!acceptedTerms)                         { setError("Debes aceptar los términos y condiciones"); return; }
-    if (form.password !== form.confirmPassword) { setError("Las contraseñas no coinciden"); return; }
-    if (form.password.length < 8)               { setError("La contraseña debe tener al menos 8 caracteres"); return; }
+    if (!form.firstName.trim() || !form.lastName.trim()) return fail("Escribe tu nombre y tu apellido.");
+    if (!/\S+@\S+\.\S+/.test(form.email)) return fail("Escribe un correo electrónico válido.");
+    if (form.password.length < 8) return fail("La contraseña debe tener al menos 8 caracteres.");
+    if (form.password !== form.confirmPassword) return fail("Las dos contraseñas no coinciden.");
+    if (!acceptedTerms) return fail("Para continuar debes aceptar el tratamiento de tus datos.");
     setLoading(true);
     try {
       await register({
         email: form.email, password: form.password,
         firstName: form.firstName, lastName: form.lastName,
-        mobile:         form.mobile         || undefined, // ya viene con país: "+573001234567"
-        city:           cityQuery           || undefined,
-        cityId:         selectedCityId      || undefined,
-        documentType:   form.documentType,
+        mobile: form.mobile || undefined, // ya viene con país: "+573001234567"
+        city: cityQuery || undefined,
+        cityId: selectedCityId || undefined,
+        documentType: form.documentType,
         documentNumber: form.documentNumber || undefined,
-        instagram:      form.instagram      || undefined,
+        instagram: form.instagram || undefined,
         roles: { artista: true },
       });
       await login(form.email, form.password);
       router.push("/convocatoria/aplicar");
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: { error?: string } }; message?: string };
+    } catch (e2: unknown) {
+      const err = e2 as { response?: { data?: { error?: string } }; message?: string };
       if (err?.message?.includes("login")) {
         router.push("/login?role=artist&redirect=/convocatoria/aplicar&msg=cuenta_creada");
       } else {
-        setError(err?.response?.data?.error || err?.message || "Error al registrarse");
+        const raw = err?.response?.data?.error || "";
+        fail(/exists/i.test(raw) ? "Ya hay una cuenta con ese correo. Entra con ella o recupera tu contraseña." : raw || "No pudimos crear tu cuenta. Inténtalo de nuevo.");
       }
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Fase 1: si la convocatoria vigente NO está "open", se bloquea el registro nuevo.
-  if (convocatoria && convocatoria.status !== "open") {
-    return <ConvocatoriaClosed />;
-  }
+  // Si la convocatoria vigente NO está abierta, no hay registro nuevo.
+  if (convocatoria && convocatoria.status !== "open") return <ConvocatoriaClosed />;
+
+  const pwMismatch = !!form.confirmPassword && form.confirmPassword !== form.password;
 
   return (
     <LoggedInArtistGate>
-    <div className="cr-root">
-      <div className="cr-glow cr-glow--1" aria-hidden />
-      <div className="cr-glow cr-glow--2" aria-hidden />
+      <ApplyShell>
+        <style>{REG_CSS}</style>
+        <Journey current={0} />
 
-      <div className="cr-shell">
+        <div className="fdm-ap-head">
+          <span className="fdm-st-eyebrow">Paso 1 de 4</span>
+          <h1 className="fdm-st-h1">Crea tu cuenta de artista</h1>
+          <p className="fdm-st-lead">Toma dos minutos. Con esta cuenta pagas la inscripción, subes tu proyecto y sigues tu postulación.</p>
+        </div>
 
-        {/* ══ LEFT — Branding ══════════════════════════ */}
-        <aside className="cr-side">
-          <div className="cr-side__top">
-            <div className="cr-wordmark">
-              <GemSvg />
-              <span>Feria del Millón</span>
+        {error && <Alert tone="bad">{error}</Alert>}
+
+        <form onSubmit={handleSubmit} noValidate style={{ display: "contents" }}>
+          <section className="fdm-st-card fdm-ap-sec">
+            <h2 className="fdm-st-h3">1. ¿Quién eres?</h2>
+            <div className="fdm-ap-grid">
+              <div className="fdm-ap-field">
+                <label htmlFor="cr-fn">Nombre</label>
+                <input id="cr-fn" type="text" value={form.firstName} onChange={set("firstName")} autoComplete="given-name" />
+              </div>
+              <div className="fdm-ap-field">
+                <label htmlFor="cr-ln">Apellido</label>
+                <input id="cr-ln" type="text" value={form.lastName} onChange={set("lastName")} autoComplete="family-name" />
+              </div>
             </div>
-            <span className="cr-badge">Convocatoria 2026</span>
-          </div>
-
-          <div className="cr-hero">
-            <h1 className="cr-hero__h">
-              Postula<br />
-              tu arte<br />
-              <span className="cr-hero__accent">al millón.</span>
-            </h1>
-            <p className="cr-hero__p">
-              Únete a la convocatoria más grande del arte colombiano.
-              Crea tu cuenta, paga la inscripción y deja que el curador elija tu obra.
-            </p>
-          </div>
-
-          <ol className="cr-timeline">
-            {([
-              { n:"01", lbl:"Crea tu cuenta",   sub:"Datos personales",     on: true  },
-              { n:"02", lbl:"Paga inscripción",  sub:"$40,000 COP",         on: false },
-              { n:"03", lbl:"Sube tus obras",    sub:"Portafolio artístico", on: false },
-              { n:"04", lbl:"Resolución",        sub:"Decisión del curador", on: false },
-            ] as const).map((s, i, arr) => (
-              <li key={s.n} className={`cr-tl${s.on ? " cr-tl--on" : ""}`}>
-                <div className="cr-tl__dot">
-                  {s.on ? <CheckSvg /> : <span>{s.n}</span>}
-                </div>
-                {i < arr.length - 1 && <div className="cr-tl__line" aria-hidden />}
-                <div className="cr-tl__text">
-                  <span className="cr-tl__lbl">{s.lbl}</span>
-                  <span className="cr-tl__sub">{s.sub}</span>
-                </div>
-              </li>
-            ))}
-          </ol>
-
-          <div className="cr-stats">
-            <div className="cr-stat">
-              <span className="cr-stat__n">500+</span>
-              <span className="cr-stat__l">Artistas participantes</span>
+            <div className="fdm-ap-field">
+              <label htmlFor="cr-em">Correo electrónico</label>
+              <input id="cr-em" type="email" inputMode="email" autoCapitalize="none" spellCheck={false} value={form.email} onChange={set("email")} autoComplete="email" placeholder="nombre@correo.com" />
+              <span className="fdm-ap-help">A este correo te llega la respuesta del jurado.</span>
             </div>
-            <div className="cr-stat__div" aria-hidden />
-            <div className="cr-stat">
-              <span className="cr-stat__n">4</span>
-              <span className="cr-stat__l">Pasos al curador</span>
+          </section>
+
+          <section className="fdm-st-card fdm-ap-sec">
+            <h2 className="fdm-st-h3">2. Elige una contraseña</h2>
+            <div className="fdm-ap-grid">
+              <div className="fdm-ap-field">
+                <label htmlFor="cr-pw">Contraseña</label>
+                <div className="fdm-rg-pass">
+                  <input id="cr-pw" type={showPwd ? "text" : "password"} value={form.password} onChange={set("password")} autoComplete="new-password" />
+                  <button type="button" className="fdm-studio-plain" aria-pressed={showPwd} onClick={() => setShowPwd((v) => !v)}>{showPwd ? "Ocultar" : "Mostrar"}</button>
+                </div>
+                <span className={`fdm-ap-help${form.password.length >= 8 ? " is-ok" : ""}`}>{form.password.length >= 8 ? "Bien: tiene 8 o más caracteres." : "Mínimo 8 caracteres."}</span>
+              </div>
+              <div className="fdm-ap-field">
+                <label htmlFor="cr-cpw">Repite la contraseña</label>
+                <input id="cr-cpw" type={showPwd ? "text" : "password"} value={form.confirmPassword} onChange={set("confirmPassword")} autoComplete="new-password" aria-invalid={pwMismatch || undefined} />
+                {pwMismatch && <span className="fdm-ap-help is-bad">Todavía no coinciden.</span>}
+              </div>
             </div>
-          </div>
-        </aside>
+          </section>
 
-        {/* ══ RIGHT — Form ═════════════════════════════ */}
-        <section className="cr-form-col">
-          <div className="cr-form-wrap">
-
-            <header className="cr-fhead">
-              <p className="cr-fhead__step">Paso 1 de 4</p>
-              <h2 className="cr-fhead__h">Registro de artista</h2>
-              <p className="cr-fhead__sub">Completa tus datos para crear la cuenta</p>
-            </header>
-
-            {error && (
-              <div role="alert" className="cr-error">
-                <div className="cr-error__dot" aria-hidden />
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} noValidate className="cr-form">
-
-              {/* ── Personal ── */}
-              <div className="cr-section">
-                <div className="cr-row">
-                  <Fld label="Nombre" req htmlFor="cr-fn">
-                    <input id="cr-fn" type="text" value={form.firstName} onChange={set("firstName")}
-                      required autoComplete="given-name" placeholder="María" />
-                  </Fld>
-                  <Fld label="Apellido" req htmlFor="cr-ln">
-                    <input id="cr-ln" type="text" value={form.lastName} onChange={set("lastName")}
-                      required autoComplete="family-name" placeholder="García" />
-                  </Fld>
-                </div>
-                <Fld label="Correo electrónico" req htmlFor="cr-em">
-                  <input id="cr-em" type="email" value={form.email} onChange={set("email")}
-                    required autoComplete="email" placeholder="artista@correo.com" />
-                </Fld>
-              </div>
-
-              {/* ── Contraseña ── */}
-              <div className="cr-section">
-                <div className="cr-row">
-                  <Fld label="Contraseña" req htmlFor="cr-pw">
-                    <div className="cr-pw-wrap">
-                      <input id="cr-pw" type={showPwd ? "text" : "password"} value={form.password}
-                        onChange={set("password")} required minLength={8}
-                        autoComplete="new-password" placeholder="Mínimo 8 caracteres" />
-                      <button type="button" className="cr-pw-btn" onClick={() => setShowPwd(v => !v)}>
-                        {showPwd ? "Ocultar" : "Ver"}
-                      </button>
-                    </div>
-                  </Fld>
-                  <Fld label="Confirmar contraseña" req htmlFor="cr-cpw">
-                    <input id="cr-cpw" type="password" value={form.confirmPassword}
-                      onChange={set("confirmPassword")} required
-                      autoComplete="new-password" placeholder="Repite la contraseña" />
-                  </Fld>
-                </div>
-              </div>
-
-              {/* ── Contacto ── */}
-              <div className="cr-section">
-                <div className="cr-row">
-                  <Fld label="Teléfono" htmlFor="cr-tel" hint="Elige el país si no es Colombia">
-                    <PhoneInput id="cr-tel" value={form.mobile} onChange={(v) => setForm(f => ({ ...f, mobile: v }))} />
-                  </Fld>
-                  <Fld label="Ciudad" htmlFor="cr-city">
-                    <div className="cr-combo" ref={cityRef}>
-                      <input id="cr-city" type="text" value={cityQuery}
-                        onChange={e => { setCityQuery(e.target.value); setSelectedCityId(""); setCityOpen(true); }}
-                        onFocus={() => setCityOpen(true)}
-                        placeholder="Buscar ciudad…" autoComplete="off"
-                        role="combobox" aria-expanded={cityOpen} aria-autocomplete="list" aria-controls="cr-city-lb" />
-                      {selectedCityId && <span className="cr-combo__ok" aria-hidden><CheckSvg /></span>}
-                      {cityOpen && filteredCities.length > 0 && (
-                        <ul id="cr-city-lb" role="listbox" className="cr-combo__drop">
-                          {filteredCities.map(c => (
-                            <li key={c.id} role="option" aria-selected={c.id === selectedCityId}
-                              className={`cr-combo__opt${c.id === selectedCityId ? " --sel" : ""}`}
-                              onMouseDown={() => selectCity(c)}>{c.name}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </Fld>
-                </div>
-              </div>
-
-              {/* ── Documento ── */}
-              <div className="cr-section">
-                <div className="cr-row cr-row--3">
-                  <Fld label="Tipo doc." htmlFor="cr-dt">
-                    <select id="cr-dt" value={form.documentType} onChange={set("documentType")}>
-                      {["CC","CE","NIT","PP","INE","OTRO"].map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </Fld>
-                  <Fld label="Nro. documento" htmlFor="cr-dn">
-                    <input id="cr-dn" type="text" value={form.documentNumber}
-                      onChange={set("documentNumber")} placeholder="12345678" />
-                  </Fld>
-                  <Fld label="Instagram" htmlFor="cr-ig">
-                    <input id="cr-ig" type="text" value={form.instagram}
-                      onChange={set("instagram")} placeholder="@usuario" />
-                  </Fld>
-                </div>
-              </div>
-
-              {/* ── Términos ── */}
-              <label className="cr-terms" htmlFor="cr-terms">
-                <input id="cr-terms" type="checkbox" checked={acceptedTerms}
-                  onChange={e => setAcceptedTerms(e.target.checked)} className="cr-sr" />
-                <span className="cr-terms__box" aria-hidden>{acceptedTerms && <CheckSvg />}</span>
-                <span className="cr-terms__txt">
-                  Acepto el tratamiento de mis datos personales para los fines relacionados
-                  con la Feria del Millón, incluyendo la publicación de mi nombre en caso
-                  de ser seleccionado.
-                </span>
-              </label>
-
-              <button type="submit" className="cr-cta" disabled={loading || !acceptedTerms}>
-                {loading
-                  ? <><SpinSvg /> Creando cuenta…</>
-                  : <>Crear cuenta y continuar <ArrowSvg /></>
-                }
-              </button>
-
-            </form>
-
-            <div className="cr-foot">
-              <p>
-                ¿Ya tienes cuenta?{" "}
-                <Link href="/login?role=artist&redirect=/convocatoria/aplicar">Inicia sesión</Link>
-              </p>
+          <section className="fdm-st-card fdm-ap-sec">
+            <div className="hd">
+              <h2 className="fdm-st-h3">3. ¿Cómo te contactamos? <span style={{ fontWeight: 400, color: "var(--fg2)", fontSize: 15 }}>· opcional</span></h2>
+              <span className="fdm-ap-help">Puedes dejarlo para después, pero nos ayuda a ubicarte más rápido.</span>
             </div>
-          </div>
-        </section>
-      </div>
+            <div className="fdm-ap-grid">
+              <div className="fdm-ap-field">
+                <label htmlFor="cr-tel">Celular</label>
+                <PhoneInput id="cr-tel" value={form.mobile} onChange={(v) => setForm((f) => ({ ...f, mobile: v }))} selectStyle={{ width: 116, flex: "0 0 116px", padding: "13px 10px" }} />
+              </div>
+              <div className="fdm-ap-field">
+                <label htmlFor="cr-city">Ciudad</label>
+                <div className="fdm-rg-combo" ref={cityRef}>
+                  <input
+                    id="cr-city"
+                    type="text"
+                    value={cityQuery}
+                    onChange={(e) => {
+                      setCityQuery(e.target.value);
+                      setSelectedCityId("");
+                      setCityOpen(true);
+                    }}
+                    onFocus={() => setCityOpen(true)}
+                    placeholder="Escribe para buscar"
+                    autoComplete="off"
+                    role="combobox"
+                    aria-expanded={cityOpen}
+                    aria-autocomplete="list"
+                    aria-controls="cr-city-lb"
+                  />
+                  {cityOpen && filteredCities.length > 0 && (
+                    <ul id="cr-city-lb" role="listbox" className="fdm-rg-drop">
+                      {filteredCities.map((c) => (
+                        <li key={c.id} role="option" aria-selected={c.id === selectedCityId} onMouseDown={() => selectCity(c)}>{c.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="fdm-ap-grid">
+              <div className="fdm-ap-field" style={{ flex: "0 1 140px" }}>
+                <label htmlFor="cr-dt">Documento</label>
+                <select id="cr-dt" value={form.documentType} onChange={set("documentType")}>
+                  {["CC", "CE", "NIT", "PP", "INE", "OTRO"].map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+              <div className="fdm-ap-field">
+                <label htmlFor="cr-dn">Número</label>
+                <input id="cr-dn" type="text" inputMode="numeric" value={form.documentNumber} onChange={set("documentNumber")} />
+              </div>
+              <div className="fdm-ap-field">
+                <label htmlFor="cr-ig">Instagram</label>
+                <input id="cr-ig" type="text" autoCapitalize="none" value={form.instagram} onChange={set("instagram")} placeholder="@usuario" />
+              </div>
+            </div>
+          </section>
 
-      <style jsx>{`
-        /* ── Tokens ── */
-        .cr-root {
-          --g:      #22c55e;
-          --g-dim:  rgba(34,197,94,.09);
-          --g-ring: rgba(34,197,94,.2);
-          --g-bd:   rgba(34,197,94,.32);
-          --blk:    #000;
-          --s1:     #0a0a0a;
-          --s2:     #111;
-          --s3:     #181818;
-          --bd:     rgba(255,255,255,.08);
-          --bd2:    rgba(255,255,255,.14);
-          --tx:     rgba(255,255,255,.93);
-          --tx2:    rgba(255,255,255,.62);
-          --tx3:    rgba(255,255,255,.35);
-          --er:     #f87171;
-          --e:      cubic-bezier(.16,1,.3,1);
-          font-family: 'Inter', system-ui, sans-serif;
-          background: var(--blk);
-          color: var(--tx);
-          min-height: calc(100vh - 64px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 32px 16px;
-          position: relative;
-          overflow: hidden;
-        }
+          <label className="fdm-rg-terms" htmlFor="cr-terms">
+            <input id="cr-terms" type="checkbox" checked={acceptedTerms} onChange={(e) => setAcceptedTerms(e.target.checked)} />
+            <span>Acepto el tratamiento de mis datos personales para los fines de la Feria del Millón, incluida la publicación de mi nombre si soy seleccionado.</span>
+          </label>
 
-        /* Glow blobs */
-        .cr-glow {
-          position: absolute; border-radius: 50%;
-          filter: blur(160px); opacity: .07; pointer-events: none;
-        }
-        .cr-glow--1 { width: 480px; height: 480px; top: -140px; left: -80px;  background: var(--g); }
-        .cr-glow--2 { width: 360px; height: 360px; bottom: -120px; right: -60px; background: #4ade80; }
+          <button type="submit" className="fdm-st-btn is-green fdm-studio-plain" style={{ height: 56, fontSize: 16 }} disabled={loading}>
+            {loading ? "Creando tu cuenta…" : <>Crear mi cuenta y continuar<Ico name="arrow" /></>}
+          </button>
+        </form>
 
-        /* ── Shell ── */
-        .cr-shell {
-          position: relative; z-index: 1;
-          width: 100%; max-width: 1000px;
-          display: grid;
-          grid-template-columns: 340px 1fr;
-          min-height: 680px;
-          border-radius: 22px;
-          border: 1px solid var(--bd2);
-          overflow: hidden;
-          box-shadow: 0 0 0 1px rgba(255,255,255,.03) inset, 0 48px 96px rgba(0,0,0,.75);
-          animation: cr-in .5s var(--e) both;
-        }
-        @keyframes cr-in { from{opacity:0;transform:translateY(18px) scale(.98)} to{opacity:1;transform:none} }
-        @media (max-width: 820px) {
-          .cr-shell { grid-template-columns: 1fr; }
-          .cr-side  { display: none; }
-        }
-
-        /* ══ LEFT SIDE ═════════════════════════════════ */
-        .cr-side {
-          background: var(--blk);
-          border-right: 1px solid var(--bd2);
-          padding: 44px 36px;
-          display: flex;
-          flex-direction: column;
-          position: relative;
-          overflow: hidden;
-        }
-        .cr-side::before {
-          content: '';
-          position: absolute;
-          bottom: -60px; left: -60px;
-          width: 280px; height: 280px;
-          background: radial-gradient(circle, rgba(34,197,94,.12) 0%, transparent 70%);
-          pointer-events: none;
-        }
-
-        .cr-side__top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 48px;
-        }
-        .cr-wordmark {
-          display: flex; align-items: center; gap: 8px;
-          font-size: 13px; font-weight: 700; color: var(--tx3);
-          letter-spacing: .01em;
-        }
-        .cr-wordmark svg { color: var(--g); }
-        .cr-badge {
-          font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-          color: var(--g); background: var(--g-dim); border: 1px solid var(--g-bd);
-          padding: 4px 10px; border-radius: 100px;
-        }
-
-        /* Hero */
-        .cr-hero { flex: 1; }
-        .cr-hero__h {
-          font-size: 48px; font-weight: 900;
-          line-height: .92; letter-spacing: -3px;
-          margin: 0 0 18px;
-          color: rgba(255,255,255,.88);
-        }
-        .cr-hero__accent { color: var(--g); display: block; }
-        .cr-hero__p {
-          font-size: 13px; color: var(--tx3); line-height: 1.7;
-          margin: 0 0 40px; max-width: 240px;
-        }
-
-        /* Timeline */
-        .cr-timeline { list-style: none; padding: 0; margin: 0 0 32px; display: flex; flex-direction: column; gap: 0; }
-        .cr-tl {
-          display: flex; align-items: flex-start; gap: 12px;
-          position: relative; padding-bottom: 18px;
-        }
-        .cr-tl__dot {
-          width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
-          border: 1.5px solid var(--bd2); background: var(--s2);
-          font-size: 10px; font-weight: 800; color: var(--tx3);
-          display: flex; align-items: center; justify-content: center;
-          transition: all .2s var(--e);
-        }
-        .cr-tl--on .cr-tl__dot { background: var(--g); border-color: var(--g); color: #000; }
-        .cr-tl__line {
-          position: absolute; left: 14px; top: 32px; bottom: 0;
-          width: 1.5px; background: var(--bd); pointer-events: none;
-        }
-        .cr-tl__text { display: flex; flex-direction: column; gap: 2px; padding-top: 4px; }
-        .cr-tl__lbl { font-size: 13px; font-weight: 600; color: var(--tx3); transition: color .15s; }
-        .cr-tl--on .cr-tl__lbl { color: var(--tx); }
-        .cr-tl__sub { font-size: 11.5px; color: var(--tx3); }
-        .cr-tl--on .cr-tl__sub { color: rgba(34,197,94,.6); }
-
-        /* Stats */
-        .cr-stats {
-          display: flex; align-items: center; gap: 20px;
-          padding-top: 20px; border-top: 1px solid var(--bd);
-          margin-top: auto;
-        }
-        .cr-stat { display: flex; flex-direction: column; gap: 2px; }
-        .cr-stat__n { font-size: 28px; font-weight: 900; color: var(--tx); line-height: 1; letter-spacing: -1px; }
-        .cr-stat__l { font-size: 11px; color: var(--tx3); }
-        .cr-stat__div { width: 1px; height: 36px; background: var(--bd2); flex-shrink: 0; }
-
-        /* ══ RIGHT FORM ════════════════════════════════ */
-        .cr-form-col { background: var(--s1); overflow-y: auto; }
-        .cr-form-wrap { padding: 32px 36px 28px; max-width: 600px; }
-        @media (max-width: 560px) { .cr-form-wrap { padding: 24px 18px; } }
-
-        .cr-fhead { margin-bottom: 20px; }
-        .cr-fhead__step {
-          font-size: 10.5px; font-weight: 700; letter-spacing: .12em;
-          text-transform: uppercase; color: var(--g); margin: 0 0 4px;
-        }
-        .cr-fhead__h { font-size: 22px; font-weight: 900; letter-spacing: -.6px; margin: 0 0 3px; }
-        .cr-fhead__sub { font-size: 13px; color: var(--tx2); margin: 0; }
-
-        /* Error */
-        .cr-error {
-          display: flex; align-items: center; gap: 10px;
-          background: rgba(248,113,113,.06); border: 1px solid rgba(248,113,113,.2);
-          border-radius: 10px; padding: 10px 14px; color: var(--er);
-          font-size: 13px; margin-bottom: 14px; line-height: 1.4;
-        }
-        .cr-error__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--er); flex-shrink: 0; }
-
-        /* Form layout */
-        .cr-form { display: flex; flex-direction: column; gap: 0; }
-        .cr-section { margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
-        .cr-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .cr-row--3 { grid-template-columns: 90px 1fr 1fr; }
-        @media (max-width: 520px) {
-          .cr-row, .cr-row--3 { grid-template-columns: 1fr; }
-        }
-
-        /* Inputs */
-        .cr-form input[type=text],
-        .cr-form input[type=email],
-        .cr-form input[type=password],
-        .cr-form input[type=tel],
-        .cr-form select {
-          width: 100%;
-          background: var(--s2);
-          border: 1.5px solid var(--bd2);
-          border-radius: 10px;
-          padding: 9px 12px;
-          font-size: 14px;
-          color: var(--tx);
-          font-family: inherit;
-          outline: none;
-          box-sizing: border-box;
-          -webkit-appearance: none;
-          appearance: none;
-          transition: border-color .15s var(--e), background .15s var(--e), box-shadow .15s var(--e);
-        }
-        .cr-form input::placeholder { color: var(--tx3); }
-        .cr-form input:hover, .cr-form select:hover {
-          border-color: rgba(255,255,255,.24);
-          background: var(--s3);
-        }
-        .cr-form input:focus, .cr-form select:focus {
-          border-color: var(--g);
-          background: var(--s3);
-          box-shadow: 0 0 0 3px var(--g-ring);
-        }
-        .cr-form select {
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-          background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px; cursor: pointer;
-        }
-        .cr-form select option { background: #1a1a1a; }
-
-        /* Pw toggle */
-        .cr-pw-wrap { position: relative; }
-        .cr-pw-wrap input { padding-right: 58px; }
-        .cr-pw-btn {
-          position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-          font-size: 11px; font-weight: 700; color: var(--tx3);
-          background: rgba(255,255,255,.06); border: 1px solid var(--bd2);
-          padding: 3px 8px; border-radius: 6px; cursor: pointer;
-          transition: color .15s, border-color .15s;
-        }
-        .cr-pw-btn:hover { color: var(--tx); border-color: rgba(255,255,255,.22); }
-
-        /* Combo */
-        .cr-combo { position: relative; }
-        .cr-combo__ok {
-          position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-          color: var(--g); display: flex; pointer-events: none;
-        }
-        .cr-combo__drop {
-          position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-          background: #111; border: 1.5px solid var(--bd2); border-radius: 10px;
-          list-style: none; margin: 0; padding: 4px;
-          max-height: 190px; overflow-y: auto;
-          z-index: 60; box-shadow: 0 16px 40px rgba(0,0,0,.7);
-        }
-        .cr-combo__drop::-webkit-scrollbar { width: 3px; }
-        .cr-combo__drop::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 3px; }
-        .cr-combo__opt {
-          padding: 8px 10px; font-size: 13.5px; color: var(--tx2);
-          border-radius: 6px; cursor: pointer; transition: all .1s;
-        }
-        .cr-combo__opt:hover { background: rgba(255,255,255,.05); color: var(--tx); }
-        .cr-combo__opt.--sel { background: var(--g-dim); color: var(--g); font-weight: 600; }
-
-        /* Terms */
-        .cr-sr { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
-        .cr-terms {
-          display: flex; align-items: flex-start; gap: 10px; cursor: pointer;
-          background: var(--s2); border: 1.5px solid var(--bd2); border-radius: 10px;
-          padding: 10px 12px; margin-bottom: 14px;
-          transition: border-color .15s var(--e), background .15s var(--e);
-        }
-        .cr-terms:hover { border-color: rgba(255,255,255,.22); }
-        .cr-terms:has(.cr-sr:checked) { border-color: var(--g-bd); background: var(--g-dim); }
-        .cr-terms__box {
-          width: 18px; height: 18px; min-width: 18px; border-radius: 5px;
-          border: 2px solid var(--bd2); background: var(--s3);
-          display: flex; align-items: center; justify-content: center;
-          transition: all .15s var(--e); margin-top: 1px;
-        }
-        .cr-terms:has(.cr-sr:checked) .cr-terms__box { background: var(--g); border-color: var(--g); color: #000; }
-        .cr-terms__txt { font-size: 12px; color: var(--tx2); line-height: 1.55; }
-
-        /* CTA */
-        .cr-cta {
-          width: 100%; background: var(--g); color: #000; border: none;
-          border-radius: 11px; padding: 13px 20px; font-size: 14.5px; font-weight: 700;
-          font-family: inherit; cursor: pointer;
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-          transition: all .2s var(--e);
-          box-shadow: 0 4px 22px rgba(34,197,94,.22);
-        }
-        .cr-cta:hover:not(:disabled) {
-          background: #4ade80; transform: translateY(-1px);
-          box-shadow: 0 8px 30px rgba(34,197,94,.38);
-        }
-        .cr-cta:active:not(:disabled) { transform: translateY(0); }
-        .cr-cta:disabled { opacity: .28; cursor: not-allowed; box-shadow: none; }
-
-        /* Footer */
-        .cr-foot {
-          text-align: center; padding-top: 14px; margin-top: 6px;
-          border-top: 1px solid var(--bd);
-        }
-        .cr-foot p { font-size: 13px; color: var(--tx3); margin: 0; }
-        .cr-foot a { color: var(--g); font-weight: 700; text-decoration: none; }
-        .cr-foot a:hover { text-decoration: underline; }
-
-        @keyframes cr-spin { to { transform: rotate(360deg); } }
-      `}</style>
-    </div>
+        <p className="fdm-st-note" style={{ textAlign: "center" }}>
+          ¿Ya tienes cuenta? <Link href="/login?role=artist&redirect=/convocatoria/aplicar" style={{ color: "var(--fg)", textDecoration: "underline" }}>Entra aquí</Link>
+        </p>
+      </ApplyShell>
     </LoggedInArtistGate>
   );
-}
-
-/* ── Field wrapper ── */
-function Fld({ label, req, htmlFor, hint, children }: {
-  label: string; req?: boolean; htmlFor: string; hint?: string; children: React.ReactNode;
-}) {
-  return (
-    <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
-      <label htmlFor={htmlFor} style={{ fontSize:12, fontWeight:700, color:"rgba(255,255,255,.62)", letterSpacing:".01em" }}>
-        {label}{req && <em style={{ fontStyle:"normal", color:"#22c55e", marginLeft:2 }}>*</em>}
-      </label>
-      {children}
-      {hint && <span style={{ fontSize:11, color:"rgba(255,255,255,.3)", marginTop:-2 }}>{hint}</span>}
-    </div>
-  );
-}
-
-/* ── SVG icons ── */
-function CheckSvg() {
-  return <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
-    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>;
-}
-function ArrowSvg() {
-  return <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>;
-}
-function SpinSvg() {
-  return <span style={{ animation:"cr-spin .7s linear infinite", display:"flex" }}>
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" strokeOpacity=".2"/>
-      <path d="M14 8a6 6 0 01-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    </svg>
-  </span>;
-}
-function GemSvg() {
-  return <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden>
-    <path d="M8 14L1 6l2-3h10l2 3-7 8z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-    <path d="M1 6h14M5 3l3 11M11 3l-3 11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-  </svg>;
 }

@@ -1,7 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { createApplication } from "@services/applications.service";
+import { Bone } from "@components/views/admin/artist/ui";
+import { Alert, ApplyShell, Ico, Journey } from "./applyUi";
 
 interface Convocatoria {
   _id: string;
@@ -10,135 +13,78 @@ interface Convocatoria {
   status: string;
 }
 
+const cop = (n?: number) => (n ? "$ " + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ".") : "Sin costo");
+
+/** Primer paso con sesión: elegir a qué convocatoria se postula. Cada una es
+ *  un botón grande con su nombre y su valor; si hay una sola, ya viene elegida. */
 export function ConvocatoriaPicker({ onCreated }: { onCreated: (doc: any) => void }) {
   const [selected, setSelected] = useState("");
   const [error, setError] = useState("");
 
-  const { data: convocatorias = [] } = useQuery({
+  const { data: convocatorias = [], isLoading } = useQuery({
     queryKey: ["convocatorias"],
     queryFn: async () => {
       const { getConvocatorias } = await import("@services/events.service");
       const res: Array<Convocatoria> = await getConvocatorias();
       return (res || []).filter((c) => c.status === "open");
-    }
+    },
   });
+
+  // Una sola convocatoria abierta no es una pregunta.
+  useEffect(() => {
+    if (!selected && convocatorias.length === 1) setSelected(convocatorias[0]._id);
+  }, [convocatorias, selected]);
 
   const createMutation = useMutation({
     mutationFn: (id: string) => createApplication(id),
     onSuccess: (doc) => onCreated(doc),
-    onError: (e: any) => setError(e?.response?.data?.error || e?.message || "Error al crear"),
+    onError: (e: any) => setError(e?.response?.data?.error || "No pudimos crear tu postulación. Inténtalo de nuevo."),
   });
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!selected) return;
     setError("");
-    await createMutation.mutateAsync(selected);
+    createMutation.mutate(selected);
   };
 
   return (
-    <div className="w-full min-h-[calc(100vh-64px)] bg-[#0a0a0a] text-white flex items-center justify-center">
-      <div className="picker-page w-full">
-        <div className="picker-card">
-          <h2>Selecciona la convocatoria</h2>
-          <p>Elige la convocatoria o salón al que deseas postular:</p>
-          {error && <div className="picker-error">{error}</div>}
-          {convocatorias.length === 0 ? (
-            <p className="picker-empty">No hay convocatorias abiertas en este momento.</p>
-          ) : (
-            <>
-              <select value={selected} onChange={(e) => setSelected(e.target.value)} className="picker-select">
-                <option value="">— Selecciona —</option>
-                {convocatorias.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name} · ${c.fee?.toLocaleString()} COP
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={handleCreate}
-                disabled={!selected || createMutation.isPending}
-                className="picker-btn"
-              >
-                {createMutation.isPending ? "Creando postulación…" : "Continuar →"}
-              </button>
-            </>
-          )}
-        </div>
-        <style jsx>{`
-          .picker-page {
-            padding: 24px;
-            font-family: "Inter", sans-serif;
-            display: flex;
-            justify-content: center;
-          }
-          .picker-card {
-            background: #0a0a0a;
-            border: 1px solid #222;
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 480px;
-            width: 100%;
-            box-shadow: 0 8px 32px rgba(255, 255, 255, 0.02);
-            text-align: center;
-          }
-          .picker-card h2 {
-            font-size: 24px;
-            font-weight: 800;
-            color: #fff;
-            margin: 0 0 8px;
-          }
-          .picker-card p {
-            color: #888;
-            margin: 0 0 24px;
-          }
-          .picker-error {
-            background: rgba(220, 38, 38, 0.1);
-            border: 1px solid #ef4444;
-            color: #ef4444;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 13px;
-            margin-bottom: 16px;
-          }
-          .picker-empty {
-            color: #666;
-            font-style: italic;
-          }
-          .picker-select {
-            width: 100%;
-            padding: 12px;
-            border: 1.5px solid #333;
-            border-radius: 100px;
-            font-size: 14px;
-            margin-bottom: 16px;
-            background: #111;
-            color: #fff;
-          }
-          .picker-select:focus {
-            border-color: #fff;
-            outline: none;
-          }
-          .picker-btn {
-            width: 100%;
-            background: #fff;
-            color: #000;
-            border: none;
-            border-radius: 100px;
-            padding: 14px;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-          }
-          .picker-btn:hover:not(:disabled) {
-            background: #eee;
-          }
-          .picker-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-          }
-        `}</style>
+    <ApplyShell narrow>
+      <Journey current={1} />
+      <div className="fdm-ap-head">
+        <span className="fdm-st-eyebrow">Empieza tu postulación</span>
+        <h1 className="fdm-st-h1">¿A cuál te quieres postular?</h1>
+        <p className="fdm-st-lead">Elige la convocatoria o el salón. Después pagas la inscripción y subes tu proyecto.</p>
       </div>
-    </div>
+
+      {error && <Alert tone="bad">{error}</Alert>}
+
+      {isLoading ? (
+        <Bone h={72} style={{ borderRadius: 16 }} />
+      ) : convocatorias.length === 0 ? (
+        <div className="fdm-st-empty" style={{ padding: "40px 20px" }}>
+          <b>No hay convocatorias abiertas</b>
+          En este momento no se están recibiendo postulaciones.
+          <Link href="/convocatoria" className="fdm-st-btn" style={{ marginTop: 8 }}>Ver la convocatoria</Link>
+        </div>
+      ) : (
+        <>
+          <div role="group" aria-label="Convocatorias abiertas" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {convocatorias.map((c) => (
+              <button key={c._id} type="button" className="fdm-ap-opt fdm-studio-plain" aria-pressed={selected === c._id} onClick={() => setSelected(c._id)}>
+                <span className="fdm-ap-radio" />
+                <span className="k">
+                  {c.name}
+                  <small>Inscripción</small>
+                </span>
+                <span className="p">{cop(c.fee)}</span>
+              </button>
+            ))}
+          </div>
+          <button type="button" className="fdm-st-btn is-green is-lg fdm-studio-plain" disabled={!selected || createMutation.isPending} onClick={handleCreate}>
+            {createMutation.isPending ? "Creando tu postulación…" : <>Continuar al pago<Ico name="arrow" /></>}
+          </button>
+        </>
+      )}
+    </ApplyShell>
   );
 }

@@ -52,8 +52,8 @@ export default function ArtistProfileCard() {
     bio.trim() !== (data?.bio || "") || photo !== (data?.profilePhotoUrl || "") || photoY !== (data?.profilePhotoY ?? 25);
 
   return (
-    <section style={{ display: "flex", flexDirection: "column", gap: 14, paddingBottom: 28, marginBottom: 28, borderBottom: hair(10) }}>
-      <Eyebrow>Tu perfil público</Eyebrow>
+    <section style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 16, borderTop: hair(10) }}>
+      <Eyebrow>Foto y presentación</Eyebrow>
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16 }}>
         <div style={{ width: 120, height: 120, borderRadius: "50%", overflow: "hidden", flexShrink: 0, background: mix(10) }}>
           {photo && (
@@ -88,7 +88,7 @@ export default function ArtistProfileCard() {
         />
       </label>
       <div>
-        <StudioButton variant="ghost" disabled={!dirty || uploading || save.isPending} onClick={() => save.mutate()}>
+        <StudioButton variant="green" disabled={!dirty || uploading || save.isPending} onClick={() => save.mutate()}>
           {save.isPending ? "Guardando…" : "Guardar perfil"}
         </StudioButton>
       </div>

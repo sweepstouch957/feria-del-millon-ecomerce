@@ -1,6 +1,5 @@
 "use client";
 import { ImageUpload } from "@components/ui/FileUpload";
-import { Palette } from "lucide-react";
 
 interface ApplicationStepProjectProps {
   projectReview: string;
@@ -14,60 +13,59 @@ interface ApplicationStepProjectProps {
   isSaving: boolean;
 }
 
-export function ApplicationStepProject({
-  projectReview,
-  setProjectReview,
-  detailImageUrl,
-  setDetailImageUrl,
-  montageImageUrl,
-  setMontageImageUrl,
-  onBack,
-  onNext,
-  isSaving
-}: ApplicationStepProjectProps) {
+/** Paso 2 de la postulación: el proyecto que presenta. */
+export function ApplicationStepProject({ projectReview, setProjectReview, detailImageUrl, setDetailImageUrl, montageImageUrl, setMontageImageUrl, onBack, onNext, isSaving }: ApplicationStepProjectProps) {
   return (
-    <div className="app-section">
-      <h2 className="app-section__title"><Palette size={18} style={{ verticalAlign: "-3px" }} /> Información del proyecto</h2>
-      <p className="app-section__desc">Describe el proyecto artístico que presentarás en la feria.</p>
+    <>
+      <section className="fdm-st-card fdm-ap-sec">
+        <div className="hd">
+          <h2 className="fdm-st-h3">1. Cuéntanos tu proyecto</h2>
+          <span className="fdm-ap-help">La serie o grupo de obras que quieres llevar a la feria: de qué trata, qué la une y cómo está hecha.</span>
+        </div>
+        <div className="fdm-ap-field">
+          <label htmlFor="ap-review">Reseña del proyecto <small>{projectReview.length} de 750 letras</small></label>
+          <textarea
+            id="ap-review"
+            value={projectReview}
+            onChange={(e) => setProjectReview(e.target.value)}
+            maxLength={750}
+            rows={8}
+            placeholder="Ejemplo: Una serie de seis pinturas al óleo sobre los mercados de mi barrio…"
+          />
+        </div>
+        <span className="fdm-ap-tip">Sé concreto: el jurado quiere ver que tus piezas forman un solo conjunto con una idea clara.</span>
+      </section>
 
-      <div className="app-field">
-        <label>Reseña del proyecto * <span className="app-chars">{projectReview.length}/750</span></label>
-        <textarea
-          value={projectReview}
-          onChange={(e) => setProjectReview(e.target.value)}
-          maxLength={750}
-          rows={7}
-          placeholder="Descripción clara de la serie o grupo de obras que planea presentar. Incluya ejes temáticos, conceptuales y técnicos."
-        />
-        <span className="app-hint">Evite descripciones vagas. La reseña debe demostrar cómo las piezas se integran en un concepto único y coherente.</span>
-      </div>
-
-      <div className="app-field">
+      <section className="fdm-st-card fdm-ap-sec">
+        <div className="hd">
+          <h2 className="fdm-st-h3">2. Imágenes de apoyo <span style={{ fontWeight: 400, color: "var(--fg2)", fontSize: 15 }}>· opcional</span></h2>
+          <span className="fdm-ap-help">Ayudan al jurado a entender cómo trabajas y cómo se vería tu espacio.</span>
+        </div>
         <ImageUpload
-          label="Imagen de detalle de proceso / técnica"
+          label="Detalle de tu técnica o proceso"
           value={detailImageUrl}
           onChange={setDetailImageUrl}
           folder="convocatoria/detail"
-          hint="Muestra un aspecto relevante de la técnica o proceso de creación. Solo 1 imagen."
+          hint="Una foto de cerca que muestre cómo está hecha la obra."
         />
-      </div>
-
-      <div className="app-field">
         <ImageUpload
           label="Plano de montaje"
           value={montageImageUrl}
           onChange={setMontageImageUrl}
           folder="convocatoria/montage"
-          hint="Disposición de obras en espacio de 3.60m ancho × 2.44m alto. Dibujado a escala."
+          hint="Un dibujo de cómo pondrías tus obras en una pared de 3,60 m de ancho por 2,44 m de alto."
         />
-      </div>
+      </section>
 
-      <div className="app-actions">
-        <button className="app-btn-secondary" onClick={onBack}>← Atrás</button>
-        <button className="app-btn-primary" disabled={isSaving} onClick={onNext}>
-          {isSaving ? "Guardando…" : "Guardar y continuar →"}
-        </button>
+      <div className="fdm-st-bar">
+        <span className="st">{projectReview.trim() ? <b>Proyecto listo</b> : <>Te falta <b>la reseña del proyecto</b></>}</span>
+        <div className="acts">
+          <button type="button" className="fdm-st-btn fdm-studio-plain" onClick={onBack}>Atrás</button>
+          <button type="button" className="fdm-st-btn is-green is-main fdm-studio-plain" disabled={isSaving} onClick={onNext}>
+            {isSaving ? "Guardando…" : "Guardar y seguir"}
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

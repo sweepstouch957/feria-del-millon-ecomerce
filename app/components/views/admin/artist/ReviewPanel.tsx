@@ -61,18 +61,7 @@ export default function ReviewPanel({
   return (
     <div style={{ display: "grid", gap: "clamp(26px,3vw,38px)" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 760 }}>
-        <h2
-          style={{
-            margin: 0,
-            fontWeight: 300,
-            fontSize: "clamp(26px,3.2vw,40px)",
-            lineHeight: 1.03,
-            letterSpacing: "0.02em",
-            textTransform: "uppercase",
-          }}
-        >
-          {delivered ? "Inventario entregado" : "Revisa y envía"}
-        </h2>
+        <h1 className="fdm-st-h1">{delivered ? "Inventario entregado" : "Revisa y envía"}</h1>
         <p style={{ ...BODY, maxWidth: "54ch" }}>
           {delivered
             ? `Lo enviaste el ${new Date(sentAt as string).toLocaleDateString("es-CO", {
@@ -85,29 +74,11 @@ export default function ReviewPanel({
       </div>
 
       {/* Resumen */}
-      <dl
-        style={{
-          margin: 0,
-          display: "grid",
-          gap: 0,
-          gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,170px),1fr))",
-          borderTop: hair(16),
-          borderBottom: hair(16),
-        }}
-      >
+      <dl className="fdm-st-stats" style={{ margin: 0 }}>
         {facts.map(([k, v]) => (
-          <div key={k} style={{ padding: "16px 20px 16px 0" }}>
-            <dt style={{ ...EYEBROW, fontSize: 9, color: mix(44), marginBottom: 7 }}>{k}</dt>
-            <dd
-              style={{
-                margin: 0,
-                fontSize: "clamp(16px,1.8vw,19px)",
-                lineHeight: 1.25,
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {v}
-            </dd>
+          <div key={k}>
+            <dt className="fdm-st-label">{k}</dt>
+            <dd style={{ margin: 0, fontSize: 20, lineHeight: 1.25, fontWeight: 500, fontVariantNumeric: "tabular-nums", overflowWrap: "anywhere" }}>{v}</dd>
           </div>
         ))}
       </dl>

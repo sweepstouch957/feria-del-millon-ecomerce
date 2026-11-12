@@ -251,12 +251,9 @@ export default function MiCuentaClient() {
   }
 
   return (
-    <div style={ROOT_VARS}>
+    <div className="fdm-studio" style={ROOT_VARS}>
       <style>{ACCOUNT_CSS}</style>
-      <div
-        className="fdm-acc"
-        style={{ maxWidth: 1280, margin: "0 auto", padding: "0 clamp(20px,4vw,56px)" }}
-      >
+      <div className="fdm-acc fdm-st-wrap fdm-st-main">
         {/* Header */}
         <div
           style={{
@@ -264,37 +261,23 @@ export default function MiCuentaClient() {
             flexWrap: "wrap",
             alignItems: "flex-end",
             justifyContent: "space-between",
-            gap: 18,
-            padding: "clamp(22px,2.6vw,36px) 0 clamp(14px,1.6vw,20px)",
-            borderBottom: `1px solid ${mix(20)}`,
+            gap: 16,
+            paddingBottom: 20,
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <span style={{ ...EYEBROW, color: "var(--acc)" }}>
-              {isArtist ? (
-                <Link href="/admin/artist">← Volver a mi estudio</Link>
-              ) : (
-                "Mi cuenta"
-              )}
-            </span>
-            <h1
-              style={{
-                margin: 0,
-                fontWeight: 300,
-                fontSize: "clamp(30px,3.6vw,54px)",
-                lineHeight: 1,
-                letterSpacing: "0.03em",
-                textTransform: "uppercase",
-              }}
-            >
-              {isArtist ? "Mi perfil" : "Mi cuenta"}
-            </h1>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {isArtist ? (
+              <Link href="/admin/artist?v=cuenta" className="fdm-st-back">← Volver a mi estudio</Link>
+            ) : (
+              <span className="fdm-st-eyebrow">Mi cuenta</span>
+            )}
+            <h1 className="fdm-st-h1">{isArtist ? "Datos personales" : "Mi cuenta"}</h1>
           </div>
           <Button
             type="submit"
             form="artist-profile-form"
             disabled={isSaving}
-            className="h-10"
+            className="fdm-st-btn is-green"
           >
             {isSaving ? (
               <>

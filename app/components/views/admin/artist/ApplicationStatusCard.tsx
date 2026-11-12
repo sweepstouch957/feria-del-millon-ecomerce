@@ -5,18 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { getMyApplications, type ArtistApplication } from "@services/applications.service";
 import Skeleton from "@components/ui/Skeleton";
 import { useInFairPavilion } from "@hooks/queries/usePavilionsByUser";
+import { Dot } from "./ui";
 
 /* Estado de la postulación del artista: en qué paso va, qué falta y qué
    puede hacer ahora. Los estados salen del modelo ArtistApplication. */
-
-const mix = (pct: number) => `color-mix(in srgb, var(--fg) ${pct}%, transparent)`;
-
-const EYEBROW: React.CSSProperties = {
-  fontWeight: 500,
-  fontSize: 10,
-  letterSpacing: "0.18em",
-  textTransform: "uppercase",
-};
 
 type Step = { key: string; label: string };
 
@@ -58,7 +50,7 @@ function readStatus(app: ArtistApplication | null, inPavilion = false) {
   if (!app) {
     return {
       current: 0,
-      title: "Todavía no postulaste",
+      title: "Todavía no te has postulado",
       detail: "Cuando abra la convocatoria vas a poder presentar tu obra.",
       tone: "neutral" as const,
       cta: { href: "/convocatoria", label: "Ver convocatoria" },
@@ -73,14 +65,14 @@ function readStatus(app: ArtistApplication | null, inPavilion = false) {
         title: "Falta el pago de inscripción",
         detail: "Tu postulación queda reservada, pero no avanza hasta que se acredite el pago.",
         tone: "warn" as const,
-        cta: { href: `/convocatoria/pagar?app=${app._id}`, label: "Pagar inscripción" },
+        cta: { href: `/convocatoria/pagar?appId=${app._id}`, label: "Pagar inscripción" },
         done: false,
       };
     case "draft":
       return {
         current: 1,
         title: "Postulación en borrador",
-        detail: "Pagaste, pero todavía falta completar el formulario y cargar tus obras.",
+        detail: "Ya pagaste, pero todavía falta completar el formulario y cargar tus obras.",
         tone: "warn" as const,
         cta: { href: "/convocatoria/aplicar", label: "Completar postulación" },
         done: false,
@@ -109,7 +101,7 @@ function readStatus(app: ArtistApplication | null, inPavilion = false) {
         title: "Te pidieron correcciones",
         detail:
           app.revisionNotes ||
-          "Curaduría solicitó ajustes en tu postulación. Podés editarla y volver a enviarla.",
+          "Curaduría solicitó ajustes en tu postulación. Puedes editarla y volver a enviarla.",
         tone: "warn" as const,
         cta: { href: "/convocatoria/aplicar", label: "Corregir postulación" },
         done: false,
@@ -118,7 +110,7 @@ function readStatus(app: ArtistApplication | null, inPavilion = false) {
       return {
         current: 3,
         title: "¡Estás dentro!",
-        detail: "Tu postulación fue aceptada. Ya podés cargar tu catálogo y gestionar entregas.",
+        detail: "Tu postulación fue aceptada. Ya puedes cargar tu catálogo y gestionar entregas.",
         tone: "ok" as const,
         cta: { href: "/admin/artist", label: "Ir a mi estudio" },
         done: true,
@@ -129,7 +121,7 @@ function readStatus(app: ArtistApplication | null, inPavilion = false) {
         title: "No quedó seleccionada",
         detail:
           app.rejectionReason ||
-          "Esta vez tu propuesta no fue seleccionada. Podés volver a presentarte en la próxima edición.",
+          "Esta vez tu propuesta no fue seleccionada. Puedes volver a presentarte en la próxima edición.",
         tone: "off" as const,
         cta: { href: "/convocatoria", label: "Ver convocatoria" },
         done: true,
@@ -146,13 +138,6 @@ function readStatus(app: ArtistApplication | null, inPavilion = false) {
   }
 }
 
-const TONE: Record<string, string> = {
-  ok: "var(--acc)",
-  warn: "#C9902B",
-  off: "#B4472A",
-  neutral: "var(--acc)",
-};
-
 export default function ApplicationStatusCard() {
   const { data, isLoading, isError } = useQuery<ArtistApplication[]>({
     queryKey: ["my-applications"],
@@ -164,7 +149,7 @@ export default function ApplicationStatusCard() {
 
   if (isLoading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div className="fdm-st-card" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <Skeleton w="40%" h={11} />
         <Skeleton w="70%" h={30} />
         <Skeleton w="90%" h={14} />
@@ -179,91 +164,51 @@ export default function ApplicationStatusCard() {
   )[0] ?? null;
 
   const s = readStatus(app, inPavilion);
-  const accent = TONE[s.tone];
+  const pill = s.tone === "ok" ? "is-ok" : s.tone === "warn" ? "is-warn" : s.tone === "off" ? "is-bad" : "is-mute";
 
   return (
-    <section style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 12 }}>
-        <span style={{ ...EYEBROW, color: accent }}>Tu postulación</span>
-        {app?.isPaid && (
-          <span style={{ ...EYEBROW, fontSize: 9.5, color: mix(48) }}>Inscripción pagada</span>
-        )}
+    <section className="fdm-st-card" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <span className="fdm-st-label">Tu postulación</span>
+        {app?.isPaid && <span className="fdm-st-pill is-ok">Inscripción pagada</span>}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <h2
-          style={{
-            margin: 0,
-            fontWeight: 300,
-            fontSize: "clamp(24px,2.6vw,34px)",
-            lineHeight: 1.1,
-            letterSpacing: "0.02em",
-          }}
-        >
-          {s.title}
-        </h2>
-        {s.detail && (
-          <p style={{ margin: 0, maxWidth: "60ch", fontSize: 15, lineHeight: 1.6, color: mix(72) }}>
-            {s.detail}
-          </p>
-        )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <h2 className="fdm-st-h2">{s.title}</h2>
+        {s.detail && <p className="fdm-st-note" style={{ maxWidth: 560 }}>{s.detail}</p>}
       </div>
 
       {/* Pasos: el invitado no recorrió ninguno, así que marcarlos todos como
-          hechos —incluido el pago— seria mentirle. */}
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        {(app?.invited ? [] : STEPS).map((st, i) => {
-          const isDone = i < s.current || (s.done && s.tone === "ok");
-          const isCurrent = i === s.current && !s.done;
-          return (
-            <div
-              key={st.key}
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: 14,
-                padding: "10px 0",
-                borderTop: `1px solid ${mix(12)}`,
-                borderBottom: i === STEPS.length - 1 ? `1px solid ${mix(12)}` : undefined,
-                color: isDone || isCurrent ? "inherit" : mix(45),
-              }}
-            >
-              <span
+          hechos —incluido el pago— sería mentirle. */}
+      {!app?.invited && (
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {STEPS.map((st, i) => {
+            const isDone = i < s.current || (s.done && s.tone === "ok");
+            const isCurrent = i === s.current && !s.done;
+            return (
+              <div
+                key={st.key}
                 style={{
-                  ...EYEBROW,
-                  fontSize: 9.5,
-                  letterSpacing: "0.16em",
-                  color: isDone ? accent : isCurrent ? accent : mix(38),
-                  minWidth: 18,
+                  minHeight: 52,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  borderTop: "1px solid var(--line3)",
+                  fontSize: 16,
+                  color: isDone || isCurrent ? "var(--fg)" : "var(--fg3)",
+                  fontWeight: isCurrent ? 500 : 400,
                 }}
               >
-                {isDone ? "✓" : `0${i + 1}`}
-              </span>
-              <span style={{ flex: 1, fontSize: 14.5 }}>{st.label}</span>
-              {isCurrent && (
-                <span style={{ ...EYEBROW, fontSize: 9, color: accent }}>Acá vas</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                <Dot on={isDone} size="xs" />
+                <span style={{ flex: 1 }}>{st.label}</span>
+                {isCurrent && <span className={`fdm-st-pill ${pill}`}>Aquí vas</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-      <Link
-        href={s.cta.href}
-        style={{
-          alignSelf: "flex-start",
-          display: "inline-flex",
-          alignItems: "center",
-          height: 46,
-          padding: "0 26px",
-          borderRadius: 999,
-          background: "var(--fg)",
-          color: "var(--bg)",
-          ...EYEBROW,
-          fontSize: 10.5,
-          letterSpacing: "0.12em",
-        }}
-      >
+      <Link href={s.cta.href} className={`fdm-st-btn is-lg ${s.tone === "off" ? "" : "is-green"}`} style={{ alignSelf: "flex-start" }}>
         {s.cta.label}
       </Link>
     </section>

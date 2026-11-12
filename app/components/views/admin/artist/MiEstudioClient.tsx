@@ -2,95 +2,85 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import SmartImage from "@components/ui/SmartImage";
 import type { FormikProps } from "formik";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CalendarClock,
-  Check,
-  LayoutGrid,
-  Lock,
-  Plus,
-  QrCode,
-  Search,
-  Send,
-  Truck,
-} from "lucide-react";
 import { toast } from "sonner";
 
 import { useTechniques } from "@hooks/queries/useTechniques";
 import { usePavilionsByUser } from "@hooks/queries/usePavilionsByUser";
 import { useArtworksCursor, type ArtworkRow } from "@hooks/queries/useArtworksCursor";
 import { useArtworkDetail } from "@hooks/queries/useArtworkDetail";
+import { useArtistOrders } from "@hooks/queries/useArtistOrders";
 import { getMyApplications } from "@services/applications.service";
 import { useMyProject } from "@hooks/artist/useMyProject";
 import { useDebouncedValue } from "@hooks/artist/useDebouncedValue";
 import { useInventoryWindow } from "@hooks/artist/useInventoryWindow";
+import { formatCOP } from "@lib/money";
+import { useNavHeight } from "@components/views/catalog/shared";
 
 import ArtworksTable from "./ArtworksTable";
 import ArtworkDetailModal from "./ArtworkDetailModal";
-import ArtistOrders from "./ArtistOrders";
+import ArtworkEditor from "./ArtworkEditor";
+import ArtistOrders, { formatOrderDate, orderStats } from "./ArtistOrders";
+import StudioAccount from "./StudioAccount";
 import { useAuth } from "@provider/authProvider";
-import { useEventId } from "@provider/editionProvider";
+import { useEdition } from "@provider/editionProvider";
 
-import CreateEditArtworkModal from "./CreateEditArtworkModal";
 import QRModal from "./QrModal";
 import QrHub from "./QrHub";
 import { ARTIST_DOWNLOADS_ENABLED, NO_PRINT_CSS } from "./lock";
 import ApplicationStatusCard from "@components/views/admin/artist/ApplicationStatusCard";
 import StudioSheet from "./StudioSheet";
-import StudioStepper, { type Step, type StepKey } from "./StudioStepper";
 import ProjectFields from "./ProjectFields";
-import ArtistProfileCard from "./ArtistProfileCard";
 import ReviewPanel from "./ReviewPanel";
-import { Bone, Eyebrow, StudioButton } from "./ui";
+import { Bone, Dot, Ico, StudioButton, type IcoName } from "./ui";
 import type { FormState } from "./ui/fields";
 import type { ProjectFormValues } from "@validators/project";
-import {
-  BODY,
-  DISPLAY,
-  EYEBROW,
-  STUDIO_CSS,
-  STUDIO_VARS,
-  btnGhost,
-  btnSolid,
-  fieldInput,
-  hair,
-  mix,
-} from "./studioTheme";
+import { STUDIO_CSS, STUDIO_VARS } from "./studioTheme";
 
-/** Título del paso: es el que manda en la pantalla. */
-const STEP_TITLE: React.CSSProperties = {
-  margin: 0,
-  fontWeight: 300,
-  fontSize: "clamp(26px,3.2vw,40px)",
-  lineHeight: 1.03,
-  letterSpacing: "0.02em",
-  textTransform: "uppercase",
-};
+/* ──────────────────────────────────────────────────────────────
+   Mi estudio — port de "Mi estudio — Artistas" (Claude Design).
+   Cuatro pestañas bajo el navbar del sitio: Inicio (qué sigue y
+   cifras), Obras (inventario, editor, proyecto, envío y QR),
+   Entregas y Cuenta. La lógica no cambió: la ventana de carga la
+   decide la feria, el envío se confirma y el servidor valida todo.
+   ────────────────────────────────────────────────────────────── */
+
+type Tab = "inicio" | "obras" | "entregas" | "cuenta";
+/** Pantallas dentro de Obras. */
+type Sub = "lista" | "editor" | "qr" | "proyecto" | "enviar";
+
+const TABS: { key: Tab; label: string; icon: IcoName }[] = [
+  { key: "inicio", label: "Inicio", icon: "home" },
+  { key: "obras", label: "Obras", icon: "grid" },
+  { key: "entregas", label: "Entregas", icon: "box" },
+  { key: "cuenta", label: "Cuenta", icon: "user" },
+];
 
 /** "3 nov, 2:06 p. m." en hora de Colombia: el artista tiene que ver que su envío quedó. */
 const sentText = (iso: string) =>
-  new Date(iso).toLocaleString("es-CO", {
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "America/Bogota",
-  });
+  new Date(iso).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" });
 
-/* El estudio del artista.
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-   Era una página larga donde todo estaba al mismo nivel y no se sabía qué
-   tocaba primero. Ahora es un camino de tres pasos —cargar las obras, contar
-   el proyecto, revisar y enviar— con la acción del paso siempre en la barra de
-   abajo. Se puede ir y volver: lo único que no se deshace es el envío. */
+function Shell({ children, tabs }: { children: React.ReactNode; tabs?: React.ReactNode }) {
+  const navH = useNavHeight();
+  return (
+    <div className="fdm-studio" style={{ ...STUDIO_VARS, "--nav-h": `${navH}px`, background: "var(--bg)", minHeight: "100vh" } as React.CSSProperties}>
+      <style>{STUDIO_CSS}</style>
+      {!ARTIST_DOWNLOADS_ENABLED && <style>{NO_PRINT_CSS}</style>}
+      {tabs}
+      <main className="fdm-st-wrap fdm-st-main">{children}</main>
+    </div>
+  );
+}
 
 export default function MiEstudioClient() {
-  const DEFAULT_EVENT_ID = useEventId();
+  const { eventId: DEFAULT_EVENT_ID, eventName } = useEdition();
   const { user, isAuthLoading, isAuthenticated } = useAuth();
   const artistId = user?.id || user?._id;
+  const artistName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Artista";
 
   const { data: apps = [], isLoading: appsLoading } = useQuery({
     queryKey: ["my-applications", artistId],
@@ -98,49 +88,20 @@ export default function MiEstudioClient() {
     enabled: !!artistId && isAuthenticated,
   });
 
-  const { data: pavsByUser, isLoading: pavsLoading } = usePavilionsByUser(
-    DEFAULT_EVENT_ID,
-    artistId as string,
-    true
-  );
+  const { data: pavsByUser, isLoading: pavsLoading } = usePavilionsByUser(DEFAULT_EVENT_ID, artistId as string, true);
 
-  /* Invitado por la feria: entra sin convocatoria y sin pagar.
-     Vale por las dos vías, porque llegan en distinto orden: la marca de su
-     postulación (lo invitaron) o tener ya un pabellón asignado (lo pusieron en
-     uno). Con una sola, al invitado recién creado todavía sin pabellón se le
-     mandaba a pagar una inscripción que no debe. */
-  const isInvited =
-    apps.some((a) => a.invited) || (pavsByUser?.rows?.length ?? 0) > 0;
-
-  /* Antes, quien llegaba acá sin postulación aceptada era expulsado a
-     /convocatoria/pagar con un toast de error. Se lo comía cualquiera cuyo
-     estado no encajara —y en particular el invitado, al que la feria metió a
-     dedo y no le debe inscripción: terminaba en una pasarela de pago.
-
-     Ahora nadie se va a ningún lado: si no corresponde cargar inventario, la
-     página muestra en qué punto va su postulación, que es lo que vino a saber.
-     El servidor sigue siendo el que decide qué puede guardar. */
+  /* Invitado por la feria: entra sin convocatoria y sin pagar. Vale por las
+     dos vías, porque llegan en distinto orden: la marca de su postulación o
+     tener ya un pabellón asignado. */
+  const isInvited = apps.some((a) => a.invited) || (pavsByUser?.rows?.length ?? 0) > 0;
 
   /* ── El proyecto y el envío ──────────────────────────────────────────── */
-  const {
-    loading: projectLoading,
-    initialValues,
-    save,
-    send,
-    sentAt,
-    locked,
-    savedTitle,
-    savedReview,
-  } = useMyProject(!!artistId && isAuthenticated);
+  const { loading: projectLoading, initialValues, save, send, sentAt, locked, savedTitle, savedReview } = useMyProject(!!artistId && isAuthenticated);
 
-  // El formulario del proyecto está en el paso 2, pero su botón vive en la
-  // barra fija: la barra lo envía por la ref y lee su estado del puente.
+  // El formulario del proyecto tiene su botón en la barra fija: la barra lo
+  // envía por la ref y lee su estado del puente.
   const projectForm = useRef<FormikProps<ProjectFormValues>>(null);
-  const [projectState, setProjectState] = useState<FormState>({
-    dirty: false,
-    valid: true,
-    submitting: false,
-  });
+  const [projectState, setProjectState] = useState<FormState>({ dirty: false, valid: true, submitting: false });
   const onProjectState = useCallback((s: FormState) => setProjectState(s), []);
   const saveProject = useCallback((v: ProjectFormValues) => save.mutateAsync(v), [save]);
 
@@ -156,12 +117,9 @@ export default function MiEstudioClient() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
   const [qrForId, setQrForId] = useState<string | null>(null);
 
   const { data: techniques = [] } = useTechniques();
-
-  // Una petición por tecla era una petición por tecla.
   const debouncedQ = useDebouncedValue(q, 350);
 
   const filters = useMemo(
@@ -183,24 +141,17 @@ export default function MiEstudioClient() {
   const rows = (artworksQuery.rows ?? []) as ArtworkRow[];
 
   const { data: detailData, isFetching: loadingDetail } = useArtworkDetail(detailId ?? undefined);
+  const { data: orders = [] } = useArtistOrders(!!artistId && isAuthenticated);
+  const stats = useMemo(() => orderStats(orders), [orders]);
 
   const pavilionOptions = useMemo(
-    () =>
-      (pavsByUser?.rows ?? []).map((p) => ({
-        value: String(p.pavilionId),
-        label: p.name || p.slug || "Pabellón",
-      })),
+    () => (pavsByUser?.rows ?? []).map((p) => ({ value: String(p.pavilionId), label: p.name || p.slug || "Pabellón" })),
     [pavsByUser]
   );
-
   // Un artista puede estar en más de un pabellón: se nombran todos.
   const pavilionNames = pavilionOptions.map((p) => p.label).join(" / ");
 
-  const techniqueOptions = useMemo(
-    () =>
-      (techniques ?? []).map((t: any) => ({ value: t.id || t._id, label: t.name })),
-    [techniques]
-  );
+  const techniqueOptions = useMemo(() => (techniques ?? []).map((t: any) => ({ value: t.id || t._id, label: t.name })), [techniques]);
 
   const doSend = useCallback(() => {
     send
@@ -209,49 +160,30 @@ export default function MiEstudioClient() {
       .finally(() => setConfirming(false));
   }, [send, rows.length, pavilionNames]);
 
-  /* ── Pasos ───────────────────────────────────────────────────────────── */
-  const [tab, setTab] = useState("inventario");
-  const [step, setStep] = useState<StepKey>("obras");
+  /* ── Navegación ──────────────────────────────────────────────────────── */
+  const [tab, setTab] = useState<Tab>("inicio");
+  const [sub, setSub] = useState<Sub>("lista");
 
-  // Al entrar se abre en el paso donde quedó, no siempre en el primero.
-  const [placed, setPlaced] = useState(false);
+  // ?v=obras al recargar o compartir: se lee una vez al montar.
   useEffect(() => {
-    if (placed || projectLoading || artworksQuery.isLoading) return;
-    // Ya envió y la carga sigue abierta: vuelve a sus obras, que es donde está
-    // "Nueva obra" (abrirle en Revisar escondía el botón de agregar).
-    setStep(
-      locked ? (inventory.canUpload ? "obras" : "enviar") : !rows.length ? "obras" : !savedTitle ? "proyecto" : "enviar"
-    );
-    setPlaced(true);
-  }, [placed, projectLoading, artworksQuery.isLoading, locked, rows.length, savedTitle, inventory.canUpload]);
+    const v = new URLSearchParams(window.location.search).get("v");
+    if (v === "qr") {
+      setTab("obras");
+      setSub("qr");
+    } else if (TABS.some((t) => t.key === v)) setTab(v as Tab);
+  }, []);
 
-  const steps: Step[] = useMemo(
-    () => [
-      {
-        key: "obras",
-        label: "Tus obras",
-        hint: rows.length
-          ? `${rows.length} ${rows.length === 1 ? "obra cargada" : "obras cargadas"}`
-          : "Carga la primera con su imagen y su precio",
-        done: rows.length > 0,
-      },
-      {
-        key: "proyecto",
-        label: "Tu proyecto",
-        hint: savedTitle || "Ponle título y cuenta de qué va",
-        done: !!savedTitle,
-      },
-      {
-        key: "enviar",
-        label: "Revisar y enviar",
-        hint: locked
-          ? `Enviado el ${new Date(sentAt as string).toLocaleDateString("es-CO")}`
-          : "Lo revisas y se lo mandas a la feria",
-        done: locked,
-      },
-    ],
-    [rows.length, savedTitle, locked, sentAt]
-  );
+  const go = useCallback((t: Tab, s: Sub = "lista") => {
+    setTab(t);
+    setSub(s);
+    try {
+      const url = new URL(window.location.href);
+      if (t === "inicio") url.searchParams.delete("v");
+      else url.searchParams.set("v", t === "obras" && s === "qr" ? "qr" : t);
+      window.history.replaceState(window.history.state, "", url);
+      window.scrollTo(0, 0);
+    } catch {}
+  }, []);
 
   // Haber enviado no cierra nada: mientras la carga esté abierta puede
   // agregar obras y volver a enviar. Lo que manda es la ventana de la feria.
@@ -261,47 +193,42 @@ export default function MiEstudioClient() {
       return;
     }
     setEditingId(null);
-    setModalOpen(true);
-  }, [inventory.canUpload, inventory.reason]);
+    go("obras", "editor");
+  }, [inventory.canUpload, inventory.reason, go]);
 
-  const openEdit = useCallback((id: string) => {
-    setEditingId(id);
-    setModalOpen(true);
-  }, []);
+  const openEdit = useCallback(
+    (id: string) => {
+      setDetailId(null);
+      setEditingId(id);
+      go("obras", "editor");
+    },
+    [go]
+  );
 
   const openDetail = useCallback((id: string) => setDetailId(id), []);
   const openQr = useCallback((id: string) => setQrForId(id), []);
   const notify = useCallback((msg: string) => toast.success(msg), []);
   const loadMore = useCallback(() => artworksQuery.loadMore(), [artworksQuery]);
-
-  // Los cierres van memoizados: una hoja que recibe un onClose nuevo en cada
-  // render del padre es una hoja que se reinicia por dentro sin motivo.
   const closeDetail = useCallback(() => setDetailId(null), []);
   const closeQr = useCallback(() => setQrForId(null), []);
   const closeConfirm = useCallback(() => setConfirming(false), []);
-  const editFromDetail = useCallback((id: string) => {
-    setDetailId(null);
-    setEditingId(id);
-    setModalOpen(true);
-  }, []);
-  const closeArtworkForm = useCallback(() => {
-    setEditingId(null);
-    setModalOpen(false);
+  const backToList = useCallback(() => go("obras", "lista"), [go]);
+  const clearFilters = useCallback(() => {
+    setQ("");
+    setTech("all");
+    setPavilion("all");
   }, []);
 
   const saveAndGo = useCallback(async () => {
     const form = projectForm.current;
     if (!form) return;
-
-    // `validateForm` devuelve los errores en la mano; leerlos de la ref después
-    // de enviar daría los de la pasada anterior.
+    // `validateForm` devuelve los errores en la mano.
     const errors = await form.validateForm();
     if (Object.keys(errors).length > 0) {
       form.setTouched({ title: true, review: true });
       toast.error("Revisa tu proyecto antes de seguir.");
       return;
     }
-
     if (projectState.dirty) {
       try {
         await form.submitForm();
@@ -309,556 +236,412 @@ export default function MiEstudioClient() {
         return; // el error ya se avisó; no se avanza con algo sin guardar
       }
     }
-
-    setStep("enviar");
-  }, [projectState.dirty]);
+    go("obras", "enviar");
+  }, [projectState.dirty, go]);
 
   const trySend = useCallback(() => {
     if (!rows.length) {
       toast.error("Carga al menos una obra antes de enviar.");
-      setStep("obras");
+      go("obras", "lista");
       return;
     }
     if (!savedTitle?.trim()) {
       toast.error("Ponle título a tu proyecto antes de enviarlo.");
-      setStep("proyecto");
+      go("obras", "proyecto");
       return;
     }
     if (projectState.dirty) {
       toast.error("Guarda el proyecto antes de enviarlo.");
-      setStep("proyecto");
+      go("obras", "proyecto");
       return;
     }
     setConfirming(true);
-  }, [rows.length, savedTitle, projectState.dirty]);
+  }, [rows.length, savedTitle, projectState.dirty, go]);
 
   /* ── Pantallas previas ───────────────────────────────────────────────── */
   if (isAuthLoading || appsLoading || pavsLoading) {
     return (
-      <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "70vh" }}>
-        <style>{STUDIO_CSS}</style>
-        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "clamp(28px,4vw,56px) clamp(20px,4vw,48px)", display: "flex", flexDirection: "column", gap: 18 }}>
-          <div className="fdm-skel" style={{ width: 120, height: 10 }} />
-          <div className="fdm-skel" style={{ width: "min(420px,70%)", height: 42 }} />
-          <div className="fdm-skel" style={{ width: "min(640px,90%)", height: 14 }} />
-          <div style={{ height: 20 }} />
-          {[0, 1, 2].map((i) => (
-            <div key={i} style={{ display: "flex", gap: 16, alignItems: "center" }}>
-              <div className="fdm-skel" style={{ width: 72, height: 72, flexShrink: 0 }} />
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-                <div className="fdm-skel" style={{ width: `${54 - i * 8}%`, height: 15 }} />
-                <div className="fdm-skel" style={{ width: `${38 - i * 6}%`, height: 11 }} />
-              </div>
-            </div>
-          ))}
+      <Shell>
+        <div className="fdm-st-col" aria-busy="true">
+          <Bone w={220} h={12} />
+          <Bone w="min(360px,70%)" h={40} />
+          <Bone h={120} style={{ borderRadius: 16 }} />
+          <Bone h={84} style={{ borderRadius: 16 }} />
+          <Bone h={160} style={{ borderRadius: 16 }} />
         </div>
-      </div>
+      </Shell>
     );
   }
 
   if (!isAuthenticated || !artistId) {
     return (
-      <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "60vh", display: "grid", placeItems: "center" }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-          <p style={{ ...BODY, textAlign: "center" }}>Debes iniciar sesión para entrar a tu estudio.</p>
-          <Link href="/login?role=artist&redirect=%2Fadmin%2Fartist" style={{ ...btnGhost, height: 44, padding: "0 24px" }}>
-            Ingresar como artista
+      <Shell>
+        <div className="fdm-st-empty" style={{ padding: "56px 24px", marginTop: 24 }}>
+          <b>Entra para ver tu estudio</b>
+          Necesitas iniciar sesión con tu cuenta de artista.
+          <Link href="/login?role=artist&redirect=%2Fadmin%2Fartist" className="fdm-st-btn is-green" style={{ marginTop: 8 }}>
+            Entrar a mi estudio
           </Link>
         </div>
-      </div>
+      </Shell>
     );
   }
 
   // Si ya tiene obras cargadas en la feria, está dentro aunque su postulación
   // haya quedado en borrador o la consulta de pabellones haya fallado.
-  const isApproved =
-    isInvited || rows.length > 0 || apps.some((app) => app.status === "accepted");
-  if (!isApproved && artworksQuery.isLoading) {
-    return <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "70vh" }} />;
-  }
+  const isApproved = isInvited || rows.length > 0 || apps.some((app) => app.status === "accepted");
+  if (!isApproved && artworksQuery.isLoading) return <Shell><span /></Shell>;
   if (!isApproved && !appsLoading) {
     return (
-      <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "60vh" }}>
-        <style>{STUDIO_CSS}</style>
-        <div style={{ maxWidth: 720, margin: "0 auto", padding: "clamp(30px,5vw,70px) clamp(20px,4vw,56px)", display: "flex", flexDirection: "column", gap: 22 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <span style={{ ...EYEBROW, color: "var(--acc)" }}>Convocatoria</span>
-            <h1 style={DISPLAY}>Tu estudio te espera</h1>
-            <p style={{ ...BODY, maxWidth: "56ch" }}>
-              Vas a poder cargar las obras finales que salen al catálogo en cuanto
-              tu postulación quede aceptada. Este es el punto en el que va.
+      <Shell>
+        <div className="fdm-st-col" style={{ maxWidth: 720 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span className="fdm-st-eyebrow">Convocatoria</span>
+            <h1 className="fdm-st-h1">Tu estudio te espera</h1>
+            <p className="fdm-st-lead">
+              Vas a poder cargar las obras finales que salen al catálogo en cuanto tu postulación quede aceptada. Este es el punto en el que va.
             </p>
           </div>
           <ApplicationStatusCard />
         </div>
-      </div>
+      </Shell>
     );
   }
 
   const filtering = !!(q || pavilion !== "all" || tech !== "all");
   const total = artworksQuery.totalLabel;
-  const showBar = tab === "inventario" && (!locked || inventory.canUpload);
+  const obrasLabel = plural(rows.length, "obra cargada", "obras cargadas");
+  const nextOrder = orders.find((o) => o.items.some((i) => i.deliveryStatus === "pending"));
+
+  /* Qué sigue: un solo paso a la vez, en el orden en que la feria lo necesita. */
+  const next = !rows.length
+    ? { title: "Carga tu primera obra", sub: "Empieza por la foto, el título y el precio. Puedes editarla después.", btn: "Nueva obra", go: openNew }
+    : !savedTitle
+    ? { title: "Cuéntanos tu proyecto", sub: "Ponle título y explica en pocas líneas de qué va lo que expones.", btn: "Escribir mi proyecto", go: () => go("obras", "proyecto") }
+    : !locked
+    ? { title: "Envía tu inventario a la feria", sub: `Tienes ${obrasLabel}. Revísalas y envíalas para que la feria las reciba.`, btn: "Revisar y enviar", go: () => go("obras", "enviar") }
+    : stats.pending > 0
+    ? { title: `Tienes ${plural(stats.pending, "entrega pendiente", "entregas pendientes")}`, sub: "Coordina con cada comprador y márcalas como entregadas cuando las reciban.", btn: "Ver entregas", go: () => go("entregas") }
+    : inventory.canUpload
+    ? { title: "Todo al día", sub: "Tu inventario está enviado y no tienes entregas pendientes.", btn: "Agregar otra obra", go: openNew }
+    : { title: "Todo al día", sub: "Tu inventario está enviado y no tienes entregas pendientes.", btn: "Ver mis obras", go: () => go("obras") };
+
+  const inv = locked
+    ? {
+        cls: "",
+        title: "La feria ya recibió tu inventario",
+        text: `${sentAt ? `Último envío: ${sentText(sentAt)}. ` : ""}${
+          inventory.canUpload
+            ? "No tienes que volver a enviarlo. Solo si agregas o corriges obras, avísale a la feria."
+            : "La carga cerró. Si necesitas cambiar una obra, escríbele a la feria."
+        }`,
+        btn: inventory.canUpload ? "Enviar de nuevo" : "",
+        fill: false,
+        step: sentAt ? `Enviado el ${new Date(sentAt).toLocaleDateString("es-CO")}` : "Enviado",
+      }
+    : {
+        cls: inventory.canUpload ? " is-warn" : " is-mute",
+        title: inventory.canUpload ? "Tu inventario está sin enviar" : "La carga de obras está cerrada",
+        text: inventory.canUpload
+          ? "Cuando tengas tus obras y tu proyecto listos, envíalos para que la feria los reciba."
+          : (inventory.reason as string) || "La feria cerró la carga de obras.",
+        btn: inventory.canUpload ? "Revisar y enviar" : "",
+        fill: true,
+        step: "Pendiente de enviar",
+      };
+
+  const tabsBar = (
+    <div className="fdm-st-tabs">
+      <nav className="fdm-st-wrap" aria-label="Secciones del estudio">
+        {TABS.map((t) => (
+          <button key={t.key} type="button" className="fdm-st-tab fdm-studio-plain" aria-pressed={tab === t.key} onClick={() => go(t.key)}>
+            <Ico name={t.icon} />
+            <span>{t.label}</span>
+            {t.key === "entregas" && stats.pending > 0 && <span className="n">{stats.pending}</span>}
+          </button>
+        ))}
+      </nav>
+    </div>
+  );
 
   return (
-    <div className="fdm-studio" style={{ ...STUDIO_VARS, background: "var(--bg)", minHeight: "100vh" }}>
-      <style>{STUDIO_CSS}</style>
-      {!ARTIST_DOWNLOADS_ENABLED && <style>{NO_PRINT_CSS}</style>}
+    <Shell tabs={tabsBar}>
+      {/* ══ INICIO ══════════════════════════════════════════════ */}
+      {tab === "inicio" && (
+        <div className="fdm-st-col">
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span className="fdm-st-eyebrow">Mi estudio · {eventName}</span>
+            <h1 className="fdm-st-h1">Hola, {user?.firstName || artistName}</h1>
+          </div>
 
-      <div
-        style={{
-          maxWidth: 1180,
-          margin: "0 auto",
-          padding: `clamp(26px,4vw,54px) clamp(20px,4vw,48px) ${showBar ? "150px" : "clamp(56px,7vw,96px)"}`,
-        }}
-      >
-        {/* ── Cabecera: quién soy y en qué estoy ────────────────────────── */}
-        <header style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-            <h1
-              style={{
-                margin: 0,
-                fontWeight: 400,
-                fontSize: 19,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-              }}
-            >
-              Mi estudio
-            </h1>
-            {pavilionNames && (
-              <span style={{ ...EYEBROW, fontSize: 9, color: mix(48) }}>{pavilionNames}</span>
+          <section className="fdm-st-next" aria-label="Qué sigue">
+            <div className="txt">
+              <span className="k">Qué sigue</span>
+              <span className="t">{next.title}</span>
+              <span className="s">{next.sub}</span>
+            </div>
+            <button type="button" className="fdm-studio-plain" onClick={next.go}>
+              {next.btn}
+              <Ico name="arrow" />
+            </button>
+          </section>
+
+          <div className="fdm-st-stats">
+            <div><span className="fdm-st-label">Obras cargadas</span><b>{artworksQuery.isLoading ? "—" : total}</b></div>
+            <div><span className="fdm-st-label">Por entregar</span><b>{stats.pending}</b></div>
+            <div><span className="fdm-st-label">Entregadas</span><b>{stats.delivered}</b></div>
+            <div><span className="fdm-st-label">Tu parte total</span><b>{formatCOP(stats.total)}</b></div>
+          </div>
+
+          <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <h2 className="fdm-st-label" style={{ margin: 0, color: "var(--fg)" }}>Accesos rápidos</h2>
+            <div className="fdm-st-quick">
+              <button type="button" className="fdm-studio-plain" onClick={openNew}><Ico name="plus" /><span>Nueva obra</span></button>
+              <button type="button" className="fdm-studio-plain" onClick={() => go("obras", "qr")}><Ico name="qr" /><span>Códigos QR</span></button>
+              <button type="button" className="fdm-studio-plain" onClick={() => go("entregas")}><Ico name="box" /><span>Entregas</span></button>
+              <a href={`/artista/${artistId}`} target="_blank" rel="noopener noreferrer"><Ico name="ext" size={16} sw={1.8} /><span>Ver mi página</span></a>
+            </div>
+          </section>
+
+          <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
+              <h2 className="fdm-st-h2">Próxima entrega</h2>
+              <button type="button" className="fdm-st-link fdm-studio-plain" onClick={() => go("entregas")}>Ver todas</button>
+            </div>
+            {nextOrder ? (
+              (() => {
+                const it = nextOrder.items.find((i) => i.deliveryStatus === "pending")!;
+                return (
+                  <button type="button" className="fdm-st-rowcard fdm-studio-plain" style={{ cursor: "pointer", textAlign: "left", color: "var(--fg)" }} onClick={() => go("entregas")}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+                      <span className="fdm-st-thumb" style={{ width: 56, height: 56 }}>
+                        {it.image && <SmartImage src={it.image} alt="" fit="cover" sizes="56px" />}
+                      </span>
+                      <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                        <span style={{ fontSize: 18, overflowWrap: "anywhere" }}>{it.title || "Obra"}</span>
+                        <span style={{ fontSize: 14, color: "var(--fg2)" }}>#{nextOrder.code} · {formatOrderDate(nextOrder.createdAt)}</span>
+                      </span>
+                    </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                      <span style={{ fontSize: 18, fontWeight: 500 }}>{formatCOP(it.unitPrice, { currency: it.currency })}</span>
+                      <span className="fdm-st-pill is-warn">Por entregar</span>
+                    </span>
+                  </button>
+                );
+              })()
+            ) : (
+              <div className="fdm-st-empty">Estás al día: no tienes entregas pendientes.</div>
             )}
+          </section>
+        </div>
+      )}
+
+      {/* ══ OBRAS · lista ═══════════════════════════════════════ */}
+      {tab === "obras" && sub === "lista" && (
+        <div className="fdm-st-col">
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: "16px 24px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <span className="fdm-st-eyebrow">{pavilionNames ? `${obrasLabel} · ${pavilionNames}` : obrasLabel}</span>
+              <h1 className="fdm-st-h1">Tus obras</h1>
+            </div>
+            <div style={{ flex: "1 1 280px", maxWidth: 420, display: "flex", gap: 10 }}>
+              <button type="button" className="fdm-st-btn is-solid fdm-studio-plain" style={{ flex: "1 1 0", padding: "0 16px" }} onClick={openNew} disabled={!inventory.canUpload}>
+                <Ico name="plus" />Nueva obra
+              </button>
+              <button type="button" className="fdm-st-btn fdm-studio-plain" style={{ flex: "1 1 0", padding: "0 16px" }} onClick={() => go("obras", "qr")}>
+                <Ico name="qr" />Códigos QR
+              </button>
+            </div>
           </div>
 
-          {/* Enlaces secundarios: texto chico, para que no compitan con las pestañas */}
-          <div style={{ display: "flex", gap: 18 }}>
-            <Link href="/admin/account" style={{ ...EYEBROW, fontSize: 10, color: mix(62), textDecoration: "underline", textUnderlineOffset: 4 }}>
-              Mi perfil
-            </Link>
-            <Link href={`/artista/${artistId}`} target="_blank" style={{ ...EYEBROW, fontSize: 10, color: mix(62), textDecoration: "underline", textUnderlineOffset: 4 }}>
-              Ver mi página ↗
-            </Link>
-          </div>
-          </div>
-
-          {/* Pestañas: una sola fila de ancho completo, con icono y para qué
-              sirve cada una. Antes eran píldoras chicas mezcladas con botones y
-              no se notaba que cambiaban de sección. */}
-          <div role="tablist" aria-label="Secciones del estudio" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", borderBottom: hair(18) }}>
-            {[
-              { key: "inventario", label: "Inventario", hint: "Tus obras", Icon: LayoutGrid },
-              { key: "orders", label: "Entregas", hint: "Tus ventas", Icon: Truck },
-            ].map(({ key, label, hint, Icon }) => {
-              const on = tab === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={on}
-                  className="fdm-studio-plain"
-                  onClick={() => setTab(key)}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 4,
-                    padding: "12px 4px 11px",
-                    marginBottom: -1,
-                    background: on ? mix(5) : "transparent",
-                    border: 0,
-                    borderBottom: `3px solid ${on ? "var(--acc)" : "transparent"}`,
-                    color: on ? "var(--fg)" : mix(55),
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    transition: "color .2s ease, background .2s ease, border-color .2s ease",
-                  }}
-                >
-                  <Icon size={18} strokeWidth={on ? 2 : 1.6} style={{ color: on ? "var(--acc)" : undefined }} />
-                  <span style={{ ...EYEBROW, fontSize: 11, letterSpacing: "0.12em", fontWeight: on ? 600 : 500 }}>{label}</span>
-                  <span style={{ fontSize: 11, color: mix(on ? 60 : 45) }}>{hint}</span>
+          <section className={`fdm-st-inv${inv.cls}`} aria-label="Estado de tu inventario">
+            <div className="fdm-st-inv-top">
+              <div className="txt">
+                <span className="t">{inv.title}</span>
+                <span className="s">{inv.text}</span>
+              </div>
+              {inv.btn && (
+                <button type="button" className={`fdm-st-btn fdm-studio-plain${inv.fill ? " is-fill" : ""}`} style={{ padding: "0 22px" }} onClick={() => go("obras", "enviar")}>
+                  {inv.btn}
                 </button>
-              );
-            })}
-          </div>
+              )}
+            </div>
+            <div className="fdm-st-steps" aria-label="Pasos para entregar tu inventario">
+              <div className="fdm-st-step" style={{ cursor: "default" }}>
+                <Dot on={rows.length > 0} />
+                <span className="txt"><span className="fdm-st-label">1 · Tus obras</span><span>{rows.length ? obrasLabel : "Carga la primera"}</span></span>
+              </div>
+              <button type="button" className="fdm-st-step fdm-studio-plain" onClick={() => go("obras", "proyecto")}>
+                <Dot on={!!savedTitle} />
+                <span className="txt"><span className="fdm-st-label">2 · Tu proyecto</span><span>{savedTitle || "Sin título todavía"}</span><u>{savedTitle ? "Editar proyecto" : "Escribir proyecto"}</u></span>
+              </button>
+              <button type="button" className="fdm-st-step fdm-studio-plain" onClick={() => go("obras", "enviar")}>
+                <Dot on={locked} />
+                <span className="txt"><span className="fdm-st-label">3 · Revisar y enviar</span><span>{inv.step}</span></span>
+              </button>
+            </div>
+          </section>
 
-          {/* QR: fuera de las pestañas, como acceso propio que dice qué es */}
-          <button
-            type="button"
-            className="fdm-studio-plain"
-            onClick={() => setTab(tab === "qr" ? "inventario" : "qr")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              width: "100%",
-              padding: "12px 14px",
-              textAlign: "left",
-              cursor: "pointer",
-              fontFamily: "inherit",
-              color: "var(--fg)",
-              background: tab === "qr" ? "color-mix(in srgb, var(--acc) 14%, transparent)" : mix(3),
-              border: `1px solid ${tab === "qr" ? "var(--acc)" : mix(20)}`,
-            }}
-          >
-            <QrCode size={26} strokeWidth={1.6} style={{ color: "var(--acc)", flexShrink: 0 }} />
-            <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
-              <span style={{ ...EYEBROW, fontSize: 11, letterSpacing: "0.12em" }}>
-                {tab === "qr" ? "← Volver al inventario" : "Mis códigos QR para el stand"}
-              </span>
-              <span style={{ fontSize: 12.5, lineHeight: 1.4, color: mix(62) }}>
-                QR de artista (muestra todas tus obras) y QR de cada obra
-              </span>
-            </span>
-            {tab !== "qr" && <ArrowRight size={16} strokeWidth={1.6} style={{ color: mix(55), flexShrink: 0 }} />}
-          </button>
-        </header>
+          {/* Aviso de cierre próximo: se dice antes de que el guardado conteste que no. */}
+          {inventory.canUpload && inventory.closingSoon && (
+            <p className="fdm-st-card fdm-st-note" style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <Ico name="clock" style={{ color: "var(--warn)", marginTop: 2 }} />
+              {inventory.closingSoon}
+            </p>
+          )}
 
-        {/* ── INVENTARIO: los tres pasos ────────────────────────────────── */}
-        {tab === "inventario" && (
-          <div style={{ marginTop: "clamp(22px,2.6vw,30px)" }}>
-            {locked && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: 11,
-                  padding: "14px 16px",
-                  marginBottom: "clamp(20px,2.4vw,28px)",
-                  border: `1px solid ${mix(20)}`,
-                  background: mix(4),
-                }}
-              >
-                <Lock size={15} strokeWidth={1.6} style={{ marginTop: 2, color: "var(--acc)", flexShrink: 0 }} />
-                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: mix(72) }}>
-                  <strong style={{ fontWeight: 500, color: "var(--fg)" }}>
-                    La feria ya recibió tu inventario{sentAt ? ` (último envío: ${sentText(sentAt)})` : ""}.
-                  </strong>{" "}
-                  {inventory.canUpload
-                    ? "No tienes que volver a enviarlo. Solo si agregas o corriges obras, dale «Enviar de nuevo» para avisarle a la feria."
-                    : "La carga cerró. Si necesitas cambiar una obra, escríbele a la feria."}
-                </p>
+          <section style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <p className="fdm-st-note" style={{ maxWidth: 640 }}>
+              Cada obra lleva su imagen, sus dimensiones, su técnica, su precio y cuántas copias hay. Puedes agregar y editar obras mientras la carga esté abierta.
+            </p>
+
+            {/* Filtros: solo estorban cuando hay poco que filtrar */}
+            {(rows.length > 4 || filtering) && (
+              <div className="fdm-st-filters">
+                <label className="fdm-st-search">
+                  <Ico name="search" />
+                  <input type="search" aria-label="Buscar por título" placeholder="Buscar por título" value={q} onChange={(e) => setQ(e.target.value)} />
+                </label>
+                {pavilionOptions.length > 1 && (
+                  <select aria-label="Pabellón" className="fdm-st-select" value={pavilion} onChange={(e) => setPavilion(e.target.value)}>
+                    <option value="all">Todos los pabellones</option>
+                    {pavilionOptions.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                )}
+                <select aria-label="Técnica" className="fdm-st-select" value={tech} onChange={(e) => setTech(e.target.value)}>
+                  <option value="all">Todas las técnicas</option>
+                  {techniqueOptions.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+                {filtering && <button type="button" className="fdm-st-link fdm-studio-plain" onClick={clearFilters}>Limpiar</button>}
               </div>
             )}
 
-            <StudioStepper steps={steps} current={step} onSelect={setStep} />
-
-            <div style={{ marginTop: "clamp(26px,3vw,38px)" }}>
-              {/* PASO 1 ─ Obras */}
-              {step === "obras" && (
-                <section>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: "clamp(18px,2.2vw,26px)" }}>
-                    <h2 style={STEP_TITLE}>Tus obras</h2>
-                    <p style={{ ...BODY, maxWidth: "54ch" }}>
-                      Cada obra lleva su imagen, sus dimensiones, su técnica, su precio y cuántas
-                      copias hay. Puedes agregar y editar obras mientras la carga esté abierta.
-                    </p>
-                  </div>
-
-                  {/* La ventana de carga de la feria: se dice acá, no cuando el
-                      guardado contesta que no. */}
-                  {(inventory.reason || inventory.closingSoon) && (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: 11,
-                        padding: "13px 15px",
-                        marginBottom: "clamp(18px,2.2vw,26px)",
-                        border: `1px solid ${inventory.reason ? mix(26) : "var(--acc)"}`,
-                        background: mix(4),
-                      }}
-                    >
-                      {inventory.reason ? (
-                        <Lock size={15} strokeWidth={1.6} style={{ marginTop: 2, flexShrink: 0, color: mix(60) }} />
-                      ) : (
-                        <CalendarClock size={15} strokeWidth={1.6} style={{ marginTop: 2, flexShrink: 0, color: "var(--acc)" }} />
-                      )}
-                      <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: mix(74) }}>
-                        {inventory.reason ?? inventory.closingSoon}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Filtros: solo estorban cuando hay poco que filtrar */}
-                  {(rows.length > 4 || filtering) && (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        alignItems: "flex-end",
-                        gap: "clamp(14px,2.2vw,26px)",
-                        paddingBottom: 16,
-                        borderBottom: hair(16),
-                        marginBottom: 4,
-                      }}
-                    >
-                      <div style={{ flex: "1 1 240px", minWidth: "min(100%,220px)", position: "relative" }}>
-                        <label htmlFor="studio-q" style={{ ...EYEBROW, fontSize: 9.5, letterSpacing: "0.22em", color: mix(58), display: "block", marginBottom: 2 }}>
-                          Buscar
-                        </label>
-                        <Search size={14} strokeWidth={1.5} style={{ position: "absolute", left: 0, bottom: 13, color: mix(40), pointerEvents: "none" }} />
-                        <input
-                          id="studio-q"
-                          value={q}
-                          onChange={(e) => setQ(e.target.value)}
-                          placeholder="Título o descripción"
-                          style={{ ...fieldInput, paddingLeft: 22 }}
-                        />
-                      </div>
-
-                      {pavilionOptions.length > 1 && (
-                        <div style={{ flex: "0 1 200px", minWidth: "min(100%,170px)" }}>
-                          <label htmlFor="studio-pav" style={{ ...EYEBROW, fontSize: 9.5, letterSpacing: "0.22em", color: mix(58), display: "block", marginBottom: 2 }}>
-                            Pabellón
-                          </label>
-                          <select id="studio-pav" value={pavilion} onChange={(e) => setPavilion(e.target.value)} style={fieldInput}>
-                            <option value="all">Todos</option>
-                            {pavilionOptions.map((p) => (
-                              <option key={p.value} value={p.value}>
-                                {p.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-
-                      <div style={{ flex: "0 1 200px", minWidth: "min(100%,170px)" }}>
-                        <label htmlFor="studio-tech" style={{ ...EYEBROW, fontSize: 9.5, letterSpacing: "0.22em", color: mix(58), display: "block", marginBottom: 2 }}>
-                          Técnica
-                        </label>
-                        <select id="studio-tech" value={tech} onChange={(e) => setTech(e.target.value)} style={fieldInput}>
-                          <option value="all">Todas</option>
-                          {techniqueOptions.map((t) => (
-                            <option key={t.value} value={t.value}>
-                              {t.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <span aria-live="polite" style={{ ...EYEBROW, fontSize: 9.5, color: mix(52), paddingBottom: 12, whiteSpace: "nowrap" }}>
-                        {artworksQuery.isFetching ? "Buscando…" : `${total} ${total === "1" ? "obra" : "obras"}`}
-                      </span>
-
-                      {filtering && (
-                        <button
-                          type="button"
-                          className="fdm-studio-plain"
-                          onClick={() => {
-                            setQ("");
-                            setTech("all");
-                            setPavilion("all");
-                          }}
-                          style={{ ...EYEBROW, fontSize: 9.5, letterSpacing: "0.14em", background: "transparent", border: 0, padding: "0 0 12px", cursor: "pointer", color: "var(--acc)" }}
-                        >
-                          Limpiar
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  <ArtworksTable
-                    rows={rows}
-                    loading={artworksQuery.isLoading}
-                    // Con la ventana abierta se agregan y corrigen obras aunque
-                    // ya haya enviado (fuera de ella el servidor rechaza).
-                    locked={!inventory.canUpload}
-                    canEdit={inventory.canUpload}
-                    filtering={filtering}
-                    onView={openDetail}
-                    onEdit={openEdit}
-                    onCreate={openNew}
-                    onOpenQr={openQr}
-                    onShare={notify}
-                    onLoadMore={loadMore}
-                    hasMore={!!artworksQuery.hasNextPage}
-                    loadingMore={!!artworksQuery.isFetchingNextPage}
-                  />
-                </section>
-              )}
-
-              {/* PASO 2 ─ Proyecto */}
-              {step === "proyecto" && (
-                <>
-                  <ArtistProfileCard />
-                  <ProjectFields
-                    initial={initialValues}
-                    loading={projectLoading}
-                    readOnly={!inventory.canUpload}
-                    formRef={projectForm}
-                    onStateChange={onProjectState}
-                    onSave={saveProject}
-                  />
-                </>
-              )}
-
-              {/* PASO 3 ─ Revisar y enviar */}
-              {step === "enviar" && (
-                <ReviewPanel
-                  rows={rows}
-                  projectTitle={savedTitle || ""}
-                  projectReview={savedReview || ""}
-                  pavilionName={pavilionNames || undefined}
-                  artistId={String(artistId)}
-                  sentAt={sentAt}
-                  onGoQr={() => setTab("qr")}
-                  onFix={(id) => {
-                    setEditingId(id);
-                    setModalOpen(true);
-                  }}
-                />
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── MIS QR: el de artista y uno por obra, con dónde va cada uno ─── */}
-        {tab === "qr" && (
-          <div style={{ marginTop: "clamp(24px,3vw,36px)" }}>
-            <QrHub
-              artistId={String(artistId)}
-              artistName={[user?.firstName, user?.lastName].filter(Boolean).join(" ")}
+            <ArtworksTable
               rows={rows}
               loading={artworksQuery.isLoading}
-              hasMore={!!artworksQuery.hasNextPage}
-              onLoadMore={loadMore}
+              // Con la ventana abierta se agregan y corrigen obras aunque ya
+              // haya enviado (fuera de ella el servidor rechaza).
+              locked={!inventory.canUpload}
+              canEdit={inventory.canUpload}
               filtering={filtering}
-              onClearFilters={() => {
-                setQ("");
-                setTech("all");
-                setPavilion("all");
-              }}
+              onView={openDetail}
+              onEdit={openEdit}
+              onCreate={openNew}
+              onOpenQr={openQr}
+              onShare={notify}
+              onLoadMore={loadMore}
+              hasMore={!!artworksQuery.hasNextPage}
+              loadingMore={!!artworksQuery.isFetchingNextPage}
             />
-          </div>
-        )}
+          </section>
+        </div>
+      )}
 
-        {/* ── ENTREGAS ──────────────────────────────────────────────────── */}
-        {tab === "orders" && (
-          <div style={{ marginTop: "clamp(24px,3vw,36px)" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: "clamp(20px,2.4vw,30px)" }}>
-              <h2 style={STEP_TITLE}>Entregas</h2>
-              <p style={{ ...BODY, maxWidth: "54ch" }}>
-                Quién compró una obra tuya, a dónde va y qué falta por entregar.
-              </p>
-            </div>
-            <ArtistOrders inFair />
-          </div>
-        )}
-      </div>
+      {/* ══ OBRAS · editor ══════════════════════════════════════ */}
+      {tab === "obras" && sub === "editor" && (
+        <ArtworkEditor
+          eventId={DEFAULT_EVENT_ID}
+          artistId={artistId as string}
+          artistName={artistName}
+          editingId={editingId}
+          currentRows={rows}
+          techniqueOptions={techniqueOptions}
+          pavilionOptions={pavilionOptions}
+          onDone={backToList}
+          onCancel={backToList}
+        />
+      )}
 
-      {/* ── Barra del paso: la acción siempre al alcance del pulgar ─────── */}
-      {showBar && (
-        <div
-          style={{
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 40,
-            background: "color-mix(in srgb, var(--bg) 94%, transparent)",
-            backdropFilter: "blur(8px)",
-            borderTop: `1px solid ${mix(16)}`,
-            paddingBottom: "env(safe-area-inset-bottom)",
-          }}
-        >
-          <div
-            style={{
-              maxWidth: 1180,
-              margin: "0 auto",
-              padding: "14px clamp(20px,4vw,48px)",
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: "min(100%,180px)" }}>
-              <Eyebrow tone="faint" size={9}>
-                Paso {step === "obras" ? 1 : step === "proyecto" ? 2 : 3} de 3
-              </Eyebrow>
-              <span style={{ fontSize: 14.5, lineHeight: 1.3 }}>
-                {step === "obras"
-                  ? rows.length
-                    ? `${rows.length} ${rows.length === 1 ? "obra cargada" : "obras cargadas"}`
-                    : "Todavía sin obras"
-                  : step === "proyecto"
-                    ? projectState.dirty
-                      ? "Sin guardar"
-                      : savedTitle
-                        ? "Proyecto guardado"
-                        : "Ponle título"
-                    : locked && sentAt
-                      ? `Enviado ✓ ${sentText(sentAt)}`
-                      : "Todo listo para enviar"}
-              </span>
-            </div>
+      {/* ══ OBRAS · códigos QR ══════════════════════════════════ */}
+      {tab === "obras" && sub === "qr" && (
+        <QrHub
+          artistId={String(artistId)}
+          artistName={artistName}
+          rows={rows}
+          loading={artworksQuery.isLoading}
+          hasMore={!!artworksQuery.hasNextPage}
+          onLoadMore={loadMore}
+          filtering={filtering}
+          onClearFilters={clearFilters}
+          onBack={backToList}
+        />
+      )}
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginLeft: "auto" }}>
-              {step !== "obras" && (
-                <StudioButton onClick={() => setStep(step === "enviar" ? "proyecto" : "obras")}>
-                  <ArrowLeft size={14} strokeWidth={1.6} />
-                  Atrás
-                </StudioButton>
-              )}
-
-              {step === "obras" && (
-                <>
-                  <StudioButton
-                    variant={rows.length ? "ghost" : "solid"}
-                    onClick={openNew}
-                    disabled={!inventory.canUpload}
-                  >
-                    <Plus size={15} strokeWidth={1.8} />
-                    Nueva obra
-                  </StudioButton>
-                  {rows.length > 0 && (
-                    <StudioButton variant="solid" onClick={() => setStep("proyecto")}>
-                      Seguir con el proyecto
-                      <ArrowRight size={14} strokeWidth={1.8} />
-                    </StudioButton>
-                  )}
-                </>
-              )}
-
-              {step === "proyecto" && (
-                <StudioButton
-                  variant="solid"
-                  onClick={saveAndGo}
-                  disabled={save.isPending || projectState.submitting}
-                >
-                  {save.isPending ? (
-                    "Guardando…"
-                  ) : (
-                    <>
-                      <Check size={14} strokeWidth={1.8} />
-                      {projectState.dirty ? "Guardar y seguir" : "Seguir a revisar"}
-                    </>
-                  )}
-                </StudioButton>
-              )}
-
-              {step === "enviar" && inventory.canUpload && (
-                <StudioButton onClick={openNew}>
-                  <Plus size={15} strokeWidth={1.8} />
-                  Nueva obra
-                </StudioButton>
-              )}
-
-              {step === "enviar" && (
-                <StudioButton variant="solid" onClick={trySend} disabled={send.isPending}>
-                  <Send size={14} strokeWidth={1.8} />
-                  {send.isPending ? "Enviando…" : locked ? "Enviar de nuevo (con las obras nuevas)" : "Enviar mi inventario"}
-                </StudioButton>
-              )}
+      {/* ══ OBRAS · proyecto ════════════════════════════════════ */}
+      {tab === "obras" && sub === "proyecto" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <button type="button" className="fdm-st-back fdm-studio-plain" onClick={backToList}><Ico name="back" />Volver a mis obras</button>
+          <ProjectFields
+            initial={initialValues}
+            loading={projectLoading}
+            readOnly={!inventory.canUpload}
+            formRef={projectForm}
+            onStateChange={onProjectState}
+            onSave={saveProject}
+          />
+          <p className="fdm-st-note">
+            Tu foto y tu presentación como artista se editan en{" "}
+            <button type="button" className="fdm-st-link fdm-studio-plain" style={{ height: "auto", display: "inline" }} onClick={() => go("cuenta")}>Cuenta</button>.
+          </p>
+          <div className="fdm-st-bar">
+            <span className="st">
+              <b>{projectState.dirty ? "Cambios sin guardar" : savedTitle ? "Proyecto guardado" : "Ponle título a tu proyecto"}</b>
+            </span>
+            <div className="acts">
+              <button type="button" className="fdm-st-btn fdm-studio-plain" onClick={backToList}>Atrás</button>
+              <button type="button" className="fdm-st-btn is-green is-main fdm-studio-plain" onClick={saveAndGo} disabled={save.isPending || projectState.submitting || !inventory.canUpload}>
+                {save.isPending ? "Guardando…" : projectState.dirty ? "Guardar y seguir" : "Seguir a revisar"}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Confirmar el envío: es irreversible, se dice con números ────── */}
+      {/* ══ OBRAS · revisar y enviar ════════════════════════════ */}
+      {tab === "obras" && sub === "enviar" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <button type="button" className="fdm-st-back fdm-studio-plain" onClick={backToList}><Ico name="back" />Volver a mis obras</button>
+          <ReviewPanel
+            rows={rows}
+            projectTitle={savedTitle || ""}
+            projectReview={savedReview || ""}
+            pavilionName={pavilionNames || undefined}
+            artistId={String(artistId)}
+            sentAt={sentAt}
+            onGoQr={() => go("obras", "qr")}
+            onFix={openEdit}
+          />
+          {(!locked || inventory.canUpload) && (
+            <div className="fdm-st-bar">
+              <span className="st">
+                <b>{locked && sentAt ? `Enviado · ${sentText(sentAt)}` : "Todo listo para enviar"}</b>
+              </span>
+              <div className="acts">
+                <button type="button" className="fdm-st-btn fdm-studio-plain" onClick={() => go("obras", "proyecto")}>Proyecto</button>
+                <button type="button" className="fdm-st-btn is-green is-main fdm-studio-plain" onClick={trySend} disabled={send.isPending}>
+                  {send.isPending ? "Enviando…" : locked ? "Enviar de nuevo" : "Enviar mi inventario"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ ENTREGAS ════════════════════════════════════════════ */}
+      {tab === "entregas" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <h1 className="fdm-st-h1">Entregas</h1>
+            <p className="fdm-st-lead">Quién compró una obra tuya, a dónde va y qué falta por entregar.</p>
+          </div>
+          <ArtistOrders inFair />
+        </div>
+      )}
+
+      {/* ══ CUENTA ══════════════════════════════════════════════ */}
+      {tab === "cuenta" && <StudioAccount />}
+
+      {/* ── Confirmar el envío: se dice con números ─────────────── */}
       <StudioSheet
         open={confirming}
         onClose={closeConfirm}
@@ -867,48 +650,34 @@ export default function MiEstudioClient() {
         maxWidth={520}
         footer={
           <>
-            <StudioButton onClick={closeConfirm} disabled={send.isPending}>
-              Todavía no
-            </StudioButton>
-            <StudioButton variant="solid" onClick={doSend} disabled={send.isPending}>
-              <Send size={14} strokeWidth={1.8} />
+            <StudioButton onClick={closeConfirm} disabled={send.isPending}>Todavía no</StudioButton>
+            <StudioButton variant="green" onClick={doSend} disabled={send.isPending} style={{ flex: "1 1 160px" }}>
               {send.isPending ? "Enviando…" : "Sí, enviar"}
             </StudioButton>
           </>
         }
       >
-        <div style={{ display: "grid", gap: 18 }}>
-          <p style={{ ...BODY, color: mix(80) }}>
-            Vas a enviarle a la feria{" "}
-            <strong style={{ fontWeight: 500, color: "var(--fg)" }}>
-              {rows.length} {rows.length === 1 ? "obra" : "obras"}
-            </strong>
-            {savedTitle ? (
-              <>
-                {" "}del proyecto <strong style={{ fontWeight: 500, color: "var(--fg)" }}>{savedTitle}</strong>
-              </>
-            ) : null}
-            .
+        <div style={{ display: "grid", gap: 16 }}>
+          <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5 }}>
+            Vas a enviarle a la feria <b style={{ fontWeight: 500 }}>{plural(rows.length, "obra", "obras")}</b>
+            {savedTitle ? <> del proyecto <b style={{ fontWeight: 500 }}>{savedTitle}</b></> : null}.
           </p>
-          <div style={{ display: "grid", gap: 10, padding: "16px 0", borderTop: hair(14), borderBottom: hair(14) }}>
+          <div style={{ display: "grid", gap: 10 }}>
             {[
               "Mientras la carga siga abierta puedes agregar más obras y volver a enviar.",
               "La feria recibe el aviso y revisa tu inventario.",
-              "Te quedan tus dos códigos QR para imprimir y poner en el stand.",
+              "Te quedan tus códigos QR para imprimir y poner en el stand.",
             ].map((t) => (
-              <div key={t} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <span style={{ width: 4, height: 4, borderRadius: 4, background: "var(--acc)", marginTop: 8, flexShrink: 0 }} />
-                <span style={{ fontSize: 13.5, lineHeight: 1.6, color: mix(70) }}>{t}</span>
-              </div>
+              <span key={t} style={{ display: "flex", gap: 10, fontSize: 15, lineHeight: 1.45, color: "var(--fg2)" }}>
+                <Ico name="check" sw={1.8} style={{ color: "var(--green)", marginTop: 2 }} />
+                {t}
+              </span>
             ))}
           </div>
-          <p style={{ ...EYEBROW, fontSize: 9.5, color: mix(48), margin: 0 }}>
-            Si falta una obra, cierra esto y cárgala primero.
-          </p>
+          <p className="fdm-st-note" style={{ fontSize: 14 }}>Si falta una obra, cierra esto y cárgala primero.</p>
         </div>
       </StudioSheet>
 
-      {/* Modales de obra */}
       <ArtworkDetailModal
         id={detailId}
         data={detailData}
@@ -916,24 +685,11 @@ export default function MiEstudioClient() {
         loading={loadingDetail}
         locked={!inventory.canUpload}
         onClose={closeDetail}
-        onEdit={editFromDetail}
+        onEdit={openEdit}
         onOpenQr={openQr}
       />
 
-      <CreateEditArtworkModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        eventId={DEFAULT_EVENT_ID}
-        editingId={editingId}
-        currentRows={rows}
-        techniqueOptions={techniqueOptions}
-        pavilionOptions={pavilionOptions}
-        artistId={artistId as string}
-        onDone={closeArtworkForm}
-      />
-
       <QRModal artworkId={qrForId} open={!!qrForId} onClose={closeQr} />
-
-    </div>
+    </Shell>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
-import { CreditCard, PartyPopper, ClipboardList, CheckCircle2 } from "lucide-react";
-import styles from "./aplicar.module.css";
+import { ApplyShell, Ico, Journey } from "../applyUi";
 
 interface ApplicationStatusGateProps {
   appId: string;
@@ -9,67 +8,42 @@ interface ApplicationStatusGateProps {
 }
 
 /**
- * Renders a gate screen when the application is not in an editable state.
- * - pending_payment → redirect to payment page
- * - submitted / under_review / accepted / rejected → "already submitted" card
- *
- * Returns `null` when the app is in an editable state and the form should render.
+ * Pantalla cuando la postulación no se puede editar:
+ * - pending_payment → llevar al pago
+ * - submitted / under_review / accepted / rejected → ya fue enviada
+ * Devuelve `null` si está editable y debe mostrarse el formulario.
  */
 export function ApplicationStatusGate({ appId, status }: ApplicationStatusGateProps) {
-  // Pending payment
   if (status === "pending_payment") {
     return (
-      <div className={styles.wrapper}>
-        <div className={styles.gateCenter}>
-          <div className={styles.gateCard}>
-            <span className={styles.gateIcon}><CreditCard size={44} /></span>
-            <h2>Pago pendiente</h2>
-            <p>
-              Para acceder al formulario de postulación debes completar el pago de
-              inscripción ($40,000 COP).
-            </p>
-            <Link
-              href={`/convocatoria/pagar?appId=${appId}`}
-              className="app-btn-primary"
-              style={{ display: "inline-block", marginTop: 16 }}
-            >
-              Ir al pago &rarr;
-            </Link>
-          </div>
+      <ApplyShell narrow>
+        <Journey current={1} />
+        <div className="fdm-ap-head">
+          <span className="fdm-st-eyebrow">Paso 2 de 4</span>
+          <h1 className="fdm-st-h1">Falta el pago de inscripción</h1>
+          <p className="fdm-st-lead">Tu cuenta ya está creada. Cuando pagues la inscripción se abre el formulario para subir tu proyecto y tus obras.</p>
         </div>
-      </div>
+        <Link href={`/convocatoria/pagar?appId=${appId}`} className="fdm-st-btn is-green is-lg">
+          Ir a pagar la inscripción
+          <Ico name="arrow" />
+        </Link>
+      </ApplyShell>
     );
   }
 
-  // Already submitted
-  if (
-    status === "submitted" ||
-    status === "under_review" ||
-    status === "accepted" ||
-    status === "rejected"
-  ) {
-    const icon =
-      status === "accepted" ? <PartyPopper size={44} /> : status === "rejected" ? <ClipboardList size={44} /> : <CheckCircle2 size={44} />;
-
+  if (status === "submitted" || status === "under_review" || status === "accepted" || status === "rejected") {
     return (
-      <div className={styles.wrapper}>
-        <div className={styles.gateCenter}>
-          <div className={styles.gateCard}>
-            <span className={styles.gateIcon}>{icon}</span>
-            <h2>Postulación enviada</h2>
-            <p>
-              Tu postulación ya fue enviada y no puede modificarse. Puedes ver su
-              estado en tu panel de artista.
-            </p>
-            <Link href="/convocatoria/mi-solicitud" className="app-btn-primary">
-              Ver mi solicitud
-            </Link>
-          </div>
+      <ApplyShell narrow>
+        <Journey current={3} />
+        <div className="fdm-ap-head">
+          <span className="fdm-st-eyebrow">Postulación enviada</span>
+          <h1 className="fdm-st-h1">Ya recibimos tu postulación</h1>
+          <p className="fdm-st-lead">Quedó en manos del jurado y ya no se puede cambiar. Puedes seguir en qué va desde «Mi postulación».</p>
         </div>
-      </div>
+        <Link href="/convocatoria/mi-solicitud" className="fdm-st-btn is-solid is-lg">Ver mi postulación</Link>
+      </ApplyShell>
     );
   }
 
-  // Editable — return null so the caller knows to render the wizard
   return null;
 }

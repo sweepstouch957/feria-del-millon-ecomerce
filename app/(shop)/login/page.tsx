@@ -4,7 +4,7 @@ import { Suspense } from "react";
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="p-6">Cargando login…</div>}>
+    <Suspense fallback={<div style={{ minHeight: "100vh" }} />}>
       <GenericLoginPageClient />
     </Suspense>
   );

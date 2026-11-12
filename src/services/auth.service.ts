@@ -134,6 +134,20 @@ export const login = async (
   return data;
 };
 
+// ------- Enlace de ingreso por correo (artistas) -------
+
+/** Pide el correo con el enlace. El servidor responde igual exista o no la cuenta. */
+export const requestLoginLink = async (email: string): Promise<void> => {
+  await apiClient.post("/auth/login/link/request", { email });
+};
+
+/** Canjea el token del enlace (#acceso=…) por una sesión. Un solo uso. */
+export const exchangeLoginLink = async (token: string) => {
+  const { data } = await apiClient.post<LoginResponse>("/auth/login/link", { token });
+  setAuthToken(data.token, true);
+  return data;
+};
+
 // ------- /me y /logout -------
 
 export const me = async (): Promise<AuthUser> => {

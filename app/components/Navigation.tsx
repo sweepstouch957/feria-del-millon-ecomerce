@@ -98,14 +98,23 @@ const CSS = `
 .fdm-nav-chip.green{background:var(--green);color:#fff;border-color:transparent;font-weight:500}
 .fdm-nav-chip.black{background:var(--inv);color:var(--invfg);border-color:transparent;font-weight:500}
 .fdm-nav-chip.muted{color:var(--muted)}
+/* Anchos (probados de 320 a 1600 px, con y sin sesión; no deben desbordar):
+   >1400 todo en línea · ≤1400 links al menú · ≤900 cuenta y tema al menú ·
+   ≤640 cabecera móvil (corazón, carrito, menú) · ≤400 marca más chica ·
+   ≤350 solo el logo. Revisar con scratchpad nav-check.mjs antes de tocar. */
+.fdm-nav-brand{min-width:0}
+.fdm-nav-brand>span{min-width:0;overflow:hidden}
+.fdm-nav-brand b{overflow:hidden;text-overflow:ellipsis}
+.fdm-nav-right{flex:none}
 @media (max-width:1440px){.fdm-nav-name{display:none}}
-@media (max-width:1280px){
+@media (max-width:1400px){
   .fdm-nav-links{display:none}.fdm-nav-burger{display:flex}.fdm-nav-mobile{display:flex}
-  .fdm-nav-pad{padding-left:24px;padding-right:24px}
 }
+@media (max-width:1280px){.fdm-nav-pad{padding-left:24px;padding-right:24px}}
+@media (max-width:900px){.fdm-nav-acct{display:none !important}}
 @media (max-width:640px){
   .fdm-nav-top{display:none}
-  .fdm-nav-bar{height:56px;gap:12px}.fdm-nav-pad{padding-left:16px;padding-right:8px}
+  .fdm-nav-bar{height:56px;gap:8px}.fdm-nav-pad{padding-left:16px;padding-right:8px}
   .fdm-nav-brand{gap:10px}.fdm-nav-brand b{font-size:15px;font-weight:500;letter-spacing:.1em}.fdm-nav-brand small{display:none}
   .fdm-nav-brand .fdm-logo{height:32px !important}
   .fdm-nav-wide{display:none !important}.fdm-nav-right{gap:0}
@@ -113,6 +122,12 @@ const CSS = `
   .fdm-nav-badge{top:3px;right:2px;padding:0}
   .fdm-nav-mobile{padding-left:16px;padding-right:16px}
 }
+@media (max-width:400px){
+  .fdm-nav-pad{padding-left:12px;padding-right:4px}
+  .fdm-nav-brand{gap:8px}.fdm-nav-brand b{font-size:13px;letter-spacing:.06em}
+  .fdm-nav-brand .fdm-logo{height:28px !important}
+}
+@media (max-width:350px){.fdm-nav-brand>span{display:none}}
 `;
 
 export default function Navigation() {
@@ -207,19 +222,19 @@ export default function Navigation() {
           </nav>
 
           <div className="fdm-nav-right">
-            <ThemeToggle className="fdm-nav-icon fdm-nav-wide" />
+            <ThemeToggle className="fdm-nav-icon fdm-nav-wide fdm-nav-acct" />
 
-            {!ready && <span className="fdm-nav-slot fdm-nav-wide" aria-hidden="true" />}
+            {!ready && <span className="fdm-nav-slot fdm-nav-wide fdm-nav-acct" aria-hidden="true" />}
 
             {ready && !isAuthenticated && (
-              <Link href="/login" className="fdm-nav-ghost fdm-nav-wide">
+              <Link href="/login" className="fdm-nav-ghost fdm-nav-wide fdm-nav-acct">
                 {Ic.user}
                 Acceso artistas
               </Link>
             )}
 
             {ready && isAuthenticated && (
-              <div ref={userRef} style={{ position: "relative", margin: "0 4px" }}>
+              <div ref={userRef} className="fdm-nav-acct" style={{ position: "relative", margin: "0 4px" }}>
                 <button className="fdm-nav-user" aria-label={`Cuenta de ${fullName}`} aria-expanded={userOpen} onClick={() => setUserOpen((v) => !v)}>
                   <span className="fdm-nav-av">
                     {initials}

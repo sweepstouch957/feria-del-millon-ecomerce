@@ -1,316 +1,213 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import SmartImage from "@components/ui/SmartImage";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { TransformWrapper, TransformComponent, type ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
+import { I } from "@components/views/catalog/shared";
+import { cloudinaryLoader, isCloudinary } from "@lib/imageUrl";
 
-/* Visor de obra: galería con transición suave + lightbox con zoom/pan/pinch.
-   Usa lo que ya estaba en el repo (framer-motion, react-zoom-pan-pinch) en vez
-   de sumar dependencias nuevas. */
+// Variante del CDN al ancho pedido (el original del artista pesa varios MB).
+const cdn = (src: string, width: number) => (isCloudinary(src) ? cloudinaryLoader({ src, width }) : src);
 
+/* Galería de la obra (port de "Obra — Desktop/Mobile" de Claude Design):
+   escenario cuadrado con la obra contenida, chips de estado, "Ampliar",
+   contador y miniaturas. El visor es una pantalla oscura con zoom (rueda,
+   pellizco, doble toque o botones), flechas y miniaturas. */
 
-const CTRL: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  height: 40,
-  minWidth: 40,
-  padding: "0 14px",
-  background: "transparent",
-  color: "#F5F4EF",
-  border: "1px solid rgba(245,244,239,0.32)",
-  borderRadius: 999,
-  cursor: "pointer",
-  fontFamily: "Jost, system-ui, sans-serif",
-  fontWeight: 500,
-  fontSize: 11,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-};
+export type ViewerChip = { label: string; tone: "green" | "inv" };
 
-export type ViewerChip = { label: string; tone: "acc" | "inv" | "mute" };
-
-const CHIP_BG: Record<ViewerChip["tone"], [string, string]> = {
-  acc: ["var(--acc)", "#0B0B0A"],
-  inv: ["var(--inv)", "var(--invfg)"],
-  mute: ["var(--line2)", "var(--fg)"],
-};
+const ZOOMS = [1, 1.7, 2.6];
 
 export default function ArtworkViewer({
   images,
   title,
+  artist,
   chips,
 }: {
   images: string[];
   title: string;
+  artist: string;
   chips: ViewerChip[];
 }) {
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
-  const reduce = useReducedMotion();
+  const [scale, setScale] = useState(1);
+  const zoomRef = useRef<ReactZoomPanPinchRef | null>(null);
+  const touchX = useRef<number | null>(null);
+  const n = images.length;
+  const many = n > 1;
 
-  const next = () => setActive((i) => (i + 1) % images.length);
-  const prev = () => setActive((i) => (i - 1 + images.length) % images.length);
+  const go = (d: number) => setActive((i) => (i + d + n) % n);
+  const shot = `Imagen ${active + 1} de ${n}`;
 
-  // Flechas navegan la galería siempre; Esc solo cierra el lightbox.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
-      if (e.key === "ArrowRight") next();
-      if (e.key === "ArrowLeft") prev();
+      if (!many) return;
+      if (e.key === "ArrowRight") go(1);
+      if (e.key === "ArrowLeft") go(-1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [images.length]);
+  }, [n]);
 
-  // Con el lightbox abierto el fondo no debe scrollear.
+  // Visor abierto: el fondo no se mueve.
   useEffect(() => {
     if (!open) return;
-    const prevOverflow = document.body.style.overflow;
+    const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = prevOverflow;
+      document.body.style.overflow = prev;
     };
   }, [open]);
 
-  const fade = reduce ? { duration: 0 } : { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const };
+  // Deslizar con el dedo cambia de imagen (celular).
+  const swipe = {
+    onTouchStart: (e: React.TouchEvent) => (touchX.current = e.touches[0].clientX),
+    onTouchEnd: (e: React.TouchEvent) => {
+      if (touchX.current == null || !many) return;
+      const dx = e.changedTouches[0].clientX - touchX.current;
+      if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
+      touchX.current = null;
+    },
+  };
+
+  const step = (dir: 1 | -1) => {
+    const i = ZOOMS.findIndex((z) => z >= scale - 0.01);
+    const next = ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, (i < 0 ? 0 : i) + dir))];
+    zoomRef.current?.centerView(next, 250);
+  };
+
+  if (!n) {
+    return (
+      <div className="fdm-ob-stage">
+        <span className="fdm-ob-noimg">Sin imagen</span>
+      </div>
+    );
+  }
 
   return (
     <>
-      <div className="fdm-obra-media">
-        <div
-          style={{
-            position: "relative",
-            aspectRatio: "4/5",
-            background: "var(--card)",
-            border: "1px solid var(--line)",
-            borderRadius: 24,
-            boxShadow: "0 30px 80px -40px rgba(0,0,0,.6)",
-            overflow: "hidden",
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label="Ampliar imagen"
-            style={{
-              position: "absolute",
-              inset: "clamp(20px,3vw,40px)",
-              padding: 0,
-              border: 0,
-              background: "transparent",
-              cursor: "zoom-in",
-            }}
-          >
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                key={images[active]}
-                initial={{ opacity: 0, scale: reduce ? 1 : 0.985 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: reduce ? 1 : 1.008 }}
-                transition={fade}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "block",
-                  filter: "drop-shadow(0 20px 40px rgba(0,0,0,.35))",
-                }}
-              >
-                <SmartImage
-                  src={images[active]}
-                  alt={title}
-                  priority
-                  sizes="(max-width: 1180px) 92vw, 640px"
-                />
-              </motion.span>
-            </AnimatePresence>
-          </button>
-
-          {chips.length > 0 && (
-            <span style={{ position: "absolute", top: 18, left: 18, display: "flex", gap: 8, flexWrap: "wrap", pointerEvents: "none" }}>
-              {chips.map((c) => (
-                <span
-                  key={c.label}
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                    letterSpacing: "0.04em",
-                    background: CHIP_BG[c.tone][0],
-                    color: CHIP_BG[c.tone][1],
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {c.label}
-                </span>
-              ))}
-            </span>
-          )}
-        </div>
-
-        {images.length > 1 && (
-          <div className="fdm-obra-thumbs">
-            {images.map((src, i) => (
-              <motion.button
-                key={src + i}
-                type="button"
-                onClick={() => setActive(i)}
-                aria-label={`Ver imagen ${i + 1}`}
-                aria-current={i === active}
-                whileHover={reduce ? undefined : { y: -2 }}
-                whileTap={reduce ? undefined : { scale: 0.97 }}
-                transition={{ duration: 0.2 }}
-                style={{
-                  position: "relative",
-                  aspectRatio: "1",
-                  minHeight: 44,
-                  padding: 7,
-                  cursor: "pointer",
-                  background: "var(--card)",
-                  borderRadius: 12,
-                  transition: "border-color .3s ease",
-                  border: `1px solid ${i === active ? "var(--acc)" : "var(--line)"}`,
-                }}
-              >
-                <span style={{ position: "absolute", inset: 7, display: "block" }}>
-                  <SmartImage src={src} alt={`${title} — vista ${i + 1}`} sizes="90px" />
-                </span>
-              </motion.button>
+      <div className="fdm-ob-stage" {...swipe}>
+        <span className="fdm-ob-stage-img">
+          <SmartImage key={images[active]} src={images[active]} alt={`${title}, de ${artist}`} priority sizes="(max-width: 767px) 100vw, 760px" />
+        </span>
+        <button type="button" className="fdm-ob-stage-hit" aria-label="Ampliar imagen" onClick={() => setOpen(true)} />
+        <button type="button" className="fdm-ob-zoom" onClick={() => setOpen(true)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+          </svg>
+          Ampliar
+        </button>
+        {chips.length > 0 && (
+          <span className="fdm-ob-chips">
+            {chips.map((c) => (
+              <span key={c.label} className={`fdm-ob-chip is-${c.tone}`}>{c.label}</span>
             ))}
-          </div>
+          </span>
         )}
+        {many && <span className="fdm-ob-count">{active + 1} / {n}</span>}
       </div>
 
-      {/* ── Lightbox con zoom / pan / pinch ──────────────────── */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-label={`${title} ampliada`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduce ? 0 : 0.25 }}
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 100,
-              background: "rgba(11,11,10,0.94)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
+      {many && (
+        <div className="fdm-ob-thumbs">
+          {images.map((src, i) => (
+            <button
+              key={src + i}
+              type="button"
+              className={`fdm-ob-thumb${i === active ? " is-on" : ""}`}
+              aria-label={`Ver imagen ${i + 1}`}
+              aria-pressed={i === active}
+              onClick={() => setActive(i)}
+            >
+              <span className="ph">
+                <SmartImage src={src} alt="" sizes="80px" />
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {open && (
+        <div className="fdm-ob-viewer" role="dialog" aria-modal="true" aria-label="Visor de imágenes">
+          <div className="fdm-ob-v-head">
+            <div className="fdm-ob-v-title">
+              <span className="t">{title}</span>
+              <span className="s">{artist} · {shot}</span>
+            </div>
+            {many && <span className="fdm-ob-v-count">{active + 1} / {n}</span>}
+            <div className="fdm-ob-v-tools">
+              <button type="button" className="fdm-ob-v-btn" aria-label="Alejar" onClick={() => step(-1)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5M8 11h6" /></svg>
+              </button>
+              <span className="fdm-ob-v-pct" aria-live="polite">{Math.round(scale * 100)}%</span>
+              <button type="button" className="fdm-ob-v-btn" aria-label="Acercar" onClick={() => step(1)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5M11 8v6M8 11h6" /></svg>
+              </button>
+              <button type="button" className="fdm-ob-v-btn is-close" aria-label="Cerrar visor" onClick={() => setOpen(false)}>
+                {I.close({ size: 20, sw: 1.6 })}
+              </button>
+            </div>
+          </div>
+
+          <div className="fdm-ob-v-stage">
             <TransformWrapper
               key={images[active]}
+              ref={zoomRef}
               initialScale={1}
               minScale={1}
-              maxScale={6}
+              maxScale={4}
               centerOnInit
-              doubleClick={{ mode: "toggle", step: 1.6 }}
+              doubleClick={{ mode: "toggle", step: 0.7 }}
               wheel={{ step: 0.12 }}
-              pinch={{ step: 6 }}
+              onTransformed={(_, s) => setScale(s.scale)}
+              onInit={() => setScale(1)}
             >
-              {({ zoomIn, zoomOut, resetTransform }) => (
-                <>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 12,
-                      flexWrap: "wrap",
-                      padding: "clamp(12px,2vw,22px)",
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: "rgba(245,244,239,0.7)",
-                        fontWeight: 500,
-                        fontSize: 11,
-                        letterSpacing: "0.14em",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {title} · {active + 1}/{images.length}
-                    </span>
-                    <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button type="button" onClick={() => zoomOut()} style={CTRL} aria-label="Alejar">
-                        −
-                      </button>
-                      <button type="button" onClick={() => zoomIn()} style={CTRL} aria-label="Acercar">
-                        +
-                      </button>
-                      <button type="button" onClick={() => resetTransform()} style={CTRL}>
-                        Ajustar
-                      </button>
-                      <button type="button" onClick={() => setOpen(false)} style={CTRL}>
-                        Cerrar
-                      </button>
-                    </span>
-                  </div>
-
-                  <TransformComponent
-                    wrapperStyle={{ width: "100%", flex: 1 }}
-                    contentStyle={{
-                      width: "100%",
-                      height: "100%",
-                      display: "grid",
-                      placeItems: "center",
-                    }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={images[active]}
-                      alt={`${title} ampliada`}
-                      style={{
-                        maxHeight: "78vh",
-                        maxWidth: "92vw",
-                        objectFit: "contain",
-                        userSelect: "none",
-                      }}
-                      draggable={false}
-                    />
-                  </TransformComponent>
-
-                  {images.length > 1 && (
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        gap: 8,
-                        padding: "clamp(12px,2vw,24px)",
-                      }}
-                    >
-                      {images.map((src, i) => (
-                        <button
-                          key={src + i}
-                          type="button"
-                          onClick={() => setActive(i)}
-                          aria-label={`Imagen ${i + 1}`}
-                          style={{
-                            width: 9,
-                            height: 9,
-                            padding: 0,
-                            borderRadius: 999,
-                            border: 0,
-                            cursor: "pointer",
-                            transition: "background .25s ease",
-                            background: i === active ? "#F5F4EF" : "rgba(245,244,239,0.38)",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
+              <TransformComponent
+                wrapperStyle={{ width: "100%", height: "100%" }}
+                contentStyle={{ width: "100%", height: "100%", display: "grid", placeItems: "center" }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={cdn(images[active], 1920)} alt={`${title}, de ${artist}`} draggable={false} className="fdm-ob-v-img" />
+              </TransformComponent>
             </TransformWrapper>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {many && (
+              <>
+                <button type="button" className="fdm-ob-v-nav is-prev" aria-label="Imagen anterior" onClick={() => go(-1)}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+                </button>
+                <button type="button" className="fdm-ob-v-nav is-next" aria-label="Imagen siguiente" onClick={() => go(1)}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="fdm-ob-v-caption">
+            <span className="t">{title}</span>
+            <span className="s">{artist} · {shot}</span>
+          </div>
+
+          {many && (
+            <div className="fdm-ob-v-thumbs">
+              {images.map((src, i) => (
+                <button
+                  key={src + i}
+                  type="button"
+                  className={`fdm-ob-v-thumb${i === active ? " is-on" : ""}`}
+                  aria-label={`Imagen ${i + 1}`}
+                  aria-pressed={i === active}
+                  onClick={() => setActive(i)}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={cdn(src, 400)} alt="" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 }

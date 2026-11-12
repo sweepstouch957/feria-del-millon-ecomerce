@@ -318,7 +318,7 @@ export const SHOP_CSS = `
 
 /* Franja "¿Eres artista?" */
 .fdm-strip{border-top:1px solid var(--line)}
-.fdm-strip-in{padding:36px 0;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px 32px}
+.fdm-strip-in{padding-top:36px;padding-bottom:36px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px 32px}
 .fdm-strip .t{font-size:24px}
 .fdm-strip .s{font-size:16px;color:var(--fg2)}
 .fdm-strip a.fdm-btn{height:48px}

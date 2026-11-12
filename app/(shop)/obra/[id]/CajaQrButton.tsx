@@ -7,7 +7,8 @@ import QRCode from "qrcode";
 /* "Comprar en caja": QR grande de la obra para que la cajera lo escanee
    (el lector de caja entiende <tienda>/obra/<id>, igual que la etiqueta). */
 // compact = barra fija del celular (al lado de "Comprar esta obra").
-export default function CajaQrButton({ id, title, price, compact = false }: { id: string; title: string; price: string; compact?: boolean }) {
+// className = estilo de la página que lo usa (sin estilos en línea).
+export default function CajaQrButton({ id, title, price, compact = false, className }: { id: string; title: string; price: string; compact?: boolean; className?: string }) {
   const [open, setOpen] = useState(false);
   const [png, setPng] = useState("");
 
@@ -28,7 +29,8 @@ export default function CajaQrButton({ id, title, price, compact = false }: { id
       <button
         type="button"
         onClick={() => setOpen(true)}
-        style={compact
+        className={className}
+        style={className ? undefined : compact
           ? { flex: "none", height: 48, padding: "0 14px", borderRadius: 12, border: "1px solid var(--line2)", background: "var(--card)", color: "var(--fg)", fontFamily: "inherit", fontSize: 14, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }
           : { width: "100%", height: 52, borderRadius: 14, border: "1px solid var(--line2)", background: "transparent", color: "var(--fg)", fontFamily: "inherit", fontSize: 15, fontWeight: 600, cursor: "pointer" }}
       >

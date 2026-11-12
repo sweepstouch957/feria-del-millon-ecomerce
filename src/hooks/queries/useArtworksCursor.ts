@@ -41,6 +41,8 @@
     /** Solo campos de tarjeta (sin descripción, galería ni etiquetas): la
      *  página pesa la mitad. Lo usa el catálogo; el resto pide el doc completo. */
     lite?: boolean;
+    /** false = no pide nada (p. ej. mientras no se conoce el artista). */
+    enabled?: boolean;
   };
 
   export function useArtworksCursor(filters: ArtworksCursorFilters = {}) {
@@ -84,6 +86,7 @@
     >({
       queryKey: ["artworks", params] as const,
       queryFn: ({ pageParam }) => listArtworks({ ...params, cursor: pageParam }),
+      enabled: filters.enabled ?? true,
       getNextPageParam: (last) => last.nextCursor ?? undefined,
       initialPageParam: undefined,
       // Volver de la obra al catálogo no vuelve a pedir nada durante 5 min.

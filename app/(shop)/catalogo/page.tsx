@@ -13,7 +13,8 @@ export default async function CatalogPage({
   return (
     <>
       <FairModeGate redirectTo={artistId ? `/artista/${encodeURIComponent(artistId)}` : undefined}>
-        <Suspense fallback={<div className="p-8">Cargando catálogo…</div>}>
+        {/* min-height: mientras carga, el footer no sube hasta arriba. */}
+        <Suspense fallback={<div style={{ minHeight: "100vh" }} aria-busy="true" />}>
           <CatalogPageClient />
         </Suspense>
       </FairModeGate>
